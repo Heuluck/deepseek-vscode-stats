@@ -58,7 +58,7 @@ export function Settings(props: SettingsProps) {
   return (
     <div
       class="overlay"
-      onClick={(e) => {
+      onPointerDown={(e) => {
         if (e.target === e.currentTarget) close();
       }}
     >

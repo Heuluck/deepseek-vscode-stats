@@ -26,6 +26,10 @@ export interface AppState {
   lastError: string;
   settingsOpen: boolean;
   themeTick: number;
+  /** 手动刷新进行中（icon 旋转）。 */
+  refreshing: boolean;
+  /** 最近一次手动刷新结果（成功/失败），短暂显示后由 clearRefreshFeedback 清除。 */
+  refreshResult: 'ok' | 'fail' | null;
 }
 
 export const [store, setStore] = createStore<AppState>({
@@ -40,6 +44,8 @@ export const [store, setStore] = createStore<AppState>({
   lastError: '',
   settingsOpen: false,
   themeTick: 0,
+  refreshing: false,
+  refreshResult: null,
 });
 
 /** 悬停信息（高频，独立 signal，避免穿透组件树）。 */
@@ -131,7 +137,12 @@ export function onSnapshot(s: Snapshot): void {
     current: s,
   };
   const patch = onNewData(data, viewState());
-  setStore({ data, ...patch });
+  // 手动刷新成功后：停转并给出成功反馈（自动轮询来的 snapshot 不影响刷新状态）
+  setStore({
+    data,
+    ...patch,
+    ...(store.refreshing ? { refreshing: false, refreshResult: 'ok' as const } : {}),
+  });
 }
 
 export function onConfig(cfg: PanelConfig): void {
@@ -148,7 +159,11 @@ export function onSettingsReset(): void {
 }
 
 export function onError(message: string): void {
-  setStore({ lastError: message });
+  // 手动刷新失败：停转并给出失败反馈（自动轮询失败只更新 lastError，不改刷新状态）
+  setStore({
+    lastError: message,
+    ...(store.refreshing ? { refreshing: false, refreshResult: 'fail' as const } : {}),
+  });
 }
 
 export function onTheme(): void {
@@ -197,7 +212,13 @@ export function closeSettings(): void {
 
 // ---------- UI 操作 ----------
 export function checkNow(): void {
+  setStore({ refreshing: true, refreshResult: null });
   postMessage({ type: 'checkNow' });
+}
+
+/** 清除刷新结果反馈（ok/fail 短暂显示后调用，恢复 idle 图标）。 */
+export function clearRefreshFeedback(): void {
+  setStore({ refreshResult: null });
 }
 
 export function openUsage(): void {

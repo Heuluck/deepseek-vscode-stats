@@ -1528,7 +1528,9 @@
     minWindow: 6e4,
     lastError: "",
     settingsOpen: false,
-    themeTick: 0
+    themeTick: 0,
+    refreshing: false,
+    refreshResult: null
   });
   var [tooltipInfo, setTooltipInfo] = createSignal(null);
   function stagedFromConfig(cfg) {
@@ -1593,7 +1595,11 @@
       current: s
     };
     const patch = onNewData(data, viewState());
-    setStore({ data, ...patch });
+    setStore({
+      data,
+      ...patch,
+      ...store.refreshing ? { refreshing: false, refreshResult: "ok" } : {}
+    });
   }
   function onConfig(cfg) {
     setStore({ config: cfg });
@@ -1605,7 +1611,10 @@
     setStore({ settingsOpen: false });
   }
   function onError(message) {
-    setStore({ lastError: message });
+    setStore({
+      lastError: message,
+      ...store.refreshing ? { refreshing: false, refreshResult: "fail" } : {}
+    });
   }
   function onTheme() {
     setStore("themeTick", (t) => t + 1);
@@ -1642,7 +1651,11 @@
     setStore({ settingsOpen: false });
   }
   function checkNow() {
+    setStore({ refreshing: true, refreshResult: null });
     postMessage({ type: "checkNow" });
+  }
+  function clearRefreshFeedback() {
+    setStore({ refreshResult: null });
   }
   function openUsage() {
     postMessage({ type: "openUsage" });
@@ -2313,7 +2326,7 @@
     }
     return (() => {
       var _el$ = _tmpl$27(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling, _el$10 = _el$9.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.firstChild, _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling, _el$15 = _el$14.firstChild, _el$16 = _el$15.nextSibling, _el$17 = _el$16.firstChild, _el$18 = _el$12.nextSibling, _el$19 = _el$18.firstChild, _el$20 = _el$19.nextSibling, _el$21 = _el$18.nextSibling, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$24 = _el$23.nextSibling, _el$25 = _el$24.firstChild, _el$26 = _el$25.nextSibling, _el$27 = _el$24.nextSibling, _el$28 = _el$27.firstChild, _el$29 = _el$28.nextSibling, _el$30 = _el$27.nextSibling, _el$31 = _el$30.firstChild, _el$32 = _el$31.nextSibling, _el$38 = _el$22.nextSibling, _el$39 = _el$38.firstChild, _el$40 = _el$39.nextSibling, _el$41 = _el$40.firstChild, _el$42 = _el$41.nextSibling, _el$43 = _el$42.firstChild, _el$44 = _el$43.nextSibling, _el$45 = _el$38.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$48 = _el$47.firstChild, _el$49 = _el$48.nextSibling, _el$50 = _el$45.nextSibling, _el$51 = _el$50.firstChild, _el$52 = _el$51.nextSibling, _el$53 = _el$52.firstChild, _el$54 = _el$53.nextSibling, _el$55 = _el$6.nextSibling, _el$56 = _el$55.firstChild, _el$57 = _el$56.nextSibling, _el$58 = _el$57.nextSibling;
-      _el$.$$click = (e) => {
+      _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
       _el$5.$$click = close;
@@ -2412,10 +2425,10 @@
       return _el$;
     })();
   }
-  delegateEvents(["click", "input"]);
+  delegateEvents(["pointerdown", "click", "input"]);
 
   // webview/components/App.tsx
-  var _tmpl$9 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button class=icon title=\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D><i class="codicon codicon-refresh"></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><main id=chartWrap><svg id=chart width=0 height=0></svg></main><footer>`);
+  var _tmpl$9 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><main id=chartWrap><svg id=chart width=0 height=0></svg></main><footer>`);
   function App() {
     let wrapRef;
     let svgRef;
@@ -2439,21 +2452,39 @@
       }));
       onCleanup(() => engine.dispose());
     });
+    createEffect(() => {
+      const r = store.refreshResult;
+      if (!r) return;
+      const t = setTimeout(() => clearRefreshFeedback(), 1800);
+      onCleanup(() => clearTimeout(t));
+    });
+    const refreshIcon = createMemo(() => {
+      if (store.refreshing) return "codicon-refresh spinning";
+      if (store.refreshResult === "ok") return "codicon-check";
+      if (store.refreshResult === "fail") return "codicon-error";
+      return "codicon-refresh";
+    });
+    const refreshTitle = createMemo(() => {
+      if (store.refreshing) return "\u67E5\u8BE2\u4E2D\u2026";
+      if (store.refreshResult === "ok") return "\u5237\u65B0\u6210\u529F";
+      if (store.refreshResult === "fail") return `\u5237\u65B0\u5931\u8D25\uFF1A${store.lastError || "\u8BF7\u67E5\u770B\u5E95\u90E8\u9519\u8BEF\u63D0\u793A"}`;
+      return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
+    });
     return (() => {
-      var _el$ = _tmpl$9(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.nextSibling, _el$7 = _el$2.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$7.nextSibling;
+      var _el$ = _tmpl$9(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling;
       insert(_el$2, createComponent(Header, {}), _el$3);
       insert(_el$3, createComponent(Ranges, {}), _el$4);
       insert(_el$3, createComponent(Tabs, {}), _el$4);
       addEventListener(_el$4, "click", resetView, true);
       addEventListener(_el$5, "click", checkNow, true);
-      addEventListener(_el$6, "click", openUsage, true);
+      addEventListener(_el$7, "click", openUsage, true);
       var _ref$ = wrapRef;
-      typeof _ref$ === "function" ? use(_ref$, _el$7) : wrapRef = _el$7;
+      typeof _ref$ === "function" ? use(_ref$, _el$8) : wrapRef = _el$8;
       var _ref$2 = svgRef;
-      typeof _ref$2 === "function" ? use(_ref$2, _el$8) : svgRef = _el$8;
-      insert(_el$7, createComponent(Tooltip, {}), null);
-      insert(_el$7, createComponent(Empty, {}), null);
-      insert(_el$9, createComponent(Footer, {}));
+      typeof _ref$2 === "function" ? use(_ref$2, _el$9) : svgRef = _el$9;
+      insert(_el$8, createComponent(Tooltip, {}), null);
+      insert(_el$8, createComponent(Empty, {}), null);
+      insert(_el$0, createComponent(Footer, {}));
       insert(_el$, createComponent(Show, {
         get when() {
           return store.settingsOpen;
@@ -2464,6 +2495,19 @@
           });
         }
       }), null);
+      createRenderEffect((_p$) => {
+        var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
+        _v$ !== _p$.e && className(_el$5, _p$.e = _v$);
+        _v$2 !== _p$.t && setAttribute(_el$5, "title", _p$.t = _v$2);
+        _v$3 !== _p$.a && (_el$5.disabled = _p$.a = _v$3);
+        _v$4 !== _p$.o && className(_el$6, _p$.o = _v$4);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0,
+        a: void 0,
+        o: void 0
+      });
       return _el$;
     })();
   }
