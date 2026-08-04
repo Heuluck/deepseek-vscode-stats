@@ -602,7 +602,6 @@
     const cur = d && d.current;
     const total = $('curTotal');
     const meta = $('curMeta');
-    const status = $('curStatus');
     const spendStat = $('spendStat');
     const spendTotal = $('spendTotal');
     if (cur) {
@@ -611,15 +610,9 @@
         cur.granted,
         cur.currency
       )}`;
-      status.textContent = cur.available ? '账户可用' : '余额不足';
-      status.className = 'status' + (cur.available ? ' ok' : ' bad');
-      status.title = cur.available ? '账户有余额可供 API 调用' : '账户余额不足，无法调用 API';
     } else {
       total.textContent = '--';
       meta.textContent = d && d.hasKey ? '等待数据…' : '未配置 API Key';
-      status.textContent = '';
-      status.className = 'status';
-      status.title = '';
     }
     // 今日花费（可选）：设置面板打开时预览暂存值，否则用已保存配置
     const showSpend = staged
