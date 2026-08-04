@@ -159,6 +159,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       pushDataToPanel();
     }),
     vscode.commands.registerCommand('deepseek-stats.checkNow', checkNow),
+    vscode.commands.registerCommand('deepseek-stats.toggleStatusBar', async () => {
+      const cfg = vscode.workspace.getConfiguration('deepseek-stats');
+      const current = cfg.get<boolean>('statusBar.show', true);
+      await cfg.update('statusBar.show', !current, vscode.ConfigurationTarget.Global);
+    }),
     vscode.commands.registerCommand('deepseek-stats.setApiKey', async () => {
       const value = await vscode.window.showInputBox({
         prompt: '输入 DeepSeek API Key（sk-...）',

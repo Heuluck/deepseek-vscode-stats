@@ -22,6 +22,12 @@
   ],
   "main": "./out/extension.js",
   "contributes": {
+    "commands": [
+      {
+        "command": "deepseek-stats.toggleStatusBar",
+        "title": "DeepSeek Stats: 切换状态栏余额显示"
+      }
+    ],
     "configuration": {
       "title": "DeepSeek Stats",
       "properties": {
