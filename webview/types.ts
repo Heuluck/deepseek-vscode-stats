@@ -27,6 +27,8 @@ export interface Threshold {
 
 export type ConnectorStyle = 'dashed' | 'solid' | 'none';
 
+export type LineStyle = 'straight' | 'smooth';
+
 export interface PanelConfig {
   pollMinutes: number;
   statusBarShow: boolean;
@@ -36,6 +38,7 @@ export interface PanelConfig {
   showTodaySpend: boolean;
   connectorStyle: ConnectorStyle;
   connectorColor: string;
+  lineStyle: LineStyle;
 }
 
 /** webview init 消息 payload。 */

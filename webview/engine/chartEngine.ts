@@ -30,6 +30,8 @@ export interface EngineState {
   connectorStyle: 'dashed' | 'solid' | 'none';
   /** 断点连接线颜色；空串 = 跟随主线条颜色。 */
   connectorColor: string;
+  /** 主线条绘制方式：直线 / 平滑曲线。 */
+  lineStyle: 'straight' | 'smooth';
 }
 
 export interface TooltipRow {
@@ -159,6 +161,107 @@ export function createChartEngine(deps: EngineDeps) {
     return segs;
   }
 
+  /** 直线折线路径。 */
+  function straightPath(
+    pts: ChartPoint[],
+    xOf: (t: number) => number,
+    yOf: (v: number) => number
+  ): string {
+    return pts
+      .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`)
+      .join(' ');
+  }
+
+  /**
+   * 平滑曲线路径：保单调三次插值（Fritsch–Carlson）。
+   * 与 Catmull-Rom 不同，曲线在任意相邻两点之间严格单调，不会越过两端点的值，
+   * 因此急转弯（如余额骤降）处不会出现先反向抬升的过冲假象。
+   */
+  function smoothPath(
+    pts: ChartPoint[],
+    xOf: (t: number) => number,
+    yOf: (v: number) => number
+  ): string {
+    const n = pts.length;
+    if (n < 2) return '';
+    // 各段斜率（数据空间，单位：值/ms）
+    const s: number[] = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) {
+      const h = pts[i + 1].t - pts[i].t;
+      s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
+    }
+    // 各点切线：内部点取相邻斜率均值，符号翻转处归零
+    const m: number[] = new Array(n);
+    m[0] = s[0];
+    m[n - 1] = s[n - 2];
+    for (let i = 1; i < n - 1; i++) {
+      m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
+    }
+    // Fritsch–Carlson 过冲限制
+    for (let i = 0; i < n - 1; i++) {
+      if (s[i] === 0) {
+        m[i] = 0;
+        m[i + 1] = 0;
+        continue;
+      }
+      const alpha = m[i] / s[i];
+      const beta = m[i + 1] / s[i];
+      const a2b2 = alpha * alpha + beta * beta;
+      if (a2b2 > 9) {
+        const tau = 3 / Math.sqrt(a2b2);
+        m[i] = tau * alpha * s[i];
+        m[i + 1] = tau * beta * s[i];
+      }
+    }
+    let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
+    for (let i = 0; i < n - 1; i++) {
+      const h = pts[i + 1].t - pts[i].t;
+      const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+      const c1y = yOf(pts[i].total + (m[i] * h) / 3);
+      const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+      const c2y = yOf(pts[i + 1].total - (m[i + 1] * h) / 3);
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
+        pts[i + 1].t
+      ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
+    }
+    return d;
+  }
+
+  /** 保单调单段曲线（p1→p2）：切线取两侧相邻斜率，方向不一致的归零并做 Fritsch–Carlson 限制，曲线不越过两端值。 */
+  function smoothSegment(
+    p0: ChartPoint,
+    p1: ChartPoint,
+    p2: ChartPoint,
+    p3: ChartPoint,
+    xOf: (t: number) => number,
+    yOf: (v: number) => number
+  ): string {
+    const h = p2.t - p1.t;
+    if (h <= 0) return straightPath([p1, p2], xOf, yOf);
+    const s = (p2.total - p1.total) / h;
+    if (s === 0) return straightPath([p1, p2], xOf, yOf);
+    let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
+    let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
+    // 与缺口方向不一致的切线归零，保证段内单调
+    if (m1 * s <= 0) m1 = 0;
+    if (m2 * s <= 0) m2 = 0;
+    const alpha = m1 / s;
+    const beta = m2 / s;
+    const a2b2 = alpha * alpha + beta * beta;
+    if (a2b2 > 9) {
+      const tau = 3 / Math.sqrt(a2b2);
+      m1 = tau * alpha * s;
+      m2 = tau * beta * s;
+    }
+    const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p1.t)) / 3;
+    const c1y = yOf(p1.total + (m1 * h) / 3);
+    const c2x = xOf(p2.t) - (xOf(p2.t) - xOf(p1.t)) / 3;
+    const c2y = yOf(p2.total - (m2 * h) / 3);
+    return `M${xOf(p1.t).toFixed(1)},${yOf(p1.total).toFixed(1)} C${c1x.toFixed(1)},${c1y.toFixed(
+      1
+    )} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(p2.t).toFixed(1)},${yOf(p2.total).toFixed(1)}`;
+  }
+
   // ---------- SVG 辅助 ----------
   function line(
     parent: SVGElement,
@@ -264,31 +367,44 @@ export function createChartEngine(deps: EngineDeps) {
     const gapMs = effectiveGapMs(decimated, st.view);
     const segments = buildSegments(decimated, gapMs);
     const baseY = yOf(yMin);
+    const lineStyle = st.lineStyle || 'straight';
+    const linePath = (seg: ChartPoint[]) =>
+      lineStyle === 'smooth' ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
 
     // 断点连接线：数据缺口两端用虚线/实线相连（先画，垫在主线条下方；不参与面积填充）
     const connectorStyle = st.connectorStyle || 'dashed';
     const connectorColor = st.connectorColor || '';
     if (connectorStyle !== 'none' && segments.length > 1) {
       for (let i = 0; i < segments.length - 1; i++) {
-        const a = segments[i][segments[i].length - 1];
-        const b = segments[i + 1][0];
-        const l = document.createElementNS(ns, 'line');
-        l.setAttribute('x1', String(xOf(a.t).toFixed(1)));
-        l.setAttribute('y1', String(yOf(a.total).toFixed(1)));
-        l.setAttribute('x2', String(xOf(b.t).toFixed(1)));
-        l.setAttribute('y2', String(yOf(b.total).toFixed(1)));
-        l.setAttribute('class', 'connector' + (connectorStyle === 'solid' ? ' solid' : ''));
+        const segA = segments[i];
+        const segB = segments[i + 1];
+        const a = segA[segA.length - 1];
+        const b = segB[0];
+        const e = document.createElementNS(ns, 'path');
+        e.setAttribute(
+          'd',
+          lineStyle === 'smooth'
+            ? // 用缺口两侧的实际相邻点做控制点，曲线与主线条相切连续
+              smoothSegment(
+                segA.length >= 2 ? segA[segA.length - 2] : a,
+                a,
+                b,
+                segB.length >= 2 ? segB[1] : b,
+                xOf,
+                yOf
+              )
+            : straightPath([a, b], xOf, yOf)
+        );
+        e.setAttribute('class', 'connector' + (connectorStyle === 'solid' ? ' solid' : ''));
         // 自定义颜色用内联样式（CSS 的 stroke 规则优先级高于 SVG 属性）
-        if (connectorColor) l.style.stroke = connectorColor;
-        svg.appendChild(l);
+        if (connectorColor) e.style.stroke = connectorColor;
+        svg.appendChild(e);
       }
     }
 
     for (const seg of segments) {
       if (seg.length >= 2) {
-        const dPath = seg
-          .map((p, i) => `${i === 0 ? 'M' : 'L'}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`)
-          .join(' ');
+        const dPath = linePath(seg);
         const area = document.createElementNS(ns, 'path');
         area.setAttribute(
           'd',

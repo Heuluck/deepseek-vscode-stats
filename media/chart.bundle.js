@@ -1790,28 +1790,68 @@
       return pts.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`).join(" ");
     }
     function smoothPath(pts, xOf, yOf) {
-      if (pts.length < 2) return "";
+      const n = pts.length;
+      if (n < 2) return "";
+      const s = new Array(n - 1);
+      for (let i = 0; i < n - 1; i++) {
+        const h = pts[i + 1].t - pts[i].t;
+        s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
+      }
+      const m = new Array(n);
+      m[0] = s[0];
+      m[n - 1] = s[n - 2];
+      for (let i = 1; i < n - 1; i++) {
+        m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
+      }
+      for (let i = 0; i < n - 1; i++) {
+        if (s[i] === 0) {
+          m[i] = 0;
+          m[i + 1] = 0;
+          continue;
+        }
+        const alpha = m[i] / s[i];
+        const beta = m[i + 1] / s[i];
+        const a2b2 = alpha * alpha + beta * beta;
+        if (a2b2 > 9) {
+          const tau = 3 / Math.sqrt(a2b2);
+          m[i] = tau * alpha * s[i];
+          m[i + 1] = tau * beta * s[i];
+        }
+      }
       let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
-      for (let i = 0; i < pts.length - 1; i++) {
-        const p0 = pts[i - 1] ?? pts[i];
-        const p1 = pts[i];
-        const p2 = pts[i + 1];
-        const p3 = pts[i + 2] ?? p2;
-        const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p0.t)) / 6;
-        const c1y = yOf(p1.total) + (yOf(p2.total) - yOf(p0.total)) / 6;
-        const c2x = xOf(p2.t) - (xOf(p3.t) - xOf(p1.t)) / 6;
-        const c2y = yOf(p2.total) - (yOf(p3.total) - yOf(p1.total)) / 6;
+      for (let i = 0; i < n - 1; i++) {
+        const h = pts[i + 1].t - pts[i].t;
+        const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+        const c1y = yOf(pts[i].total + m[i] * h / 3);
+        const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+        const c2y = yOf(pts[i + 1].total - m[i + 1] * h / 3);
         d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
-          p2.t
-        ).toFixed(1)},${yOf(p2.total).toFixed(1)}`;
+          pts[i + 1].t
+        ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
       }
       return d;
     }
     function smoothSegment(p0, p1, p2, p3, xOf, yOf) {
-      const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p0.t)) / 6;
-      const c1y = yOf(p1.total) + (yOf(p2.total) - yOf(p0.total)) / 6;
-      const c2x = xOf(p2.t) - (xOf(p3.t) - xOf(p1.t)) / 6;
-      const c2y = yOf(p2.total) - (yOf(p3.total) - yOf(p1.total)) / 6;
+      const h = p2.t - p1.t;
+      if (h <= 0) return straightPath([p1, p2], xOf, yOf);
+      const s = (p2.total - p1.total) / h;
+      if (s === 0) return straightPath([p1, p2], xOf, yOf);
+      let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
+      let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
+      if (m1 * s <= 0) m1 = 0;
+      if (m2 * s <= 0) m2 = 0;
+      const alpha = m1 / s;
+      const beta = m2 / s;
+      const a2b2 = alpha * alpha + beta * beta;
+      if (a2b2 > 9) {
+        const tau = 3 / Math.sqrt(a2b2);
+        m1 = tau * alpha * s;
+        m2 = tau * beta * s;
+      }
+      const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p1.t)) / 3;
+      const c1y = yOf(p1.total + m1 * h / 3);
+      const c2x = xOf(p2.t) - (xOf(p2.t) - xOf(p1.t)) / 3;
+      const c2y = yOf(p2.total - m2 * h / 3);
       return `M${xOf(p1.t).toFixed(1)},${yOf(p1.total).toFixed(1)} C${c1x.toFixed(1)},${c1y.toFixed(
         1
       )} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(p2.t).toFixed(1)},${yOf(p2.total).toFixed(1)}`;

@@ -46,6 +46,7 @@ export function Settings(props: SettingsProps) {
       showTodaySpend: staged.showTodaySpend,
       connectorStyle: staged.connectorStyle,
       connectorColor: staged.connectorColor,
+      lineStyle: staged.lineStyle,
     };
     // 乐观更新本地 config：config 回传是异步的，先让 Header/Footer 立即用新值，避免闪回旧值
     applySavedConfig(payload);
@@ -162,6 +163,20 @@ export function Settings(props: SettingsProps) {
           <div class="settings-group">
             <div class="settings-label">图表</div>
             <p class="settings-hint first">数据轮询出现断档时，用连接线把缺口两端连起来。</p>
+            <div class="settings-row">
+              <label for="lineStyleEl">线条样式</label>
+              <select
+                id="lineStyleEl"
+                class="settings-select"
+                value={staged?.lineStyle ?? 'straight'}
+                onChange={(e) =>
+                  setStaged('lineStyle', e.currentTarget.value as StagedConfig['lineStyle'])
+                }
+              >
+                <option value="straight">直线</option>
+                <option value="smooth">曲线</option>
+              </select>
+            </div>
             <div class="settings-row">
               <label for="connectorStyleEl">断点连接线</label>
               <select

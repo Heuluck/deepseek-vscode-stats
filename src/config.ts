@@ -49,6 +49,13 @@ export function getConnectorColor(): string {
   return (getConfig().get<string>('chart.connectorColor', '') || '').trim();
 }
 
+export type LineStyle = 'straight' | 'smooth';
+
+export function getLineStyle(): LineStyle {
+  const v = getConfig().get<string>('chart.lineStyle', 'straight');
+  return v === 'smooth' ? v : 'straight';
+}
+
 /** 下发给设置面板的完整配置快照。 */
 export interface PanelConfig {
   pollMinutes: number;
@@ -59,6 +66,7 @@ export interface PanelConfig {
   showTodaySpend: boolean;
   connectorStyle: ConnectorStyle;
   connectorColor: string;
+  lineStyle: LineStyle;
 }
 
 export function getPanelConfig(): PanelConfig {
@@ -71,5 +79,6 @@ export function getPanelConfig(): PanelConfig {
     showTodaySpend: getShowTodaySpend(),
     connectorStyle: getConnectorStyle(),
     connectorColor: getConnectorColor(),
+    lineStyle: getLineStyle(),
   };
 }

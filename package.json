@@ -111,6 +111,19 @@
           "default": "",
           "format": "color",
           "description": "图表断点连接线颜色。留空则跟随图表主线条颜色。"
+        },
+        "deepseek-stats.chart.lineStyle": {
+          "type": "string",
+          "enum": [
+            "straight",
+            "smooth"
+          ],
+          "enumDescriptions": [
+            "直线连接（默认）",
+            "平滑曲线连接"
+          ],
+          "default": "straight",
+          "description": "图表主线条的绘制方式：直线或平滑曲线。"
         }
       }
     }

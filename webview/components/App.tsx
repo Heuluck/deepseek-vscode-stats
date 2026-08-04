@@ -35,6 +35,7 @@ export function App() {
         minWindow: store.minWindow,
         connectorStyle: store.config?.connectorStyle ?? 'dashed',
         connectorColor: store.config?.connectorColor ?? '',
+        lineStyle: store.config?.lineStyle ?? 'straight',
       }),
       onHover: (info) => setTooltipInfo(info),
       onViewChange: (vr, followLive) => setViewRange(vr, followLive),

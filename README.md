@@ -37,6 +37,7 @@
 | `deepseek-stats.history.rawRetentionDays` | `7` | 分钟级快照保留天数（分时视图数据来源） |
 | `deepseek-stats.chart.connectorStyle` | `dashed` | 图表断点连接线样式：`dashed` 虚线 / `solid` 实线 / `none` 不连接 |
 | `deepseek-stats.chart.connectorColor` | `""` | 断点连接线颜色（留空跟随主线条） |
+| `deepseek-stats.chart.lineStyle` | `straight` | 图表主线条绘制方式：`straight` 直线 / `smooth` 平滑曲线 |
 
 默认阈值：余额 < 10 显示红色 `#e51400`，< 50 显示黄色 `#ffb900`。
 

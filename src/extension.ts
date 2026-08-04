@@ -65,6 +65,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     showTodaySpend: boolean;
     connectorStyle: 'dashed' | 'solid' | 'none';
     connectorColor: string;
+    lineStyle: 'straight' | 'smooth';
   }): Promise<void> {
     if (!p) return;
     try {
@@ -93,6 +94,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         p.connectorColor,
         vscode.ConfigurationTarget.Global
       );
+      await cfg.update('chart.lineStyle', p.lineStyle, vscode.ConfigurationTarget.Global);
     } catch (e) {
       console.error('[deepseek-stats] 保存设置失败', e);
     }
@@ -116,6 +118,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       'showTodaySpend',
       'chart.connectorStyle',
       'chart.connectorColor',
+      'chart.lineStyle',
     ];
     for (const k of keys) {
       await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);
