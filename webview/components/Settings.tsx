@@ -44,6 +44,8 @@ export function Settings(props: SettingsProps) {
       pollMinutes: staged.pollMinutes,
       rawRetentionDays: staged.rawRetentionDays,
       showTodaySpend: staged.showTodaySpend,
+      connectorStyle: staged.connectorStyle,
+      connectorColor: staged.connectorColor,
     };
     // 乐观更新本地 config：config 回传是异步的，先让 Header/Footer 立即用新值，避免闪回旧值
     applySavedConfig(payload);
@@ -154,6 +156,48 @@ export function Settings(props: SettingsProps) {
                 </For>
               </div>
               <p class="settings-hint">余额低于阈值（不含）时显示对应颜色。</p>
+            </div>
+          </div>
+
+          <div class="settings-group">
+            <div class="settings-label">图表</div>
+            <p class="settings-hint first">数据轮询出现断档时，用连接线把缺口两端连起来。</p>
+            <div class="settings-row">
+              <label for="connectorStyleEl">断点连接线</label>
+              <select
+                id="connectorStyleEl"
+                class="settings-select"
+                value={staged?.connectorStyle ?? 'dashed'}
+                onChange={(e) =>
+                  setStaged('connectorStyle', e.currentTarget.value as StagedConfig['connectorStyle'])
+                }
+              >
+                <option value="dashed">虚线</option>
+                <option value="solid">实线</option>
+                <option value="none">不连接</option>
+              </select>
+            </div>
+            <div class="settings-row">
+              <span>连接线颜色</span>
+              <div class="settings-controls">
+                <input
+                  type="color"
+                  value={staged?.connectorColor || '#000000'}
+                  disabled={!staged?.connectorColor}
+                  onChange={(e) => setStaged('connectorColor', e.currentTarget.value)}
+                />
+                <label class="settings-inline">
+                  <input
+                    type="checkbox"
+                    checked={!staged?.connectorColor}
+                    onChange={(e) => {
+                      const theme = e.currentTarget.checked;
+                      setStaged('connectorColor', theme ? '' : '#000000');
+                    }}
+                  />
+                  跟随主色
+                </label>
+              </div>
             </div>
           </div>
 

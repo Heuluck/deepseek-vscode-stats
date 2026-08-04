@@ -1,7 +1,7 @@
 /** Solid store：单一状态源 + actions（替代 chart.js 的全局 state + 手动 renderXxx）。 */
 import { createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import type { InitPayload, PanelConfig, Snapshot, Threshold } from './types';
+import type { ConnectorStyle, InitPayload, PanelConfig, Snapshot, Threshold } from './types';
 import type { ViewKey, ViewRange, ViewState } from './logic/viewport';
 import {
   computeDataBounds,
@@ -60,6 +60,8 @@ export interface StagedConfig {
   pollMinutes: number;
   rawRetentionDays: number;
   showTodaySpend: boolean;
+  connectorStyle: ConnectorStyle;
+  connectorColor: string;
 }
 
 export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
@@ -71,6 +73,8 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         pollMinutes: cfg.pollMinutes || 1,
         rawRetentionDays: cfg.rawRetentionDays || 7,
         showTodaySpend: !!cfg.showTodaySpend,
+        connectorStyle: cfg.connectorStyle || 'dashed',
+        connectorColor: cfg.connectorColor || '',
       }
     : {
         statusBarShow: true,
@@ -79,6 +83,8 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         pollMinutes: 1,
         rawRetentionDays: 7,
         showTodaySpend: false,
+        connectorStyle: 'dashed',
+        connectorColor: '',
       };
 }
 

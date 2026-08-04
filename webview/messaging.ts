@@ -1,5 +1,5 @@
 /** 与扩展侧 src/extension.ts 对齐的消息契约。 */
-import type { InitPayload, PanelConfig, Snapshot, Threshold } from './types';
+import type { ConnectorStyle, InitPayload, PanelConfig, Snapshot, Threshold } from './types';
 
 /** 扩展 → webview。 */
 export type ExtensionToWebview =
@@ -17,6 +17,8 @@ export interface SaveSettingsPayload {
   pollMinutes: number;
   rawRetentionDays: number;
   showTodaySpend: boolean;
+  connectorStyle: ConnectorStyle;
+  connectorColor: string;
 }
 
 /** webview → 扩展。 */

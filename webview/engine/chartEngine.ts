@@ -26,6 +26,10 @@ export interface EngineState {
   viewRange: ViewRange | null;
   maxWindow: number;
   minWindow: number;
+  /** 断点（数据缺口）连接线样式：虚线 / 实线 / 不连接。 */
+  connectorStyle: 'dashed' | 'solid' | 'none';
+  /** 断点连接线颜色；空串 = 跟随主线条颜色。 */
+  connectorColor: string;
 }
 
 export interface TooltipRow {
@@ -260,6 +264,26 @@ export function createChartEngine(deps: EngineDeps) {
     const gapMs = effectiveGapMs(decimated, st.view);
     const segments = buildSegments(decimated, gapMs);
     const baseY = yOf(yMin);
+
+    // 断点连接线：数据缺口两端用虚线/实线相连（先画，垫在主线条下方；不参与面积填充）
+    const connectorStyle = st.connectorStyle || 'dashed';
+    const connectorColor = st.connectorColor || '';
+    if (connectorStyle !== 'none' && segments.length > 1) {
+      for (let i = 0; i < segments.length - 1; i++) {
+        const a = segments[i][segments[i].length - 1];
+        const b = segments[i + 1][0];
+        const l = document.createElementNS(ns, 'line');
+        l.setAttribute('x1', String(xOf(a.t).toFixed(1)));
+        l.setAttribute('y1', String(yOf(a.total).toFixed(1)));
+        l.setAttribute('x2', String(xOf(b.t).toFixed(1)));
+        l.setAttribute('y2', String(yOf(b.total).toFixed(1)));
+        l.setAttribute('class', 'connector' + (connectorStyle === 'solid' ? ' solid' : ''));
+        // 自定义颜色用内联样式（CSS 的 stroke 规则优先级高于 SVG 属性）
+        if (connectorColor) l.style.stroke = connectorColor;
+        svg.appendChild(l);
+      }
+    }
+
     for (const seg of segments) {
       if (seg.length >= 2) {
         const dPath = seg

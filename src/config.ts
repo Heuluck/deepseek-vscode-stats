@@ -38,6 +38,17 @@ export function getShowTodaySpend(): boolean {
   return getConfig().get<boolean>('showTodaySpend', false);
 }
 
+export type ConnectorStyle = 'dashed' | 'solid' | 'none';
+
+export function getConnectorStyle(): ConnectorStyle {
+  const v = getConfig().get<string>('chart.connectorStyle', 'dashed');
+  return v === 'solid' || v === 'none' ? v : 'dashed';
+}
+
+export function getConnectorColor(): string {
+  return (getConfig().get<string>('chart.connectorColor', '') || '').trim();
+}
+
 /** 下发给设置面板的完整配置快照。 */
 export interface PanelConfig {
   pollMinutes: number;
@@ -46,6 +57,8 @@ export interface PanelConfig {
   thresholds: Threshold[];
   rawRetentionDays: number;
   showTodaySpend: boolean;
+  connectorStyle: ConnectorStyle;
+  connectorColor: string;
 }
 
 export function getPanelConfig(): PanelConfig {
@@ -56,5 +69,7 @@ export function getPanelConfig(): PanelConfig {
     thresholds: getThresholds(),
     rawRetentionDays: getRawRetentionDays(),
     showTodaySpend: getShowTodaySpend(),
+    connectorStyle: getConnectorStyle(),
+    connectorColor: getConnectorColor(),
   };
 }

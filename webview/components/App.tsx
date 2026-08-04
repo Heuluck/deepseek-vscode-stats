@@ -33,6 +33,8 @@ export function App() {
         viewRange: store.viewRange,
         maxWindow: store.maxWindow,
         minWindow: store.minWindow,
+        connectorStyle: store.config?.connectorStyle ?? 'dashed',
+        connectorColor: store.config?.connectorColor ?? '',
       }),
       onHover: (info) => setTooltipInfo(info),
       onViewChange: (vr, followLive) => setViewRange(vr, followLive),
@@ -45,6 +47,7 @@ export function App() {
         () =>
           [
             store.data,
+            store.config,
             store.view,
             store.rangeKey,
             store.viewRange,

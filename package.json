@@ -90,6 +90,27 @@
           "type": "boolean",
           "default": false,
           "description": "在面板头部显示今日花费（估算值，可能因充值或数据断档而不准确，需在设置中同意后启用）。"
+        },
+        "deepseek-stats.chart.connectorStyle": {
+          "type": "string",
+          "enum": [
+            "dashed",
+            "solid",
+            "none"
+          ],
+          "enumDescriptions": [
+            "虚线连接断点（默认）",
+            "实线连接断点",
+            "不连接断点"
+          ],
+          "default": "dashed",
+          "description": "图表中数据断点（缺口）的连接线样式。"
+        },
+        "deepseek-stats.chart.connectorColor": {
+          "type": "string",
+          "default": "",
+          "format": "color",
+          "description": "图表断点连接线颜色。留空则跟随图表主线条颜色。"
         }
       }
     }

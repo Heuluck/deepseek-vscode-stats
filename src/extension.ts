@@ -63,6 +63,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     pollMinutes: number;
     rawRetentionDays: number;
     showTodaySpend: boolean;
+    connectorStyle: 'dashed' | 'solid' | 'none';
+    connectorColor: string;
   }): Promise<void> {
     if (!p) return;
     try {
@@ -81,6 +83,16 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         vscode.ConfigurationTarget.Global
       );
       await cfg.update('showTodaySpend', p.showTodaySpend, vscode.ConfigurationTarget.Global);
+      await cfg.update(
+        'chart.connectorStyle',
+        p.connectorStyle,
+        vscode.ConfigurationTarget.Global
+      );
+      await cfg.update(
+        'chart.connectorColor',
+        p.connectorColor,
+        vscode.ConfigurationTarget.Global
+      );
     } catch (e) {
       console.error('[deepseek-stats] 保存设置失败', e);
     }
@@ -102,6 +114,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       'statusBar.thresholds',
       'history.rawRetentionDays',
       'showTodaySpend',
+      'chart.connectorStyle',
+      'chart.connectorColor',
     ];
     for (const k of keys) {
       await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);

@@ -35,6 +35,8 @@
 | `deepseek-stats.statusBar.defaultColor` | `""` | 状态栏默认颜色（留空跟随主题） |
 | `deepseek-stats.statusBar.thresholds` | 见下 | 余额阈值 → 颜色映射 |
 | `deepseek-stats.history.rawRetentionDays` | `7` | 分钟级快照保留天数（分时视图数据来源） |
+| `deepseek-stats.chart.connectorStyle` | `dashed` | 图表断点连接线样式：`dashed` 虚线 / `solid` 实线 / `none` 不连接 |
+| `deepseek-stats.chart.connectorColor` | `""` | 断点连接线颜色（留空跟随主线条） |
 
 默认阈值：余额 < 10 显示红色 `#e51400`，< 50 显示黄色 `#ffb900`。
 
@@ -57,4 +59,4 @@
 | 图表面板右下角 **⚙ 设置** | 打开设置页 |
 | 图表面板内滚轮 / 拖拽 | 缩放 / 平移时间轴 |
 
-> 设置页（半透明遮罩，点击背景关闭）提供：状态栏开关 / 默认颜色 / 余额阈值→颜色配置、设置 / 更换 / 清除 API Key、清除全部历史快照、恢复默认设置（危险操作均为红色按钮）。
+> 设置页（半透明遮罩，点击背景关闭）提供：状态栏开关 / 默认颜色 / 余额阈值→颜色配置、图表断点连接线样式与颜色、设置 / 更换 / 清除 API Key、清除全部历史快照、恢复默认设置（危险操作均为红色按钮）。
