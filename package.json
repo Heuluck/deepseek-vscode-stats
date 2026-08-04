@@ -1,0 +1,96 @@
+{
+  "name": "deepseek-stats",
+  "displayName": "DeepSeek Stats",
+  "description": "在 VS Code 中查询 DeepSeek 账户余额，并查看分时 / 分天 / 分月的余额趋势图",
+  "version": "0.1.0",
+  "publisher": "heuluck",
+  "license": "MIT",
+  "engines": {
+    "vscode": "^1.85.0"
+  },
+  "categories": [
+    "Other"
+  ],
+  "keywords": [
+    "deepseek",
+    "balance",
+    "余额",
+    "stats"
+  ],
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "main": "./out/extension.js",
+  "contributes": {
+    "configuration": {
+      "title": "DeepSeek Stats",
+      "properties": {
+        "deepseekStats.pollIntervalMinutes": {
+          "type": "number",
+          "default": 1,
+          "minimum": 1,
+          "description": "余额轮询间隔（分钟）。VS Code 打开期间按此间隔自动查询余额。"
+        },
+        "deepseekStats.statusBar.show": {
+          "type": "boolean",
+          "default": true,
+          "description": "是否在状态栏显示余额。"
+        },
+        "deepseekStats.statusBar.defaultColor": {
+          "type": "string",
+          "default": "",
+          "format": "color",
+          "description": "状态栏余额默认颜色（不匹配任何阈值时）。留空则跟随主题默认颜色。"
+        },
+        "deepseekStats.statusBar.thresholds": {
+          "type": "array",
+          "default": [
+            {
+              "below": 10,
+              "color": "#e51400"
+            },
+            {
+              "below": 50,
+              "color": "#ffb900"
+            }
+          ],
+          "items": {
+            "type": "object",
+            "properties": {
+              "below": {
+                "type": "number",
+                "description": "余额低于此值（不含）时使用该颜色"
+              },
+              "color": {
+                "type": "string",
+                "format": "color",
+                "description": "颜色"
+              }
+            },
+            "required": [
+              "below",
+              "color"
+            ]
+          },
+          "description": "按余额阈值设置状态栏颜色。按顺序匹配第一条满足 below 的规则。"
+        },
+        "deepseekStats.history.rawRetentionDays": {
+          "type": "number",
+          "default": 7,
+          "minimum": 1,
+          "description": "原始分钟级快照保留天数（分时视图数据来源）。更早的数据会自动滚动聚合为按天记录。"
+        }
+      }
+    }
+  },
+  "scripts": {
+    "compile": "tsc -p ./",
+    "watch": "tsc -watch -p ./",
+    "vscode:prepublish": "npm run compile"
+  },
+  "devDependencies": {
+    "@types/node": "^20.11.0",
+    "@types/vscode": "^1.85.0",
+    "typescript": "^5.3.0"
+  }
+}

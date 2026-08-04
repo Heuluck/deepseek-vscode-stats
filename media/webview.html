@@ -1,0 +1,39 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta http-equiv="Content-Security-Policy" content="{{CSP}}" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepSeek 余额</title>
+  <link rel="stylesheet" href="{{CSS_URI}}" />
+</head>
+<body>
+  <div id="app">
+    <header>
+      <div class="current">
+        <span class="label">当前余额</span>
+        <span class="value" id="curTotal">--</span>
+        <span class="meta" id="curMeta"></span>
+      </div>
+      <div class="controls">
+        <div class="tabs" id="tabs"></div>
+        <div class="ranges" id="ranges"></div>
+        <button class="btn" id="resetBtn" title="重置视图范围">重置</button>
+        <button class="btn" id="keyBtn" title="管理 API Key">API Key</button>
+        <button class="btn" id="clearBtn" title="清除全部历史记录">清除历史</button>
+      </div>
+    </header>
+    <main id="chartWrap">
+      <svg id="chart" width="0" height="0"></svg>
+      <div id="tooltip" class="tooltip hidden"></div>
+      <div id="empty" class="empty hidden">
+        <div class="empty-icon">📊</div>
+        <div class="empty-text" id="emptyText">暂无数据</div>
+        <button class="btn primary" id="emptyAction" style="display:none">设置 API Key</button>
+      </div>
+    </main>
+    <footer id="footer"></footer>
+  </div>
+  <script nonce="{{NONCE}}" src="{{JS_URI}}"></script>
+</body>
+</html>
