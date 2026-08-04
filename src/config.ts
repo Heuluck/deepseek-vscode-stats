@@ -34,6 +34,10 @@ export function getRawRetentionDays(): number {
   return Math.max(1, Math.round(v || 7));
 }
 
+export function getShowTodaySpend(): boolean {
+  return getConfig().get<boolean>('showTodaySpend', false);
+}
+
 /** 下发给设置面板的完整配置快照。 */
 export interface PanelConfig {
   pollMinutes: number;
@@ -41,6 +45,7 @@ export interface PanelConfig {
   defaultColor: string;
   thresholds: Threshold[];
   rawRetentionDays: number;
+  showTodaySpend: boolean;
 }
 
 export function getPanelConfig(): PanelConfig {
@@ -50,5 +55,6 @@ export function getPanelConfig(): PanelConfig {
     defaultColor: getDefaultColor(),
     thresholds: getThresholds(),
     rawRetentionDays: getRawRetentionDays(),
+    showTodaySpend: getShowTodaySpend(),
   };
 }

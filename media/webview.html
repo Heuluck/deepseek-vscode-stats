@@ -11,10 +11,21 @@
 <body>
   <div id="app">
     <header>
-      <div class="current">
-        <span class="label">当前余额</span>
-        <span class="value" id="curTotal">--</span>
+      <div class="head-left">
+      <div class="stats">
+        <div class="stat">
+          <span class="stat-label">当前余额</span>
+          <span class="stat-value" id="curTotal">--</span>
+        </div>
+        <div class="stat" id="spendStat" hidden>
+          <span class="stat-label">今日花费</span>
+          <span class="stat-value" id="spendTotal">--</span>
+        </div>
+      </div>
+      <div class="current-meta">
         <span class="meta" id="curMeta"></span>
+        <span class="status" id="curStatus"></span>
+      </div>
       </div>
       <div class="controls">
         <div class="ranges" id="ranges"></div>
@@ -83,6 +94,17 @@
             <div class="settings-row">
               <label for="rawRetentionEl">分钟级快照保留（天）</label>
               <input type="number" id="rawRetentionEl" min="1" step="1" class="settings-number" />
+            </div>
+            <label class="settings-row">
+              <span>显示今日花费（估算）</span>
+              <input type="checkbox" id="showTodaySpend" />
+            </label>
+            <div id="spendConsent" class="settings-consent hidden">
+              <p class="settings-hint">今日花费为根据余额快照推算的估算值，可能因充值或数据断档而不准确。</p>
+              <div class="row">
+                <button class="btn primary" id="spendConsentOk">同意启用</button>
+                <button class="btn" id="spendConsentCancel">取消</button>
+              </div>
             </div>
           </div>
 

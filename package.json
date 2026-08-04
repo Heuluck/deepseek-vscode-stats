@@ -85,6 +85,11 @@
           "default": 7,
           "minimum": 1,
           "description": "原始分钟级快照保留天数（分时视图数据来源）。更早的数据会自动滚动聚合为按天记录。"
+        },
+        "deepseek-stats.showTodaySpend": {
+          "type": "boolean",
+          "default": false,
+          "description": "在面板头部显示今日花费（估算值，可能因充值或数据断档而不准确，需在设置中同意后启用）。"
         }
       }
     }

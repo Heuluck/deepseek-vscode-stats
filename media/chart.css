@@ -49,27 +49,83 @@ header {
   gap: 8px;
 }
 
-.current {
+.head-left {
   display: flex;
-  align-items: baseline;
-  gap: 10px;
+  flex-direction: column;
+  gap: 2px;
+  min-width: 0;
+}
+
+.stats {
+  display: flex;
+  align-items: stretch;
+}
+
+.stat {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding-right: 18px;
+}
+
+.stat + .stat {
+  padding-left: 18px;
+  border-left: 1px solid var(--vscode-panel-border, var(--border));
+}
+
+.stat-label {
+  color: var(--muted);
+  font-size: 11px;
+  text-transform: uppercase;
+  letter-spacing: 0.06em;
+}
+
+.stat-value {
+  font-size: 24px;
+  font-weight: 600;
+  letter-spacing: 0.3px;
+  font-variant-numeric: tabular-nums;
+  white-space: nowrap;
+}
+
+.current-meta {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 12px;
   flex-wrap: wrap;
 }
 
-.current .label {
+.current-meta .meta {
   color: var(--muted);
   font-size: 12px;
 }
 
-.current .value {
-  font-size: 28px;
-  font-weight: 600;
-  letter-spacing: 0.5px;
+/* 账户状态标签：可用=绿点，余额不足=红点 */
+.status {
+  display: inline-flex;
+  align-items: center;
+  gap: 5px;
+  font-size: 12px;
+  color: var(--muted);
+  white-space: nowrap;
 }
 
-.current .meta {
-  color: var(--muted);
-  font-size: 12px;
+.status::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 50%;
+  background: currentColor;
+  flex: none;
+}
+
+.status.ok {
+  color: var(--vscode-testing-iconPassed, #89d185);
+}
+
+.status.bad {
+  color: var(--vscode-testing-iconFailed, #f14c4c);
 }
 
 .controls {
@@ -455,6 +511,28 @@ footer .footer-right {
   padding: 2px 6px;
   font-size: 12px;
   text-align: right;
+}
+
+/* 今日花费同意确认 */
+.settings-consent {
+  margin-top: 8px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-inputValidation-warningBorder, #cca700);
+  background: var(--vscode-inputValidation-warningBackground, rgba(204, 167, 0, 0.15));
+  border-radius: 4px;
+}
+
+.settings-consent .settings-hint {
+  margin: 0 0 8px;
+}
+
+.settings-consent .row {
+  display: flex;
+  gap: 8px;
+}
+
+.settings-consent.hidden {
+  display: none;
 }
 
 .settings-row input[type='checkbox'] {

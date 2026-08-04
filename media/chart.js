@@ -97,6 +97,10 @@
   const defaultColorTheme = $('defaultColorTheme');
   const thresholdList = $('thresholdList');
   const addThresholdBtn = $('addThresholdBtn');
+  const showTodaySpendEl = $('showTodaySpend');
+  const spendConsent = $('spendConsent');
+  const spendConsentOk = $('spendConsentOk');
+  const spendConsentCancel = $('spendConsentCancel');
   const ns = 'http://www.w3.org/2000/svg';
 
   // ---------- 工具 ----------
@@ -598,16 +602,65 @@
     const cur = d && d.current;
     const total = $('curTotal');
     const meta = $('curMeta');
+    const status = $('curStatus');
+    const spendStat = $('spendStat');
+    const spendTotal = $('spendTotal');
     if (cur) {
       total.textContent = fmtMoney(cur.total, cur.currency);
       meta.textContent = `充值 ${fmtMoney(cur.toppedUp, cur.currency)} · 赠送 ${fmtMoney(
         cur.granted,
         cur.currency
-      )} · ${cur.available ? '可用' : '余额不足'}`;
+      )}`;
+      status.textContent = cur.available ? '账户可用' : '余额不足';
+      status.className = 'status' + (cur.available ? ' ok' : ' bad');
+      status.title = cur.available ? '账户有余额可供 API 调用' : '账户余额不足，无法调用 API';
     } else {
       total.textContent = '--';
       meta.textContent = d && d.hasKey ? '等待数据…' : '未配置 API Key';
+      status.textContent = '';
+      status.className = 'status';
+      status.title = '';
     }
+    // 今日花费（可选）：设置面板打开时预览暂存值，否则用已保存配置
+    const showSpend = staged
+      ? staged.showTodaySpend
+      : !!(state.config && state.config.showTodaySpend);
+    spendStat.hidden = !showSpend;
+    if (showSpend) {
+      const info = computeTodaySpend();
+      if (info && info.spend != null) {
+        spendTotal.textContent = `~${fmtMoney(info.spend, cur ? cur.currency : 'CNY')}`;
+        spendStat.title = `估算：基于${info.source} ¥${info.baseline} 推算，可能因充值或数据断档而不准确`;
+      } else {
+        spendTotal.textContent = '—';
+        spendStat.title = '数据不足，无法估算今日花费';
+      }
+    }
+  }
+
+  /** 今日花费估算：昨日收盘余额（或今日首条快照）− 当前余额，数据断点自动降级。 */
+  function computeTodaySpend() {
+    const d = state.data;
+    if (!d || !d.snapshots || !d.snapshots.length) return null;
+    const snapshots = d.snapshots.slice().sort((a, b) => a.t - b.t);
+    const current = snapshots[snapshots.length - 1];
+    const todayStart = startOfDay(Date.now());
+    const yesterdayStart = todayStart - 86400e3;
+    let baseline = null;
+    let source = '';
+    const yesterdayDaily = (d.daily || []).find((x) => x.day === yesterdayStart);
+    if (yesterdayDaily) {
+      baseline = yesterdayDaily.total;
+      source = '昨日余额';
+    } else {
+      const firstToday = snapshots.find((s) => s.t >= todayStart);
+      if (firstToday) {
+        baseline = firstToday.total;
+        source = '今日首条快照';
+      }
+    }
+    if (baseline == null) return { spend: null, source: null, baseline: null };
+    return { spend: Math.max(0, baseline - current.total), source, baseline };
   }
 
   function updateKeyStatus() {
@@ -635,8 +688,16 @@
           thresholds: (cfg.thresholds || []).map((t) => ({ below: t.below, color: t.color })),
           pollMinutes: cfg.pollMinutes || 1,
           rawRetentionDays: cfg.rawRetentionDays || 7,
+          showTodaySpend: !!cfg.showTodaySpend,
         }
-      : { statusBarShow: true, defaultColor: '', thresholds: [], pollMinutes: 1, rawRetentionDays: 7 };
+      : {
+          statusBarShow: true,
+          defaultColor: '',
+          thresholds: [],
+          pollMinutes: 1,
+          rawRetentionDays: 7,
+          showTodaySpend: false,
+        };
   }
 
   function closeSettings() {
@@ -653,6 +714,8 @@
     if (hasDefault) defaultColorEl.value = staged.defaultColor;
     pollMinutesEl.value = staged.pollMinutes;
     rawRetentionEl.value = staged.rawRetentionDays;
+    showTodaySpendEl.checked = staged.showTodaySpend;
+    spendConsent.classList.add('hidden');
     thresholdList.innerHTML = '';
     staged.thresholds.forEach((t) => thresholdList.appendChild(thresholdRow(t)));
   }
@@ -887,6 +950,7 @@
         thresholds: collectThresholds(),
         pollMinutes: staged.pollMinutes,
         rawRetentionDays: staged.rawRetentionDays,
+        showTodaySpend: staged.showTodaySpend,
       },
     });
     closeSettings();
@@ -933,6 +997,30 @@
     const v = parseInt(rawRetentionEl.value, 10);
     if (Number.isFinite(v) && v >= 1) staged.rawRetentionDays = v;
   });
+  // 今日花费：开启需先同意（估算值可能不准）
+  showTodaySpendEl.addEventListener('change', () => {
+    if (!staged) return;
+    if (showTodaySpendEl.checked) {
+      spendConsent.classList.remove('hidden');
+    } else {
+      staged.showTodaySpend = false;
+      spendConsent.classList.add('hidden');
+      renderHeader();
+    }
+  });
+  spendConsentOk.addEventListener('click', () => {
+    if (!staged) return;
+    staged.showTodaySpend = true;
+    spendConsent.classList.add('hidden');
+    renderHeader();
+  });
+  spendConsentCancel.addEventListener('click', () => {
+    if (!staged) return;
+    staged.showTodaySpend = false;
+    showTodaySpendEl.checked = false;
+    spendConsent.classList.add('hidden');
+    renderHeader();
+  });
 
   // ---------- 消息 ----------
   window.addEventListener('message', (e) => {
@@ -960,6 +1048,7 @@
         staged = stagedFromConfig(state.config);
         renderSettings();
       }
+      renderHeader();
       renderFooter();
     } else if (msg.type === 'settingsReset') {
       // 设置已恢复默认，关闭面板丢弃暂存，下次打开时从新配置渲染

@@ -62,6 +62,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     thresholds: { below: number; color: string }[];
     pollMinutes: number;
     rawRetentionDays: number;
+    showTodaySpend: boolean;
   }): Promise<void> {
     if (!p) return;
     try {
@@ -79,6 +80,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         p.rawRetentionDays,
         vscode.ConfigurationTarget.Global
       );
+      await cfg.update('showTodaySpend', p.showTodaySpend, vscode.ConfigurationTarget.Global);
     } catch (e) {
       console.error('[deepseek-stats] 保存设置失败', e);
     }
@@ -99,6 +101,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       'statusBar.defaultColor',
       'statusBar.thresholds',
       'history.rawRetentionDays',
+      'showTodaySpend',
     ];
     for (const k of keys) {
       await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);
