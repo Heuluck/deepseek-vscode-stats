@@ -134,6 +134,13 @@ header {
   font-size: 11px;
 }
 
+.settingsBtn {
+  display: flex;
+  flex-direction: row;
+  justify-content: center;
+  align-items: center;
+}
+
 #chartWrap {
   position: relative;
   flex: 1;
@@ -361,7 +368,7 @@ footer .footer-right {
 }
 
 .btn .codicon {
-  font-size: 16px;
+  font-size: 12px;
   vertical-align: -2px;
   margin-right: 4px;
 }
