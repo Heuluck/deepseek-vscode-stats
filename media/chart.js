@@ -1,4 +1,3 @@
-// @ts-check
 /* DeepSeek Stats — 余额趋势图（Webview 端） */
 (() => {
   'use strict';
@@ -15,7 +14,7 @@
         { key: '24h', label: '24 小时', ms: 24 * 3600e3 },
         { key: '7d', label: '7 天', ms: 7 * 86400e3 },
       ],
-      defaultRange: '24h',
+      defaultRange: '6h',
       tickLabel: 'time',
     },
     daily: {
@@ -67,15 +66,23 @@
   const tabsEl = $('tabs');
   const rangesEl = $('ranges');
   const resetBtn = $('resetBtn');
-  const keyBtn = $('keyBtn');
-  const clearBtn = $('clearBtn');
+  const usageBtn = $('usageBtn');
   const chartWrap = $('chartWrap');
   const svg = $('chart');
   const tooltip = $('tooltip');
   const emptyEl = $('empty');
   const emptyText = $('emptyText');
   const emptyAction = $('emptyAction');
-  const footer = $('footer');
+  const footerInfo = $('footerInfo');
+  const footerErr = $('footerErr');
+  const settingsBtn = $('settingsBtn');
+  const settingsOverlay = $('settingsOverlay');
+  const settingsClose = $('settingsClose');
+  const keyStatus = $('keyStatus');
+  const setKeyBtn = $('setKeyBtn');
+  const clearKeyBtn = $('clearKeyBtn');
+  const clearHistoryBtn = $('clearHistoryBtn');
+  const resetSettingsBtn = $('resetSettingsBtn');
   const ns = 'http://www.w3.org/2000/svg';
 
   // ---------- 工具 ----------
@@ -591,10 +598,16 @@
     }
   }
 
+  function updateKeyStatus() {
+    const d = state.data;
+    keyStatus.textContent = d && d.hasKey ? '已配置（存储于系统钥匙串）' : '未配置';
+  }
+
   function renderFooter() {
     const d = state.data;
     if (!d) {
-      footer.innerHTML = '';
+      footerInfo.textContent = '';
+      footerErr.textContent = '';
       return;
     }
     const count = (d.snapshots || []).length;
@@ -602,16 +615,10 @@
     const lastStr = last
       ? `上次同步 ${new Date(last.t).toLocaleTimeString('zh-CN', { hour12: false })}`
       : '';
-    const err = state.lastError ? `<span class="err">⚠ ${escapeHtml(state.lastError)}</span>` : '';
-    footer.innerHTML =
-      `<span>仅记录 VS Code 打开期间的数据 · 轮询间隔 ${d.pollMinutes || 1} 分钟 · 快照 ${count} 条 · ${lastStr}</span>` +
-      `<span>${err}</span>`;
-  }
-
-  function escapeHtml(s) {
-    return String(s).replace(/[&<>"']/g, (c) =>
-      ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c])
-    );
+    footerInfo.textContent = `仅记录 VS Code 打开期间的数据 · 轮询间隔 ${
+      d.pollMinutes || 1
+    } 分钟 · 快照 ${count} 条 · ${lastStr}`;
+    footerErr.textContent = state.lastError ? `⚠ ${state.lastError}` : '';
   }
 
   function renderAll() {
@@ -757,9 +764,16 @@
     resetViewRange();
     renderAll();
   });
-  keyBtn.addEventListener('click', () => vscode.postMessage({ type: 'apiKeyMenu' }));
-  clearBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearHistory' }));
-  emptyAction.addEventListener('click', () => vscode.postMessage({ type: 'apiKeyMenu' }));
+  usageBtn.addEventListener('click', () => vscode.postMessage({ type: 'openUsage' }));
+  emptyAction.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
+
+  // 设置页
+  settingsBtn.addEventListener('click', () => settingsOverlay.classList.remove('hidden'));
+  settingsClose.addEventListener('click', () => settingsOverlay.classList.add('hidden'));
+  setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
+  clearKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearApiKey' }));
+  clearHistoryBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearHistory' }));
+  resetSettingsBtn.addEventListener('click', () => vscode.postMessage({ type: 'resetSettings' }));
 
   // ---------- 消息 ----------
   window.addEventListener('message', (e) => {
@@ -771,6 +785,7 @@
       if (!state.rangeKey) state.rangeKey = currentViewCfg().defaultRange;
       resetViewRange();
       renderAll();
+      updateKeyStatus();
     } else if (msg.type === 'snapshot') {
       if (!state.data) return;
       const s = msg.payload;

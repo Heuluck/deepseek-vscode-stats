@@ -16,11 +16,10 @@
         <span class="meta" id="curMeta"></span>
       </div>
       <div class="controls">
-        <div class="tabs" id="tabs"></div>
         <div class="ranges" id="ranges"></div>
+        <div class="tabs" id="tabs"></div>
         <button class="btn" id="resetBtn" title="重置视图范围">重置</button>
-        <button class="btn" id="keyBtn" title="管理 API Key">API Key</button>
-        <button class="btn" id="clearBtn" title="清除全部历史记录">清除历史</button>
+        <button class="icon" id="usageBtn" title="在浏览器打开 DeepSeek 用量页">↗</button>
       </div>
     </header>
     <main id="chartWrap">
@@ -32,7 +31,44 @@
         <button class="btn primary" id="emptyAction" style="display:none">设置 API Key</button>
       </div>
     </main>
-    <footer id="footer"></footer>
+    <footer>
+      <span id="footerInfo"></span>
+      <span class="footer-right">
+        <span class="err" id="footerErr"></span>
+        <button class="btn" id="settingsBtn" title="设置">⚙ 设置</button>
+      </span>
+    </footer>
+    <div id="settingsOverlay" class="overlay hidden">
+      <div class="overlay-card">
+        <div class="overlay-head">
+          <span>设置</span>
+          <button class="icon" id="settingsClose" title="关闭">✕</button>
+        </div>
+        <div class="overlay-body">
+          <div class="section">
+            <h3>API Key</h3>
+            <p class="hint" id="keyStatus">未配置</p>
+            <div class="row">
+              <button class="btn" id="setKeyBtn">设置 / 更换 API Key</button>
+              <button class="btn danger" id="clearKeyBtn">清除 API Key</button>
+            </div>
+          </div>
+          <div class="section">
+            <h3>数据</h3>
+            <div class="row">
+              <button class="btn danger" id="clearHistoryBtn">清除历史记录</button>
+            </div>
+            <p class="hint">历史快照仅记录 VS Code 打开期间的数据。</p>
+          </div>
+          <div class="section">
+            <h3>其他</h3>
+            <div class="row">
+              <button class="btn danger" id="resetSettingsBtn">恢复默认设置</button>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
   </div>
   <script nonce="{{NONCE}}" src="{{JS_URI}}"></script>
 </body>

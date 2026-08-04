@@ -256,3 +256,100 @@ footer {
 footer .err {
   color: var(--vscode-errorForeground, var(--vscode-charts-red));
 }
+
+footer .footer-right {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+/* 图标按钮 / 危险按钮 / 设置页 */
+.icon {
+  background: var(--secondary-bg);
+  color: var(--secondary-fg);
+  border: none;
+  border-radius: 4px;
+  width: 26px;
+  height: 26px;
+  font-size: 14px;
+  line-height: 1;
+  cursor: pointer;
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.icon:hover {
+  background: var(--button-hover);
+}
+
+.btn.danger {
+  background: var(--vscode-errorBackground, rgba(231, 0, 32, 0.18));
+  color: var(--vscode-errorForeground, #e51400);
+  border: 1px solid var(--vscode-errorForeground, #e51400);
+}
+
+.btn.danger:hover {
+  background: var(--vscode-errorForeground, #e51400);
+  color: #ffffff;
+}
+
+.overlay {
+  position: fixed;
+  inset: 0;
+  z-index: 30;
+  background: var(--bg);
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.overlay.hidden {
+  display: none;
+}
+
+.overlay-card {
+  background: var(--widget-bg);
+  border: 1px solid var(--widget-border);
+  border-radius: 8px;
+  width: min(420px, 90vw);
+  max-height: 80vh;
+  overflow: auto;
+  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+}
+
+.overlay-head {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 10px 14px;
+  border-bottom: 1px solid var(--border);
+  font-weight: 600;
+}
+
+.overlay-body {
+  padding: 14px;
+}
+
+.overlay .section {
+  margin-bottom: 18px;
+}
+
+.overlay h3 {
+  margin: 0 0 8px;
+  font-size: 13px;
+  color: var(--muted);
+  font-weight: 600;
+}
+
+.overlay .hint {
+  margin: 0 0 10px;
+  font-size: 12px;
+  color: var(--muted);
+}
+
+.overlay .row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 8px;
+}

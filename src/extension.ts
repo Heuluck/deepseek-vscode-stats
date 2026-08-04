@@ -19,25 +19,21 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   // 图表面板懒创建：只有用户执行“打开余额图表”时才创建，避免启动时弹出标签页
   function handleWebviewMessage(msg: any): void {
     if (!msg || !msg.type) return;
-    if (msg.type === 'apiKeyMenu') {
-      void vscode.window
-        .showQuickPick(['设置 / 更换 API Key', '清除 API Key'], {
-          placeHolder: 'DeepSeek API Key 管理',
-        })
-        .then((pick) => {
-          if (pick === '设置 / 更换 API Key') {
-            void vscode.commands.executeCommand('deepseek-stats.setApiKey');
-          } else if (pick === '清除 API Key') {
-            void vscode.commands.executeCommand('deepseek-stats.clearApiKey');
-          }
-        });
+    if (msg.type === 'setApiKey') {
+      void vscode.commands.executeCommand('deepseek-stats.setApiKey');
+    } else if (msg.type === 'clearApiKey') {
+      void vscode.commands.executeCommand('deepseek-stats.clearApiKey');
+    } else if (msg.type === 'clearHistory') {
+      void vscode.commands.executeCommand('deepseek-stats.clearHistory');
+    } else if (msg.type === 'resetSettings') {
+      void resetSettings();
+    } else if (msg.type === 'openUsage') {
+      void vscode.env.openExternal(vscode.Uri.parse('https://platform.deepseek.com/usage'));
     } else if (msg.type === 'ready') {
       // Webview 就绪后补发一次数据，避免启动时消息丢失
       pushDataToPanel();
     } else if (msg.type === 'checkNow') {
       void checkNow();
-    } else if (msg.type === 'clearHistory') {
-      void vscode.commands.executeCommand('deepseek-stats.clearHistory');
     }
   }
 
@@ -53,6 +49,29 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     if (chart && chart.alive) {
       chart.postData(store, getPollIntervalMinutes(), !!apiKey);
     }
+  }
+
+  /** 恢复 DeepSeek Stats 全部配置为默认值。 */
+  async function resetSettings(): Promise<void> {
+    const pick = await vscode.window.showWarningMessage(
+      '确定恢复 DeepSeek Stats 全部设置为默认值？',
+      { modal: true },
+      '恢复'
+    );
+    if (pick !== '恢复') return;
+    const cfg = vscode.workspace.getConfiguration('deepseekStats');
+    const keys = [
+      'pollIntervalMinutes',
+      'statusBar.show',
+      'statusBar.defaultColor',
+      'statusBar.thresholds',
+      'history.rawRetentionDays',
+    ];
+    for (const k of keys) {
+      await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);
+    }
+    pushDataToPanel();
+    vscode.window.showInformationMessage('DeepSeek Stats 设置已恢复默认');
   }
 
   async function checkNow(): Promise<void> {
@@ -125,6 +144,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       await context.secrets.delete(API_KEY_SECRET);
       apiKey = undefined;
       statusBar.showNoKey();
+      pushDataToPanel();
       vscode.window.showInformationMessage('DeepSeek API Key 已清除');
     }),
     vscode.commands.registerCommand('deepseek-stats.clearHistory', async () => {
