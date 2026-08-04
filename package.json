@@ -25,24 +25,24 @@
     "configuration": {
       "title": "DeepSeek Stats",
       "properties": {
-        "deepseekStats.pollIntervalMinutes": {
+        "deepseek-stats.pollIntervalMinutes": {
           "type": "number",
           "default": 1,
           "minimum": 1,
           "description": "余额轮询间隔（分钟）。VS Code 打开期间按此间隔自动查询余额。"
         },
-        "deepseekStats.statusBar.show": {
+        "deepseek-stats.statusBar.show": {
           "type": "boolean",
           "default": true,
           "description": "是否在状态栏显示余额。"
         },
-        "deepseekStats.statusBar.defaultColor": {
+        "deepseek-stats.statusBar.defaultColor": {
           "type": "string",
           "default": "",
           "format": "color",
           "description": "状态栏余额默认颜色（不匹配任何阈值时）。留空则跟随主题默认颜色。"
         },
-        "deepseekStats.statusBar.thresholds": {
+        "deepseek-stats.statusBar.thresholds": {
           "type": "array",
           "default": [
             {
@@ -74,7 +74,7 @@
           },
           "description": "按余额阈值设置状态栏颜色。按顺序匹配第一条满足 below 的规则。"
         },
-        "deepseekStats.history.rawRetentionDays": {
+        "deepseek-stats.history.rawRetentionDays": {
           "type": "number",
           "default": 7,
           "minimum": 1,

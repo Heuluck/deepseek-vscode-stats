@@ -53,6 +53,10 @@ export class ChartPanel {
     this.panel?.webview.postMessage({ type: 'config', payload: config });
   }
 
+  postSettingsReset(): void {
+    this.panel?.webview.postMessage({ type: 'settingsReset' });
+  }
+
   postTheme(): void {
     this.panel?.webview.postMessage({ type: 'theme' });
   }

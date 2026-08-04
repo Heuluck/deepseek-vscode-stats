@@ -6,7 +6,7 @@ export interface Threshold {
 }
 
 export function getConfig(): vscode.WorkspaceConfiguration {
-  return vscode.workspace.getConfiguration('deepseekStats');
+  return vscode.workspace.getConfiguration('deepseek-stats');
 }
 
 export function getPollIntervalMinutes(): number {

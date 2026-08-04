@@ -23,11 +23,11 @@
 
 | 设置 | 默认 | 说明 |
 |---|---|---|
-| `deepseekStats.pollIntervalMinutes` | `1` | 轮询间隔（分钟） |
-| `deepseekStats.statusBar.show` | `true` | 是否在状态栏显示余额 |
-| `deepseekStats.statusBar.defaultColor` | `""` | 状态栏默认颜色（留空跟随主题） |
-| `deepseekStats.statusBar.thresholds` | 见下 | 余额阈值 → 颜色映射 |
-| `deepseekStats.history.rawRetentionDays` | `7` | 分钟级快照保留天数（分时视图数据来源） |
+| `deepseek-stats.pollIntervalMinutes` | `1` | 轮询间隔（分钟） |
+| `deepseek-stats.statusBar.show` | `true` | 是否在状态栏显示余额 |
+| `deepseek-stats.statusBar.defaultColor` | `""` | 状态栏默认颜色（留空跟随主题） |
+| `deepseek-stats.statusBar.thresholds` | 见下 | 余额阈值 → 颜色映射 |
+| `deepseek-stats.history.rawRetentionDays` | `7` | 分钟级快照保留天数（分时视图数据来源） |
 
 默认阈值：余额 < 10 显示红色 `#e51400`，< 50 显示黄色 `#ffb900`。
 

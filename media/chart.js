@@ -80,6 +80,13 @@
   const settingsBtn = $('settingsBtn');
   const settingsOverlay = $('settingsOverlay');
   const settingsClose = $('settingsClose');
+  const settingsCancel = $('settingsCancel');
+  const settingsSave = $('settingsSave');
+  const colorToggle = $('colorToggle');
+  const colorCollapse = $('colorCollapse');
+  const pollMinutesEl = $('pollMinutesEl');
+  const rawRetentionEl = $('rawRetentionEl');
+  const openNativeSettingsBtn = $('openNativeSettingsBtn');
   const keyStatus = $('keyStatus');
   const setKeyBtn = $('setKeyBtn');
   const clearKeyBtn = $('clearKeyBtn');
@@ -611,16 +618,45 @@
   }
 
   // ---------- 设置面板 ----------
+  // 面板内编辑先进入暂存（staged），点「保存」才统一写入配置；取消/关闭则丢弃。
+  let staged = null;
+
+  function openSettings() {
+    staged = stagedFromConfig(state.config);
+    colorCollapse.classList.remove('open');
+    colorToggle.classList.remove('open');
+    renderSettings();
+    settingsOverlay.classList.remove('hidden');
+  }
+
+  function stagedFromConfig(cfg) {
+    return cfg
+      ? {
+          statusBarShow: !!cfg.statusBarShow,
+          defaultColor: cfg.defaultColor || '',
+          thresholds: (cfg.thresholds || []).map((t) => ({ below: t.below, color: t.color })),
+          pollMinutes: cfg.pollMinutes || 1,
+          rawRetentionDays: cfg.rawRetentionDays || 7,
+        }
+      : { statusBarShow: true, defaultColor: '', thresholds: [], pollMinutes: 1, rawRetentionDays: 7 };
+  }
+
+  function closeSettings() {
+    staged = null;
+    settingsOverlay.classList.add('hidden');
+  }
+
   function renderSettings() {
-    const cfg = state.config;
-    if (!cfg) return;
-    showStatusBarEl.checked = !!cfg.statusBarShow;
-    const hasDefault = !!cfg.defaultColor;
+    if (!staged) return;
+    showStatusBarEl.checked = staged.statusBarShow;
+    const hasDefault = !!staged.defaultColor;
     defaultColorTheme.checked = !hasDefault;
     defaultColorEl.disabled = !hasDefault;
-    if (hasDefault) defaultColorEl.value = cfg.defaultColor;
+    if (hasDefault) defaultColorEl.value = staged.defaultColor;
+    pollMinutesEl.value = staged.pollMinutes;
+    rawRetentionEl.value = staged.rawRetentionDays;
     thresholdList.innerHTML = '';
-    (cfg.thresholds || []).forEach((t) => thresholdList.appendChild(thresholdRow(t)));
+    staged.thresholds.forEach((t) => thresholdList.appendChild(thresholdRow(t)));
   }
 
   function thresholdRow(t) {
@@ -653,17 +689,13 @@
     row.appendChild(color);
     row.appendChild(del);
 
-    const sync = () => sendThresholds();
-    below.addEventListener('change', sync);
-    color.addEventListener('change', sync);
     del.addEventListener('click', () => {
       row.remove();
-      sendThresholds();
     });
     return row;
   }
 
-  function sendThresholds() {
+  function collectThresholds() {
     const rows = thresholdList.querySelectorAll('.threshold-row');
     const list = [];
     for (const r of rows) {
@@ -672,7 +704,7 @@
       if (Number.isFinite(below) && color) list.push({ below, color });
     }
     list.sort((a, b) => a.below - b.below);
-    vscode.postMessage({ type: 'updateSetting', key: 'statusBar.thresholds', value: list });
+    return list;
   }
 
   function renderFooter() {
@@ -841,45 +873,67 @@
   emptyAction.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
 
   // 设置页
-  settingsBtn.addEventListener('click', () => settingsOverlay.classList.remove('hidden'));
-  settingsClose.addEventListener('click', () => settingsOverlay.classList.add('hidden'));
+  settingsBtn.addEventListener('click', openSettings);
+  settingsClose.addEventListener('click', closeSettings);
+  settingsCancel.addEventListener('click', closeSettings);
   settingsOverlay.addEventListener('click', (e) => {
-    if (e.target === settingsOverlay) settingsOverlay.classList.add('hidden');
+    if (e.target === settingsOverlay) closeSettings();
   });
+  settingsSave.addEventListener('click', () => {
+    if (!staged) return;
+    vscode.postMessage({
+      type: 'saveSettings',
+      payload: {
+        statusBarShow: staged.statusBarShow,
+        defaultColor: staged.defaultColor,
+        thresholds: collectThresholds(),
+        pollMinutes: staged.pollMinutes,
+        rawRetentionDays: staged.rawRetentionDays,
+      },
+    });
+    closeSettings();
+  });
+  colorToggle.addEventListener('click', () => {
+    const open = colorCollapse.classList.toggle('open');
+    colorToggle.classList.toggle('open', open);
+  });
+  openNativeSettingsBtn.addEventListener('click', () =>
+    vscode.postMessage({ type: 'openNativeSettings' })
+  );
+
   setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
   clearKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearApiKey' }));
   clearHistoryBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearHistory' }));
   resetSettingsBtn.addEventListener('click', () => vscode.postMessage({ type: 'resetSettings' }));
 
-  // 状态栏配置
+  // 状态栏配置（暂存，保存时统一提交）
   showStatusBarEl.addEventListener('change', () => {
-    vscode.postMessage({
-      type: 'updateSetting',
-      key: 'statusBar.show',
-      value: showStatusBarEl.checked,
-    });
+    if (staged) staged.statusBarShow = showStatusBarEl.checked;
   });
   defaultColorEl.addEventListener('change', () => {
+    if (!staged) return;
     defaultColorTheme.checked = false;
     defaultColorEl.disabled = false;
-    vscode.postMessage({
-      type: 'updateSetting',
-      key: 'statusBar.defaultColor',
-      value: defaultColorEl.value,
-    });
+    staged.defaultColor = defaultColorEl.value;
   });
   defaultColorTheme.addEventListener('change', () => {
+    if (!staged) return;
     const theme = defaultColorTheme.checked;
     defaultColorEl.disabled = theme;
-    vscode.postMessage({
-      type: 'updateSetting',
-      key: 'statusBar.defaultColor',
-      value: theme ? '' : defaultColorEl.value,
-    });
+    staged.defaultColor = theme ? '' : defaultColorEl.value;
   });
   addThresholdBtn.addEventListener('click', () => {
     thresholdList.appendChild(thresholdRow({ below: 100, color: '#ffb900' }));
-    sendThresholds();
+  });
+  pollMinutesEl.addEventListener('change', () => {
+    if (!staged) return;
+    const v = parseInt(pollMinutesEl.value, 10);
+    if (Number.isFinite(v) && v >= 1) staged.pollMinutes = v;
+  });
+  rawRetentionEl.addEventListener('change', () => {
+    if (!staged) return;
+    const v = parseInt(rawRetentionEl.value, 10);
+    if (Number.isFinite(v) && v >= 1) staged.rawRetentionDays = v;
   });
 
   // ---------- 消息 ----------
@@ -894,7 +948,6 @@
       resetViewRange();
       renderAll();
       updateKeyStatus();
-      renderSettings();
     } else if (msg.type === 'snapshot') {
       if (!state.data) return;
       const s = msg.payload;
@@ -904,8 +957,15 @@
       onNewData();
     } else if (msg.type === 'config') {
       state.config = msg.payload;
+      // 双向同步：外部（VS Code 设置）改动时刷新打开中的面板
+      if (!settingsOverlay.classList.contains('hidden')) {
+        staged = stagedFromConfig(state.config);
+        renderSettings();
+      }
       renderFooter();
-      renderSettings();
+    } else if (msg.type === 'settingsReset') {
+      // 设置已恢复默认，关闭面板丢弃暂存，下次打开时从新配置渲染
+      closeSettings();
     } else if (msg.type === 'theme') {
       render();
     } else if (msg.type === 'error') {
