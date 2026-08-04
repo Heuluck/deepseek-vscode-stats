@@ -245,11 +245,9 @@
     if (!bounds) return;
     if (!state.viewRange) {
       resetViewRange();
-    } else if (state.followLive && currentRangeMs() !== Infinity) {
-      // 始终以预设窗口宽度为基准滑动，避免区间被缩放等状态污染
-      const end = bounds.maxT;
-      const start = Math.max(bounds.minT, end - currentRangeMs());
-      state.viewRange = { start, end };
+    } else if (state.followLive && bounds.maxT > state.viewRange.end) {
+      // 新数据超出右缘时仅向右扩展，保持左缘与当前位置不动——刷新不重置视图
+      state.viewRange.end = bounds.maxT;
     }
     renderAll();
   }
@@ -759,7 +757,7 @@
       b.className = 'btn small' + (r.key === state.rangeKey ? ' primary' : '');
       b.textContent = r.label;
       b.addEventListener('click', () => {
-        if (state.rangeKey === r.key) return;
+        // 重复点击当前范围也重新应用预设（重置右缘扩展带来的窗口变宽）
         state.rangeKey = r.key;
         resetViewRange();
         renderAll();
