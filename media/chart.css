@@ -306,10 +306,12 @@ footer .footer-right {
   position: fixed;
   inset: 0;
   z-index: 30;
-  background: var(--bg);
+  background: rgba(128, 128, 128, 0.35);
+  background: color-mix(in srgb, var(--bg) 55%, transparent);
   display: flex;
   align-items: center;
   justify-content: center;
+  padding: 24px;
 }
 
 .overlay.hidden {
@@ -320,46 +322,136 @@ footer .footer-right {
   background: var(--widget-bg);
   border: 1px solid var(--widget-border);
   border-radius: 8px;
-  width: min(420px, 90vw);
-  max-height: 80vh;
+  width: min(460px, 100%);
+  max-height: 100%;
   overflow: auto;
-  box-shadow: 0 6px 24px rgba(0, 0, 0, 0.25);
+  box-shadow: 0 8px 32px rgba(0, 0, 0, 0.35);
 }
 
 .overlay-head {
   display: flex;
   justify-content: space-between;
   align-items: center;
-  padding: 10px 14px;
+  padding: 12px 16px;
   border-bottom: 1px solid var(--border);
   font-weight: 600;
 }
 
 .overlay-body {
-  padding: 14px;
+  padding: 16px 18px;
 }
 
 .overlay .section {
-  margin-bottom: 18px;
+  margin-bottom: 22px;
 }
 
 .overlay h3 {
-  margin: 0 0 8px;
+  margin: 0 0 10px;
   font-size: 13px;
   color: var(--muted);
   font-weight: 600;
+  padding-bottom: 6px;
+  border-bottom: 1px solid var(--border);
 }
 
 .overlay .hint {
-  margin: 0 0 10px;
+  margin: 8px 0 0;
   font-size: 12px;
   color: var(--muted);
+  line-height: 1.5;
 }
 
 .overlay .row {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* 设置面板：状态栏配置 */
+.setting-row {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  gap: 10px;
+  margin-bottom: 10px;
+}
+
+.setting-row .setting-label {
+  font-size: 12px;
+}
+
+.switch-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 10px;
+  font-size: 12px;
+  cursor: pointer;
+}
+
+.switch-row input,
+.inline-check input {
+  margin: 0;
+}
+
+.color-field {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.inline-check {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  font-size: 12px;
+  color: var(--muted);
+  cursor: pointer;
+}
+
+input[type='color'] {
+  width: 30px;
+  height: 22px;
+  padding: 0;
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  background: transparent;
+  cursor: pointer;
+}
+
+.threshold-row {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  margin-bottom: 8px;
+}
+
+.threshold-row .threshold-below {
+  width: 96px;
+  background: var(--vscode-input-background, var(--secondary-bg));
+  color: var(--fg);
+  border: 1px solid var(--border);
+  border-radius: 4px;
+  padding: 3px 6px;
+  font-size: 12px;
+}
+
+.threshold-row .sep {
+  color: var(--muted);
+  font-size: 12px;
+}
+
+.threshold-row .threshold-color {
+  flex: none;
+}
+
+.threshold-row .threshold-del {
+  width: 24px;
+  height: 24px;
+}
+
+.threshold-row .threshold-del .codicon {
+  font-size: 14px;
 }
 
 /* codicon 图标尺寸 */

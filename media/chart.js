@@ -48,7 +48,8 @@
   ];
 
   const state = {
-    data: null, // { snapshots, daily, current, pollMinutes, hasKey }
+    data: null, // { snapshots, daily, current, hasKey }
+    config: null, // { pollMinutes, statusBarShow, defaultColor, thresholds, rawRetentionDays }
     view: 'hourly',
     rangeKey: null,
     followLive: true,
@@ -84,6 +85,11 @@
   const clearKeyBtn = $('clearKeyBtn');
   const clearHistoryBtn = $('clearHistoryBtn');
   const resetSettingsBtn = $('resetSettingsBtn');
+  const showStatusBarEl = $('showStatusBar');
+  const defaultColorEl = $('defaultColor');
+  const defaultColorTheme = $('defaultColorTheme');
+  const thresholdList = $('thresholdList');
+  const addThresholdBtn = $('addThresholdBtn');
   const ns = 'http://www.w3.org/2000/svg';
 
   // ---------- 工具 ----------
@@ -604,6 +610,71 @@
     keyStatus.textContent = d && d.hasKey ? '已配置（存储于系统钥匙串）' : '未配置';
   }
 
+  // ---------- 设置面板 ----------
+  function renderSettings() {
+    const cfg = state.config;
+    if (!cfg) return;
+    showStatusBarEl.checked = !!cfg.statusBarShow;
+    const hasDefault = !!cfg.defaultColor;
+    defaultColorTheme.checked = !hasDefault;
+    defaultColorEl.disabled = !hasDefault;
+    if (hasDefault) defaultColorEl.value = cfg.defaultColor;
+    thresholdList.innerHTML = '';
+    (cfg.thresholds || []).forEach((t) => thresholdList.appendChild(thresholdRow(t)));
+  }
+
+  function thresholdRow(t) {
+    const row = document.createElement('div');
+    row.className = 'threshold-row';
+
+    const below = document.createElement('input');
+    below.type = 'number';
+    below.className = 'threshold-below';
+    below.min = '0';
+    below.step = '0.01';
+    below.value = t.below;
+
+    const sep = document.createElement('span');
+    sep.className = 'sep';
+    sep.textContent = '以下';
+
+    const color = document.createElement('input');
+    color.type = 'color';
+    color.className = 'threshold-color';
+    color.value = t.color;
+
+    const del = document.createElement('button');
+    del.className = 'icon threshold-del';
+    del.title = '删除该阈值';
+    del.innerHTML = '<i class="codicon codicon-trash"></i>';
+
+    row.appendChild(below);
+    row.appendChild(sep);
+    row.appendChild(color);
+    row.appendChild(del);
+
+    const sync = () => sendThresholds();
+    below.addEventListener('change', sync);
+    color.addEventListener('change', sync);
+    del.addEventListener('click', () => {
+      row.remove();
+      sendThresholds();
+    });
+    return row;
+  }
+
+  function sendThresholds() {
+    const rows = thresholdList.querySelectorAll('.threshold-row');
+    const list = [];
+    for (const r of rows) {
+      const below = parseFloat(r.querySelector('.threshold-below').value);
+      const color = r.querySelector('.threshold-color').value;
+      if (Number.isFinite(below) && color) list.push({ below, color });
+    }
+    list.sort((a, b) => a.below - b.below);
+    vscode.postMessage({ type: 'updateSetting', key: 'statusBar.thresholds', value: list });
+  }
+
   function renderFooter() {
     const d = state.data;
     if (!d) {
@@ -617,7 +688,7 @@
       ? `上次同步 ${new Date(last.t).toLocaleTimeString('zh-CN', { hour12: false })}`
       : '';
     footerInfo.textContent = `仅记录 VS Code 打开期间的数据 · 轮询间隔 ${
-      d.pollMinutes || 1
+      state.config ? state.config.pollMinutes : 1
     } 分钟 · 快照 ${count} 条 · ${lastStr}`;
     footerErr.textContent = state.lastError ? `⚠ ${state.lastError}` : '';
   }
@@ -772,10 +843,44 @@
   // 设置页
   settingsBtn.addEventListener('click', () => settingsOverlay.classList.remove('hidden'));
   settingsClose.addEventListener('click', () => settingsOverlay.classList.add('hidden'));
+  settingsOverlay.addEventListener('click', (e) => {
+    if (e.target === settingsOverlay) settingsOverlay.classList.add('hidden');
+  });
   setKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
   clearKeyBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearApiKey' }));
   clearHistoryBtn.addEventListener('click', () => vscode.postMessage({ type: 'clearHistory' }));
   resetSettingsBtn.addEventListener('click', () => vscode.postMessage({ type: 'resetSettings' }));
+
+  // 状态栏配置
+  showStatusBarEl.addEventListener('change', () => {
+    vscode.postMessage({
+      type: 'updateSetting',
+      key: 'statusBar.show',
+      value: showStatusBarEl.checked,
+    });
+  });
+  defaultColorEl.addEventListener('change', () => {
+    defaultColorTheme.checked = false;
+    defaultColorEl.disabled = false;
+    vscode.postMessage({
+      type: 'updateSetting',
+      key: 'statusBar.defaultColor',
+      value: defaultColorEl.value,
+    });
+  });
+  defaultColorTheme.addEventListener('change', () => {
+    const theme = defaultColorTheme.checked;
+    defaultColorEl.disabled = theme;
+    vscode.postMessage({
+      type: 'updateSetting',
+      key: 'statusBar.defaultColor',
+      value: theme ? '' : defaultColorEl.value,
+    });
+  });
+  addThresholdBtn.addEventListener('click', () => {
+    thresholdList.appendChild(thresholdRow({ below: 100, color: '#ffb900' }));
+    sendThresholds();
+  });
 
   // ---------- 消息 ----------
   window.addEventListener('message', (e) => {
@@ -783,11 +888,13 @@
     if (!msg || !msg.type) return;
     if (msg.type === 'init') {
       state.data = msg.payload;
+      state.config = msg.payload.config || null;
       state.lastError = undefined;
       if (!state.rangeKey) state.rangeKey = currentViewCfg().defaultRange;
       resetViewRange();
       renderAll();
       updateKeyStatus();
+      renderSettings();
     } else if (msg.type === 'snapshot') {
       if (!state.data) return;
       const s = msg.payload;
@@ -796,8 +903,9 @@
       upsertDailyLocal(s);
       onNewData();
     } else if (msg.type === 'config') {
-      if (state.data) state.data.pollMinutes = msg.payload.pollMinutes;
+      state.config = msg.payload;
       renderFooter();
+      renderSettings();
     } else if (msg.type === 'theme') {
       render();
     } else if (msg.type === 'error') {

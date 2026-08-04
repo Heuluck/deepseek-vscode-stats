@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import * as fs from 'fs';
 import type { HistoryStore, Snapshot } from './historyStore';
+import type { PanelConfig } from './config';
 
 /** 余额趋势图 Webview 面板（单例，重复打开复用）。 */
 export class ChartPanel {
@@ -35,21 +36,21 @@ export class ChartPanel {
     this.panel?.webview.postMessage({ type: 'snapshot', payload: s });
   }
 
-  postData(store: HistoryStore, pollMinutes: number, hasKey: boolean): void {
+  postData(store: HistoryStore, config: PanelConfig, hasKey: boolean): void {
     this.panel?.webview.postMessage({
       type: 'init',
       payload: {
         snapshots: store.getSnapshots(),
         daily: store.getDaily(),
         current: store.getLatest() || null,
-        pollMinutes,
+        config,
         hasKey,
       },
     });
   }
 
-  postConfig(pollMinutes: number): void {
-    this.panel?.webview.postMessage({ type: 'config', payload: { pollMinutes } });
+  postConfig(config: PanelConfig): void {
+    this.panel?.webview.postMessage({ type: 'config', payload: config });
   }
 
   postTheme(): void {

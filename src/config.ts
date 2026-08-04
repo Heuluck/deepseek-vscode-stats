@@ -33,3 +33,22 @@ export function getRawRetentionDays(): number {
   const v = getConfig().get<number>('history.rawRetentionDays', 7);
   return Math.max(1, Math.round(v || 7));
 }
+
+/** 下发给设置面板的完整配置快照。 */
+export interface PanelConfig {
+  pollMinutes: number;
+  statusBarShow: boolean;
+  defaultColor: string;
+  thresholds: Threshold[];
+  rawRetentionDays: number;
+}
+
+export function getPanelConfig(): PanelConfig {
+  return {
+    pollMinutes: getPollIntervalMinutes(),
+    statusBarShow: getShowStatusBar(),
+    defaultColor: getDefaultColor(),
+    thresholds: getThresholds(),
+    rawRetentionDays: getRawRetentionDays(),
+  };
+}

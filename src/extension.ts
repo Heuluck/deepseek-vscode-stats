@@ -3,7 +3,7 @@ import { ChartPanel } from './panel';
 import { HistoryStore, Snapshot } from './historyStore';
 import { StatusBar } from './statusBar';
 import { fetchBalance, pickBalanceInfo } from './balanceClient';
-import { getPollIntervalMinutes } from './config';
+import { getPanelConfig, getPollIntervalMinutes } from './config';
 
 const API_KEY_SECRET = 'deepseekStats.apiKey';
 
@@ -29,6 +29,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void resetSettings();
     } else if (msg.type === 'openUsage') {
       void vscode.env.openExternal(vscode.Uri.parse('https://platform.deepseek.com/usage'));
+    } else if (msg.type === 'updateSetting') {
+      void updateSetting(msg.payload?.key, msg.payload?.value);
     } else if (msg.type === 'ready') {
       // Webview 就绪后补发一次数据，避免启动时消息丢失
       pushDataToPanel();
@@ -47,7 +49,19 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function pushDataToPanel(): void {
     if (chart && chart.alive) {
-      chart.postData(store, getPollIntervalMinutes(), !!apiKey);
+      chart.postData(store, getPanelConfig(), !!apiKey);
+    }
+  }
+
+  /** 由设置面板写入某个 deepseekStats 配置项。 */
+  async function updateSetting(key: string, value: unknown): Promise<void> {
+    if (!key) return;
+    try {
+      await vscode.workspace
+        .getConfiguration('deepseekStats')
+        .update(key, value, vscode.ConfigurationTarget.Global);
+    } catch (e) {
+      console.error('[deepseek-stats] 更新设置失败', e);
     }
   }
 
@@ -167,7 +181,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         statusBar.refresh();
       }
       if (chart && chart.alive) {
-        chart.postConfig(getPollIntervalMinutes());
+        chart.postConfig(getPanelConfig());
       }
     }),
     vscode.window.onDidChangeActiveColorTheme(() => {

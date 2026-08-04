@@ -48,6 +48,27 @@
         </div>
         <div class="overlay-body">
           <div class="section">
+            <h3>状态栏</h3>
+            <label class="switch-row">
+              <input type="checkbox" id="showStatusBar" />
+              <span>在状态栏显示余额</span>
+            </label>
+            <div class="setting-row">
+              <label for="defaultColor">默认颜色</label>
+              <div class="color-field">
+                <input type="color" id="defaultColor" />
+                <label class="inline-check"><input type="checkbox" id="defaultColorTheme" />跟随主题</label>
+              </div>
+            </div>
+            <div class="setting-row">
+              <span class="setting-label">余额阈值 → 颜色</span>
+              <button class="btn small" id="addThresholdBtn"><i class="codicon codicon-add"></i>添加</button>
+            </div>
+            <div id="thresholdList"></div>
+            <p class="hint">余额低于阈值（不含）时状态栏使用对应颜色；按顺序匹配第一条，阈值可增删。</p>
+          </div>
+
+          <div class="section">
             <h3>API Key</h3>
             <p class="hint" id="keyStatus">未配置</p>
             <div class="row">
@@ -55,6 +76,7 @@
               <button class="btn danger" id="clearKeyBtn">清除 API Key</button>
             </div>
           </div>
+
           <div class="section">
             <h3>数据</h3>
             <div class="row">
@@ -62,6 +84,7 @@
             </div>
             <p class="hint">历史快照仅记录 VS Code 打开期间的数据。</p>
           </div>
+
           <div class="section">
             <h3>其他</h3>
             <div class="row">
