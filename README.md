@@ -19,6 +19,12 @@
 
 > 也可以不配置 API Key，改为设置环境变量 `DEEPSEEK_API_KEY`（扩展会作为后备读取）。
 
+## 开发
+
+- 扩展侧用 `tsc` 编译；webview 用 SolidJS + esbuild，产物为 `media/chart.bundle.js`。
+- `npm run compile` 会一并构建两者；改 webview 源码时可用 `npm run watch:webview` 增量重建。
+- webview 源码在 `webview/`（TS + JSX），构建配置见 `build.mjs`。
+
 ## 设置项
 
 | 设置 | 默认 | 说明 |

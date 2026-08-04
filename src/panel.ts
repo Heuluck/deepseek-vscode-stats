@@ -93,7 +93,7 @@ export class ChartPanel {
     const codiconCssUri = wv.asWebviewUri(
       vscode.Uri.joinPath(this.extUri, 'media', 'codicons', 'codicon.css')
     );
-    const jsUri = wv.asWebviewUri(vscode.Uri.joinPath(this.extUri, 'media', 'chart.js'));
+    const jsUri = wv.asWebviewUri(vscode.Uri.joinPath(this.extUri, 'media', 'chart.bundle.js'));
     const htmlPath = vscode.Uri.joinPath(this.extUri, 'media', 'webview.html');
     let html = fs.readFileSync(htmlPath.fsPath, 'utf8');
     const csp = [

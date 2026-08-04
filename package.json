@@ -95,14 +95,22 @@
     }
   },
   "scripts": {
-    "compile": "tsc -p ./",
+    "compile": "tsc -p ./ && node build.mjs",
     "watch": "tsc -watch -p ./",
+    "watch:webview": "node build.mjs --watch",
+    "build:webview": "node build.mjs",
+    "typecheck:webview": "tsc -p webview/tsconfig.json",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/codicons": "0.0.46-24",
+    "esbuild": "^0.28.1",
+    "esbuild-plugin-solid": "^0.6.0",
     "typescript": "^5.3.0"
+  },
+  "dependencies": {
+    "solid-js": "^1.9.14"
   }
 }
