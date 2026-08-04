@@ -76,6 +76,8 @@ export class ChartPanel {
         localResourceRoots: [vscode.Uri.joinPath(this.extUri, 'media')],
       }
     );
+    // tab 图标（DeepSeek logo，浅/深色主题通用）
+    panel.iconPath = vscode.Uri.joinPath(this.extUri, 'media', 'icon.svg');
     this.panel = panel;
     panel.webview.html = this.getHtml(panel.webview);
     panel.webview.onDidReceiveMessage((msg) => this.onDidReceiveMessage?.(msg));
