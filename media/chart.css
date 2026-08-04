@@ -248,6 +248,7 @@ footer {
   color: var(--muted);
   font-size: 11px;
   display: flex;
+  align-items: center;
   justify-content: space-between;
   gap: 12px;
   flex-wrap: wrap;
@@ -352,4 +353,19 @@ footer .footer-right {
   display: flex;
   flex-wrap: wrap;
   gap: 8px;
+}
+
+/* codicon 图标尺寸 */
+.icon .codicon {
+  font-size: 16px;
+}
+
+.btn .codicon {
+  font-size: 16px;
+  vertical-align: -2px;
+  margin-right: 4px;
+}
+
+.empty-icon .codicon {
+  font-size: 40px;
 }

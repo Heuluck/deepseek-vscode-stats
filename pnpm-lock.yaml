@@ -14,6 +14,9 @@ importers:
       '@types/vscode':
         specifier: ^1.85.0
         version: 1.125.0
+      '@vscode/codicons':
+        specifier: 0.0.46-24
+        version: 0.0.46-24
       typescript:
         specifier: ^5.3.0
         version: 5.9.3
@@ -25,6 +28,9 @@ packages:
 
   '@types/vscode@1.125.0':
     resolution: {integrity: sha512-0icm/ZQAaism87P0ekHqi4/Ju9du+Tm0RUW+y7vqRsxY2cY0FNRX1nAnaW7nT6npPt2tfHiheZ55Zm9UhqonFA==}
+
+  '@vscode/codicons@0.0.46-24':
+    resolution: {integrity: sha512-KIDWUYxG6eh+DHRg+3G4bS487T+g1ZkLfB4HylOBbCcHsvLdfLMRM/m92DS1Ljhi8nglLr9ucwwWhHTEAC+DpA==}
 
   typescript@5.9.3:
     resolution: {integrity: sha512-jl1vZzPDinLr9eUt3J/t7V6FgNEw9QjvBPdysz9KfQDD41fQrC2Y4vKQdiaUpFT4bXlb1RHhLpp8wtm6M5TgSw==}
@@ -41,6 +47,8 @@ snapshots:
       undici-types: 6.21.0
 
   '@types/vscode@1.125.0': {}
+
+  '@vscode/codicons@0.0.46-24': {}
 
   typescript@5.9.3: {}
 

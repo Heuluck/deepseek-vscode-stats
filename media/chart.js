@@ -67,6 +67,7 @@
   const rangesEl = $('ranges');
   const resetBtn = $('resetBtn');
   const usageBtn = $('usageBtn');
+  const refreshBtn = $('refreshBtn');
   const chartWrap = $('chartWrap');
   const svg = $('chart');
   const tooltip = $('tooltip');
@@ -764,6 +765,7 @@
     resetViewRange();
     renderAll();
   });
+  refreshBtn.addEventListener('click', () => vscode.postMessage({ type: 'checkNow' }));
   usageBtn.addEventListener('click', () => vscode.postMessage({ type: 'openUsage' }));
   emptyAction.addEventListener('click', () => vscode.postMessage({ type: 'setApiKey' }));
 

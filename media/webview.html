@@ -5,6 +5,7 @@
   <meta http-equiv="Content-Security-Policy" content="{{CSP}}" />
   <meta name="viewport" content="width=device-width, initial-scale=1.0" />
   <title>DeepSeek 余额</title>
+  <link rel="stylesheet" href="{{CODICON_CSS_URI}}" />
   <link rel="stylesheet" href="{{CSS_URI}}" />
 </head>
 <body>
@@ -19,14 +20,15 @@
         <div class="ranges" id="ranges"></div>
         <div class="tabs" id="tabs"></div>
         <button class="btn" id="resetBtn" title="重置视图范围">重置</button>
-        <button class="icon" id="usageBtn" title="在浏览器打开 DeepSeek 用量页">↗</button>
+        <button class="icon" id="refreshBtn" title="立即查询余额"><i class="codicon codicon-refresh"></i></button>
+        <button class="icon" id="usageBtn" title="在浏览器打开 DeepSeek 用量页"><i class="codicon codicon-link-external"></i></button>
       </div>
     </header>
     <main id="chartWrap">
       <svg id="chart" width="0" height="0"></svg>
       <div id="tooltip" class="tooltip hidden"></div>
       <div id="empty" class="empty hidden">
-        <div class="empty-icon">📊</div>
+        <div class="empty-icon"><i class="codicon codicon-graph-line"></i></div>
         <div class="empty-text" id="emptyText">暂无数据</div>
         <button class="btn primary" id="emptyAction" style="display:none">设置 API Key</button>
       </div>
@@ -35,14 +37,14 @@
       <span id="footerInfo"></span>
       <span class="footer-right">
         <span class="err" id="footerErr"></span>
-        <button class="btn" id="settingsBtn" title="设置">⚙ 设置</button>
+        <button class="btn" id="settingsBtn" title="设置"><i class="codicon codicon-gear"></i> 设置</button>
       </span>
     </footer>
     <div id="settingsOverlay" class="overlay hidden">
       <div class="overlay-card">
         <div class="overlay-head">
           <span>设置</span>
-          <button class="icon" id="settingsClose" title="关闭">✕</button>
+          <button class="icon" id="settingsClose" title="关闭"><i class="codicon codicon-close"></i></button>
         </div>
         <div class="overlay-body">
           <div class="section">

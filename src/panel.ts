@@ -85,6 +85,9 @@ export class ChartPanel {
   private getHtml(wv: vscode.Webview): string {
     const nonce = getNonce();
     const cssUri = wv.asWebviewUri(vscode.Uri.joinPath(this.extUri, 'media', 'chart.css'));
+    const codiconCssUri = wv.asWebviewUri(
+      vscode.Uri.joinPath(this.extUri, 'media', 'codicons', 'codicon.css')
+    );
     const jsUri = wv.asWebviewUri(vscode.Uri.joinPath(this.extUri, 'media', 'chart.js'));
     const htmlPath = vscode.Uri.joinPath(this.extUri, 'media', 'webview.html');
     let html = fs.readFileSync(htmlPath.fsPath, 'utf8');
@@ -97,6 +100,7 @@ export class ChartPanel {
     ].join('; ');
     return html
       .replace(/\{\{CSP\}\}/g, csp)
+      .replace(/\{\{CODICON_CSS_URI\}\}/g, codiconCssUri.toString())
       .replace(/\{\{CSS_URI\}\}/g, cssUri.toString())
       .replace(/\{\{JS_URI\}\}/g, jsUri.toString())
       .replace(/\{\{NONCE\}\}/g, nonce);
