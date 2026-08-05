@@ -1886,7 +1886,20 @@
     }
     return view === "daily" ? 2 * 864e5 : 60 * 864e5;
   }
-  function computeChartGeometry(points, vr, gapMs) {
+  function computeChartGeometry(points, vr, gapMs, overscan = 10) {
+    const n = points.length;
+    if (n === 0) return { solid: [], isolated: [], gaps: [] };
+    let lo = 0;
+    let hi = n - 1;
+    while (lo < n && points[lo].t < vr.start) lo++;
+    while (hi >= 0 && points[hi].t > vr.end) hi--;
+    if (hi < lo) {
+      hi = lo - 1;
+    }
+    const lo2 = Math.max(0, lo - overscan);
+    const hi2 = Math.min(n - 1, hi + overscan);
+    const t0 = points[lo2].t;
+    const t1 = points[hi2].t;
     const solid = [];
     const isolated = [];
     const gaps = [];
@@ -1896,13 +1909,13 @@
       else if (run.length >= 2) solid.push(run);
       run = [];
     };
-    for (let i = 0; i < points.length; i++) {
+    for (let i = 0; i < n; i++) {
       const p = points[i];
       const gapBefore = i > 0 && p.t - points[i - 1].t > gapMs;
       if (gapBefore) {
         const a = points[i - 1];
         const b = p;
-        if (b.t >= vr.start && a.t <= vr.end) {
+        if (b.t >= t0 && a.t <= t1) {
           gaps.push({
             from: a,
             to: b,
@@ -1912,7 +1925,7 @@
         }
         flush();
       }
-      if (p.t >= vr.start && p.t <= vr.end) run.push(p);
+      if (p.t >= t0 && p.t <= t1) run.push(p);
       else flush();
     }
     flush();
@@ -2197,17 +2210,19 @@
   delegateEvents(["click"]);
 
   // webview/components/Chart.tsx
-  var _tmpl$8 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
-  var _tmpl$27 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
-  var _tmpl$32 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
-  var _tmpl$42 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
-  var _tmpl$52 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
-  var _tmpl$62 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
-  var _tmpl$72 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
-  var _tmpl$82 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
-  var _tmpl$9 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
-  var _tmpl$0 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
-  var _tmpl$1 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
+  var _tmpl$8 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
+  var _tmpl$27 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
+  var _tmpl$32 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
+  var _tmpl$42 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
+  var _tmpl$52 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
+  var _tmpl$62 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
+  var _tmpl$72 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
+  var _tmpl$82 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$9 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
+  var _tmpl$0 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
+  var _tmpl$1 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
+  var _tmpl$10 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
+  var _tmpl$11 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
   function Chart() {
     let wrapRef;
     let svgRef;
@@ -2628,7 +2643,7 @@
       });
     });
     return (() => {
-      var _el$ = _tmpl$42(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$62(), _el$2 = _el$.firstChild;
       var _ref$ = wrapRef;
       typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
       var _ref$2 = svgRef;
@@ -2639,8 +2654,24 @@
         },
         get children() {
           return [(() => {
-            var _el$3 = _tmpl$8();
-            insert(_el$3, createComponent(For, {
+            var _el$3 = _tmpl$8(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
+            createRenderEffect((_p$) => {
+              var _v$ = layout().plotLeft, _v$2 = M.top, _v$3 = layout().plotRight - layout().plotLeft, _v$4 = size().h - M.bottom - M.top;
+              _v$ !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$);
+              _v$2 !== _p$.t && setAttribute(_el$5, "y", _p$.t = _v$2);
+              _v$3 !== _p$.a && setAttribute(_el$5, "width", _p$.a = _v$3);
+              _v$4 !== _p$.o && setAttribute(_el$5, "height", _p$.o = _v$4);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0,
+              a: void 0,
+              o: void 0
+            });
+            return _el$3;
+          })(), (() => {
+            var _el$6 = _tmpl$27();
+            insert(_el$6, createComponent(For, {
               get each() {
                 return layout().yTicks;
               },
@@ -2648,48 +2679,48 @@
                 const lay = layout();
                 const y = lay.yOf(v);
                 return (() => {
-                  var _el$7 = _tmpl$52();
-                  setAttribute(_el$7, "y1", y);
-                  setAttribute(_el$7, "y2", y);
+                  var _el$1 = _tmpl$72();
+                  setAttribute(_el$1, "y1", y);
+                  setAttribute(_el$1, "y2", y);
                   createRenderEffect((_p$) => {
-                    var _v$9 = lay.plotLeft, _v$0 = lay.plotRight;
-                    _v$9 !== _p$.e && setAttribute(_el$7, "x1", _p$.e = _v$9);
-                    _v$0 !== _p$.t && setAttribute(_el$7, "x2", _p$.t = _v$0);
+                    var _v$11 = lay.plotLeft, _v$12 = lay.plotRight;
+                    _v$11 !== _p$.e && setAttribute(_el$1, "x1", _p$.e = _v$11);
+                    _v$12 !== _p$.t && setAttribute(_el$1, "x2", _p$.t = _v$12);
                     return _p$;
                   }, {
                     e: void 0,
                     t: void 0
                   });
-                  return _el$7;
+                  return _el$1;
                 })();
               }
             }), null);
-            insert(_el$3, createComponent(For, {
+            insert(_el$6, createComponent(For, {
               get each() {
                 return layout().yLabels;
               },
               children: (lbl) => {
                 const lay = layout();
                 return (() => {
-                  var _el$8 = _tmpl$62();
-                  insert(_el$8, () => lbl.text);
+                  var _el$10 = _tmpl$82();
+                  insert(_el$10, () => lbl.text);
                   createRenderEffect((_p$) => {
-                    var _v$1 = lay.plotLeft - 8, _v$10 = lbl.y;
-                    _v$1 !== _p$.e && setAttribute(_el$8, "x", _p$.e = _v$1);
-                    _v$10 !== _p$.t && setAttribute(_el$8, "y", _p$.t = _v$10);
+                    var _v$13 = lay.plotLeft - 8, _v$14 = lbl.y;
+                    _v$13 !== _p$.e && setAttribute(_el$10, "x", _p$.e = _v$13);
+                    _v$14 !== _p$.t && setAttribute(_el$10, "y", _p$.t = _v$14);
                     return _p$;
                   }, {
                     e: void 0,
                     t: void 0
                   });
-                  return _el$8;
+                  return _el$10;
                 })();
               }
             }), null);
-            return _el$3;
+            return _el$6;
           })(), (() => {
-            var _el$4 = _tmpl$8();
-            insert(_el$4, createComponent(For, {
+            var _el$7 = _tmpl$27();
+            insert(_el$7, createComponent(For, {
               get each() {
                 return layout().xTicks;
               },
@@ -2697,114 +2728,120 @@
                 const lay = layout();
                 const x = lay.xOf(t);
                 return (() => {
-                  var _el$9 = _tmpl$52();
-                  setAttribute(_el$9, "x1", x);
-                  setAttribute(_el$9, "x2", x);
+                  var _el$11 = _tmpl$72();
+                  setAttribute(_el$11, "x1", x);
+                  setAttribute(_el$11, "x2", x);
                   createRenderEffect((_p$) => {
-                    var _v$11 = M.top, _v$12 = lay.h - M.bottom;
-                    _v$11 !== _p$.e && setAttribute(_el$9, "y1", _p$.e = _v$11);
-                    _v$12 !== _p$.t && setAttribute(_el$9, "y2", _p$.t = _v$12);
+                    var _v$15 = M.top, _v$16 = lay.h - M.bottom;
+                    _v$15 !== _p$.e && setAttribute(_el$11, "y1", _p$.e = _v$15);
+                    _v$16 !== _p$.t && setAttribute(_el$11, "y2", _p$.t = _v$16);
                     return _p$;
                   }, {
                     e: void 0,
                     t: void 0
                   });
-                  return _el$9;
+                  return _el$11;
                 })();
               }
             }), null);
-            insert(_el$4, createComponent(For, {
+            insert(_el$7, createComponent(For, {
               get each() {
                 return layout().xLabels;
               },
               children: (lbl) => {
                 const lay = layout();
                 return (() => {
-                  var _el$0 = _tmpl$72();
-                  insert(_el$0, () => lbl.text);
+                  var _el$12 = _tmpl$9();
+                  insert(_el$12, () => lbl.text);
                   createRenderEffect((_p$) => {
-                    var _v$13 = lbl.x, _v$14 = lay.h - M.bottom + 16, _v$15 = lbl.anchor;
-                    _v$13 !== _p$.e && setAttribute(_el$0, "x", _p$.e = _v$13);
-                    _v$14 !== _p$.t && setAttribute(_el$0, "y", _p$.t = _v$14);
-                    _v$15 !== _p$.a && setAttribute(_el$0, "text-anchor", _p$.a = _v$15);
+                    var _v$17 = lbl.x, _v$18 = lay.h - M.bottom + 16, _v$19 = lbl.anchor;
+                    _v$17 !== _p$.e && setAttribute(_el$12, "x", _p$.e = _v$17);
+                    _v$18 !== _p$.t && setAttribute(_el$12, "y", _p$.t = _v$18);
+                    _v$19 !== _p$.a && setAttribute(_el$12, "text-anchor", _p$.a = _v$19);
                     return _p$;
                   }, {
                     e: void 0,
                     t: void 0,
                     a: void 0
                   });
-                  return _el$0;
+                  return _el$12;
                 })();
               }
             }), null);
-            return _el$4;
-          })(), createComponent(For, {
-            get each() {
-              return connectorDraws();
-            },
-            children: (c) => (() => {
-              var _el$1 = _tmpl$82();
-              createRenderEffect((_p$) => {
-                var _v$16 = "connector" + (c.solid ? " solid" : ""), _v$17 = c.d, _v$18 = c.color ? {
-                  stroke: c.color
-                } : void 0;
-                _v$16 !== _p$.e && setAttribute(_el$1, "class", _p$.e = _v$16);
-                _v$17 !== _p$.t && setAttribute(_el$1, "d", _p$.t = _v$17);
-                _p$.a = style(_el$1, _v$18, _p$.a);
-                return _p$;
-              }, {
-                e: void 0,
-                t: void 0,
-                a: void 0
-              });
-              return _el$1;
-            })()
-          }), createComponent(For, {
-            get each() {
-              return solidDraws();
-            },
-            children: (s) => [(() => {
-              var _el$10 = _tmpl$9();
-              createRenderEffect(() => setAttribute(_el$10, "d", s.area));
-              return _el$10;
-            })(), (() => {
-              var _el$11 = _tmpl$0();
-              createRenderEffect(() => setAttribute(_el$11, "d", s.d));
-              return _el$11;
-            })()]
-          }), createComponent(For, {
-            get each() {
-              return chartData().geom.isolated;
-            },
-            children: (p) => {
-              const lay = layout();
-              return (() => {
-                var _el$12 = _tmpl$1();
+            return _el$7;
+          })(), (() => {
+            var _el$8 = _tmpl$32();
+            insert(_el$8, createComponent(For, {
+              get each() {
+                return connectorDraws();
+              },
+              children: (c) => (() => {
+                var _el$13 = _tmpl$0();
                 createRenderEffect((_p$) => {
-                  var _v$19 = lay.xOf(p.t), _v$20 = lay.yOf(p.total);
-                  _v$19 !== _p$.e && setAttribute(_el$12, "cx", _p$.e = _v$19);
-                  _v$20 !== _p$.t && setAttribute(_el$12, "cy", _p$.t = _v$20);
+                  var _v$20 = "connector" + (c.solid ? " solid" : ""), _v$21 = c.d, _v$22 = c.color ? {
+                    stroke: c.color
+                  } : void 0;
+                  _v$20 !== _p$.e && setAttribute(_el$13, "class", _p$.e = _v$20);
+                  _v$21 !== _p$.t && setAttribute(_el$13, "d", _p$.t = _v$21);
+                  _p$.a = style(_el$13, _v$22, _p$.a);
                   return _p$;
                 }, {
                   e: void 0,
-                  t: void 0
+                  t: void 0,
+                  a: void 0
                 });
-                return _el$12;
-              })();
-            }
-          }), createComponent(Show, {
+                return _el$13;
+              })()
+            }), null);
+            insert(_el$8, createComponent(For, {
+              get each() {
+                return solidDraws();
+              },
+              children: (s) => [(() => {
+                var _el$14 = _tmpl$1();
+                createRenderEffect(() => setAttribute(_el$14, "d", s.area));
+                return _el$14;
+              })(), (() => {
+                var _el$15 = _tmpl$10();
+                createRenderEffect(() => setAttribute(_el$15, "d", s.d));
+                return _el$15;
+              })()]
+            }), null);
+            insert(_el$8, createComponent(For, {
+              get each() {
+                return chartData().geom.isolated;
+              },
+              children: (p) => {
+                const lay = layout();
+                return (() => {
+                  var _el$16 = _tmpl$11();
+                  createRenderEffect((_p$) => {
+                    var _v$23 = lay.xOf(p.t), _v$24 = lay.yOf(p.total);
+                    _v$23 !== _p$.e && setAttribute(_el$16, "cx", _p$.e = _v$23);
+                    _v$24 !== _p$.t && setAttribute(_el$16, "cy", _p$.t = _v$24);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0
+                  });
+                  return _el$16;
+                })();
+              }
+            }), null);
+            return _el$8;
+          })(), createComponent(Show, {
             get when() {
               return hover();
             },
             get children() {
               return [(() => {
-                var _el$5 = _tmpl$27();
+                var _el$9 = _tmpl$42();
                 createRenderEffect((_p$) => {
-                  var _v$ = hover().x, _v$2 = M.top, _v$3 = hover().x, _v$4 = size().h - M.bottom;
-                  _v$ !== _p$.e && setAttribute(_el$5, "x1", _p$.e = _v$);
-                  _v$2 !== _p$.t && setAttribute(_el$5, "y1", _p$.t = _v$2);
-                  _v$3 !== _p$.a && setAttribute(_el$5, "x2", _p$.a = _v$3);
-                  _v$4 !== _p$.o && setAttribute(_el$5, "y2", _p$.o = _v$4);
+                  var _v$5 = hover().x, _v$6 = M.top, _v$7 = hover().x, _v$8 = size().h - M.bottom;
+                  _v$5 !== _p$.e && setAttribute(_el$9, "x1", _p$.e = _v$5);
+                  _v$6 !== _p$.t && setAttribute(_el$9, "y1", _p$.t = _v$6);
+                  _v$7 !== _p$.a && setAttribute(_el$9, "x2", _p$.a = _v$7);
+                  _v$8 !== _p$.o && setAttribute(_el$9, "y2", _p$.o = _v$8);
                   return _p$;
                 }, {
                   e: void 0,
@@ -2812,19 +2849,19 @@
                   a: void 0,
                   o: void 0
                 });
-                return _el$5;
+                return _el$9;
               })(), (() => {
-                var _el$6 = _tmpl$32();
+                var _el$0 = _tmpl$52();
                 createRenderEffect((_p$) => {
-                  var _v$5 = hover().x, _v$6 = hover().y;
-                  _v$5 !== _p$.e && setAttribute(_el$6, "cx", _p$.e = _v$5);
-                  _v$6 !== _p$.t && setAttribute(_el$6, "cy", _p$.t = _v$6);
+                  var _v$9 = hover().x, _v$0 = hover().y;
+                  _v$9 !== _p$.e && setAttribute(_el$0, "cx", _p$.e = _v$9);
+                  _v$0 !== _p$.t && setAttribute(_el$0, "cy", _p$.t = _v$0);
                   return _p$;
                 }, {
                   e: void 0,
                   t: void 0
                 });
-                return _el$6;
+                return _el$0;
               })()];
             }
           })];
@@ -2833,9 +2870,9 @@
       insert(_el$, createComponent(Tooltip, {}), null);
       insert(_el$, createComponent(Empty, {}), null);
       createRenderEffect((_p$) => {
-        var _v$7 = size().w, _v$8 = size().h;
-        _v$7 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$7);
-        _v$8 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$8);
+        var _v$1 = size().w, _v$10 = size().h;
+        _v$1 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$1);
+        _v$10 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$10);
         return _p$;
       }, {
         e: void 0,
@@ -2846,7 +2883,7 @@
   }
 
   // webview/components/Settings.tsx
-  var _tmpl$10 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
+  var _tmpl$12 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
   var _tmpl$28 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><div class=settings-label>\u72B6\u6001\u680F</div><label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox></label><button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down"></i></button><div><div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898</label></div></div><div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0</button></div><div id=thresholdList></div><p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002</p></div></div><div class=settings-group><div class=settings-label>\u56FE\u8868</div><p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002</p><div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF</option></select></div><div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5</option></select></div><div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272</label></div></div><div class=settings-row><label for=yMinSpanRatioEl>\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6</label><input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number></div><p class=settings-hint>Y \u8F74\u8DE8\u5EA6\u81F3\u5C11\u4E3A\u6700\u5927\u503C\u7684\u8BE5\u6BD4\u4F8B\uFF0C\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u8868\u793A\u5B8C\u5168\u81EA\u9002\u5E94\u3002</p></div><div class=settings-group><div class=settings-label>\u5E38\u89C4</div><div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number></div><div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number></div><label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox></label></div><div class=settings-group><div class=settings-label>API Key</div><div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664</button></div></div></div><div class=settings-group><div class=settings-label>\u6570\u636E</div><div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2</button></div></div><div class=settings-group><div class=settings-label>\u5176\u4ED6</div><div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4</button></div></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
   var _tmpl$33 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function Settings(props) {
@@ -2962,7 +2999,7 @@
           return consent();
         },
         get children() {
-          var _el$51 = _tmpl$10(), _el$52 = _el$51.firstChild, _el$53 = _el$52.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling;
+          var _el$51 = _tmpl$12(), _el$52 = _el$51.firstChild, _el$53 = _el$52.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling;
           _el$54.$$click = () => {
             setStaged("showTodaySpend", true);
             setConsent(false);
@@ -3022,7 +3059,7 @@
   delegateEvents(["pointerdown", "click", "input"]);
 
   // webview/components/App.tsx
-  var _tmpl$11 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
+  var _tmpl$13 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
     createEffect(() => {
       const r = store.refreshResult;
@@ -3043,7 +3080,7 @@
       return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
     });
     return (() => {
-      var _el$ = _tmpl$11(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling;
+      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling;
       insert(_el$2, createComponent(Header, {}), _el$3);
       insert(_el$3, createComponent(Ranges, {}), _el$4);
       insert(_el$3, createComponent(Tabs, {}), _el$4);

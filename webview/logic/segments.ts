@@ -65,14 +65,34 @@ export function effectiveGapMs(pts: ChartPoint[], view: ViewKey): number {
 
 /**
  * 核心规约：把（已排序、可选已降采样的）数据点 + 视口计算成绘制清单。
- * - 实线段/孤立点：仅视口内
- * - 缺口：所有相邻间隔 > gapMs 的对，与视口相交才输出（含跨视口的边缘缺口）
+ * - 实线段/孤立点：视口内（含左右各 overscan 个点的"预渲染"余量）
+ * - 缺口：所有相邻间隔 > gapMs 的对，与（扩展后）范围相交才输出（含跨视口的边缘缺口）
+ *
+ * overscan：视口外左右各最多 N 个点也纳入几何。渲染端用 clipPath 把绘图区外的部分
+ * 裁掉，平移/缩放时曲线整体滑入/滑出视口，避免点在边缘"弹入"造成的顿挫。
  */
 export function computeChartGeometry(
   points: ChartPoint[],
   vr: ViewRange,
-  gapMs: number
+  gapMs: number,
+  overscan = 10
 ): ChartGeometry {
+  const n = points.length;
+  if (n === 0) return { solid: [], isolated: [], gaps: [] };
+  // 视口内索引区间 [lo, hi]（points 已排序）
+  let lo = 0;
+  let hi = n - 1;
+  while (lo < n && points[lo].t < vr.start) lo++;
+  while (hi >= 0 && points[hi].t > vr.end) hi--;
+  if (hi < lo) {
+    // 视口内无数据点（空区间）：lo/hi 退化为视口两侧最近点，仍画两侧连接线
+    hi = lo - 1;
+  }
+  const lo2 = Math.max(0, lo - overscan);
+  const hi2 = Math.min(n - 1, hi + overscan);
+  const t0 = points[lo2].t;
+  const t1 = points[hi2].t;
+
   const solid: ChartPoint[][] = [];
   const isolated: ChartPoint[] = [];
   const gaps: GapConnector[] = [];
@@ -82,14 +102,14 @@ export function computeChartGeometry(
     else if (run.length >= 2) solid.push(run);
     run = [];
   };
-  for (let i = 0; i < points.length; i++) {
+  for (let i = 0; i < n; i++) {
     const p = points[i];
     const gapBefore = i > 0 && p.t - points[i - 1].t > gapMs;
     if (gapBefore) {
       const a = points[i - 1];
       const b = p;
-      // 缺口与视口相交才需要画（离屏部分渲染端裁剪掉）
-      if (b.t >= vr.start && a.t <= vr.end) {
+      // 缺口与（扩展后）范围相交才需要画（离屏部分渲染端裁剪掉）
+      if (b.t >= t0 && a.t <= t1) {
         gaps.push({
           from: a,
           to: b,
@@ -99,7 +119,7 @@ export function computeChartGeometry(
       }
       flush();
     }
-    if (p.t >= vr.start && p.t <= vr.end) run.push(p);
+    if (p.t >= t0 && p.t <= t1) run.push(p);
     else flush();
   }
   flush();

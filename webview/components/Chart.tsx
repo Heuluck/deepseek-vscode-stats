@@ -499,6 +499,17 @@ export function Chart() {
     <main id="chartWrap" ref={wrapRef}>
       <svg id="chart" width={size().w} height={size().h} ref={svgRef}>
         <Show when={layout()}>
+          <defs>
+            {/* 绘图区裁剪：几何含视口外 overscan 预渲染点，裁掉离屏部分，避免画到坐标轴上 */}
+            <clipPath id="plotClip">
+              <rect
+                x={layout()!.plotLeft}
+                y={M.top}
+                width={layout()!.plotRight - layout()!.plotLeft}
+                height={size().h - M.bottom - M.top}
+              />
+            </clipPath>
+          </defs>
           <g class="axis">
             <For each={layout()!.yTicks}>
               {(v) => {
@@ -542,36 +553,38 @@ export function Chart() {
               }}
             </For>
           </g>
-          <For each={connectorDraws()}>
-            {(c) => (
-              <path
-                class={'connector' + (c.solid ? ' solid' : '')}
-                d={c.d}
-                style={c.color ? { stroke: c.color } : undefined}
-              />
-            )}
-          </For>
-          <For each={solidDraws()}>
-            {(s) => (
-              <>
-                <path class="area" d={s.area} />
-                <path class="line" d={s.d} />
-              </>
-            )}
-          </For>
-          <For each={chartData()!.geom.isolated}>
-            {(p) => {
-              const lay = layout()!;
-              return (
-                <circle
-                  class="line isolated"
-                  cx={lay.xOf(p.t)}
-                  cy={lay.yOf(p.total)}
-                  r={3}
+          <g clip-path="url(#plotClip)">
+            <For each={connectorDraws()}>
+              {(c) => (
+                <path
+                  class={'connector' + (c.solid ? ' solid' : '')}
+                  d={c.d}
+                  style={c.color ? { stroke: c.color } : undefined}
                 />
-              );
-            }}
-          </For>
+              )}
+            </For>
+            <For each={solidDraws()}>
+              {(s) => (
+                <>
+                  <path class="area" d={s.area} />
+                  <path class="line" d={s.d} />
+                </>
+              )}
+            </For>
+            <For each={chartData()!.geom.isolated}>
+              {(p) => {
+                const lay = layout()!;
+                return (
+                  <circle
+                    class="line isolated"
+                    cx={lay.xOf(p.t)}
+                    cy={lay.yOf(p.total)}
+                    r={3}
+                  />
+                );
+              }}
+            </For>
+          </g>
           <Show when={hover()}>
             <line
               class="crosshair"
