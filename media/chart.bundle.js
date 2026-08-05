@@ -890,6 +890,27 @@
       node.addEventListener(name, handler[0] = (e) => handlerFn.call(node, handler[1], e));
     } else node.addEventListener(name, handler, typeof handler !== "function" && handler);
   }
+  function style(node, value, prev) {
+    if (!value) return prev ? setAttribute(node, "style") : value;
+    const nodeStyle = node.style;
+    if (typeof value === "string") return nodeStyle.cssText = value;
+    typeof prev === "string" && (nodeStyle.cssText = prev = void 0);
+    prev || (prev = {});
+    value || (value = {});
+    let v, s;
+    for (s in prev) {
+      value[s] == null && nodeStyle.removeProperty(s);
+      delete prev[s];
+    }
+    for (s in value) {
+      v = value[s];
+      if (v !== prev[s]) {
+        nodeStyle.setProperty(s, v);
+        prev[s] = v;
+      }
+    }
+    return prev;
+  }
   function setStyleProperty(node, name, value) {
     value != null ? node.style.setProperty(name, value) : node.style.removeProperty(name);
   }
@@ -1434,29 +1455,6 @@
     if (!pts.length) return null;
     return { minT: pts[0].t, maxT: pts[pts.length - 1].t };
   }
-  function getRangeNeighbors(data, view, viewRange) {
-    const pts = viewPoints(data, view);
-    if (!viewRange) return { inRange: pts, left: null, right: null, leftPrev: null, rightNext: null };
-    const inRange = [];
-    let left = null;
-    let leftPrev = null;
-    let right = null;
-    let rightNext = null;
-    for (let i = 0; i < pts.length; i++) {
-      const p = pts[i];
-      if (p.t < viewRange.start) {
-        leftPrev = left;
-        left = p;
-      } else if (p.t > viewRange.end) {
-        right = p;
-        rightNext = pts[i + 1] ?? null;
-        break;
-      } else {
-        inRange.push(p);
-      }
-    }
-    return { inRange, left, right, leftPrev, rightNext };
-  }
   function resetViewRange(data, view, rangeKey) {
     const bounds = computeDataBounds(data, view);
     if (!bounds) {
@@ -1700,554 +1698,6 @@
     return null;
   }
 
-  // webview/engine/chartEngine.ts
-  var M = { top: 16, right: 18, bottom: 30, left: 66 };
-  var TIME_STEPS = [
-    6e4,
-    5 * 6e4,
-    15 * 6e4,
-    30 * 6e4,
-    36e5,
-    2 * 36e5,
-    6 * 36e5,
-    12 * 36e5,
-    24 * 36e5,
-    2 * 864e5,
-    7 * 864e5,
-    14 * 864e5,
-    30 * 864e5,
-    60 * 864e5,
-    90 * 864e5,
-    180 * 864e5,
-    365 * 864e5
-  ];
-  var ns = "http://www.w3.org/2000/svg";
-  function createChartEngine(deps) {
-    const { svg, container } = deps;
-    let last = null;
-    let mouseX = -1;
-    let pinT = null;
-    let pinUntil = 0;
-    let zoomAnchorT = null;
-    let zoomAnchorFrac = 0;
-    let lastWheelTs = 0;
-    let drag = null;
-    function niceTicks(min, max, count) {
-      const span = max - min;
-      if (span <= 0) return [min];
-      const step0 = span / count;
-      const mag = Math.pow(10, Math.floor(Math.log10(step0)));
-      const norm = step0 / mag;
-      const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
-      const out = [];
-      for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) {
-        out.push(Number(v.toFixed(10)));
-      }
-      return out;
-    }
-    function niceTimeStep(dur) {
-      const target = dur / 8;
-      for (const s of TIME_STEPS) {
-        if (s >= target) return s;
-      }
-      return 365 * 864e5;
-    }
-    function fmtAxisTime(t, step, view) {
-      if (view === "monthly" || step >= 30 * 864e5) return fmtMonth(t);
-      if (view === "daily" || step >= 24 * 36e5) return fmtDayShort(t);
-      return fmtClock(t);
-    }
-    function decimate(pts, max) {
-      if (pts.length <= max) return pts;
-      const out = [];
-      const bucket = Math.ceil(pts.length / max);
-      for (let i = 0; i < pts.length; i += bucket) {
-        const slice = pts.slice(i, i + bucket);
-        let minP = slice[0];
-        let maxP = slice[0];
-        for (const p of slice) {
-          if (p.total < minP.total) minP = p;
-          if (p.total > maxP.total) maxP = p;
-        }
-        out.push(slice[0]);
-        if (minP !== slice[0] && minP !== slice[slice.length - 1]) out.push(minP);
-        if (maxP !== slice[0] && maxP !== slice[slice.length - 1] && maxP !== minP) out.push(maxP);
-        out.push(slice[slice.length - 1]);
-      }
-      return out;
-    }
-    function medianDt(pts) {
-      if (pts.length < 2) return 0;
-      const ds = [];
-      for (let i = 1; i < pts.length; i++) ds.push(pts[i].t - pts[i - 1].t);
-      ds.sort((a, b) => a - b);
-      return ds[Math.floor(ds.length / 2)];
-    }
-    function effectiveGapMs(pts, view) {
-      if (view === "hourly") {
-        return Math.max(10 * 6e4, medianDt(pts) * 3);
-      }
-      return view === "daily" ? 2 * 864e5 : 60 * 864e5;
-    }
-    function buildSegments(pts, gapMs) {
-      const segs = [];
-      let cur = [pts[0]];
-      for (let i = 1; i < pts.length; i++) {
-        if (pts[i].t - pts[i - 1].t > gapMs) {
-          segs.push(cur);
-          cur = [];
-        }
-        cur.push(pts[i]);
-      }
-      if (cur.length) segs.push(cur);
-      return segs;
-    }
-    function straightPath(pts, xOf, yOf) {
-      return pts.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`).join(" ");
-    }
-    function smoothPath(pts, xOf, yOf) {
-      const n = pts.length;
-      if (n < 2) return "";
-      const s = new Array(n - 1);
-      for (let i = 0; i < n - 1; i++) {
-        const h = pts[i + 1].t - pts[i].t;
-        s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
-      }
-      const m = new Array(n);
-      m[0] = s[0];
-      m[n - 1] = s[n - 2];
-      for (let i = 1; i < n - 1; i++) {
-        m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
-      }
-      for (let i = 0; i < n - 1; i++) {
-        if (s[i] === 0) {
-          m[i] = 0;
-          m[i + 1] = 0;
-          continue;
-        }
-        const alpha = m[i] / s[i];
-        const beta = m[i + 1] / s[i];
-        const a2b2 = alpha * alpha + beta * beta;
-        if (a2b2 > 9) {
-          const tau = 3 / Math.sqrt(a2b2);
-          m[i] = tau * alpha * s[i];
-          m[i + 1] = tau * beta * s[i];
-        }
-      }
-      let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
-      for (let i = 0; i < n - 1; i++) {
-        const h = pts[i + 1].t - pts[i].t;
-        const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-        const c1y = yOf(pts[i].total + m[i] * h / 3);
-        const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-        const c2y = yOf(pts[i + 1].total - m[i + 1] * h / 3);
-        d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
-          pts[i + 1].t
-        ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
-      }
-      return d;
-    }
-    function flattenSmoothSegment(p0, p1, p2, p3, xOf, yOf) {
-      const h = p2.t - p1.t;
-      if (h <= 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
-      const s = (p2.total - p1.total) / h;
-      if (s === 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
-      let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
-      let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
-      if (m1 * s <= 0) m1 = 0;
-      if (m2 * s <= 0) m2 = 0;
-      const alpha = m1 / s;
-      const beta = m2 / s;
-      const a2b2 = alpha * alpha + beta * beta;
-      if (a2b2 > 9) {
-        const tau = 3 / Math.sqrt(a2b2);
-        m1 = tau * alpha * s;
-        m2 = tau * beta * s;
-      }
-      const bx0 = xOf(p1.t);
-      const by0 = yOf(p1.total);
-      const bx3 = xOf(p2.t);
-      const by3 = yOf(p2.total);
-      const c1x = bx0 + (bx3 - bx0) / 3;
-      const c1y = yOf(p1.total + m1 * h / 3);
-      const c2x = bx3 - (bx3 - bx0) / 3;
-      const c2y = yOf(p2.total - m2 * h / 3);
-      const STEPS = 64;
-      const out = [[bx0, by0]];
-      for (let i = 1; i < STEPS; i++) {
-        const u = i / STEPS;
-        const w = 1 - u;
-        out.push([
-          w * w * w * bx0 + 3 * w * w * u * c1x + 3 * w * u * u * c2x + u * u * u * bx3,
-          w * w * w * by0 + 3 * w * w * u * c1y + 3 * w * u * u * c2y + u * u * u * by3
-        ]);
-      }
-      out.push([bx3, by3]);
-      return out;
-    }
-    function clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax) {
-      const dx = x1 - x0;
-      const dy = y1 - y0;
-      let t0 = 0;
-      let t1 = 1;
-      const p = [-dx, dx, -dy, dy];
-      const q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
-      for (let i = 0; i < 4; i++) {
-        if (p[i] === 0) {
-          if (q[i] < 0) return null;
-        } else {
-          const r = q[i] / p[i];
-          if (p[i] < 0) {
-            if (r > t1) return null;
-            if (r > t0) t0 = r;
-          } else {
-            if (r < t0) return null;
-            if (r < t1) t1 = r;
-          }
-        }
-      }
-      return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
-    }
-    function polylineToClippedPath(poly, xmin, ymin, xmax, ymax) {
-      let d = "";
-      for (let i = 0; i < poly.length - 1; i++) {
-        const [x0, y0] = poly[i];
-        const [x1, y1] = poly[i + 1];
-        const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
-        if (!seg) continue;
-        d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
-      }
-      return d;
-    }
-    function line(parent, x1, y1, x2, y2, cls) {
-      const e = document.createElementNS(ns, "line");
-      e.setAttribute("x1", String(x1));
-      e.setAttribute("y1", String(y1));
-      e.setAttribute("x2", String(x2));
-      e.setAttribute("y2", String(y2));
-      e.setAttribute("class", cls);
-      parent.appendChild(e);
-    }
-    function text(parent, x, y, str, anchor, dy) {
-      const e = document.createElementNS(ns, "text");
-      e.setAttribute("x", String(x));
-      e.setAttribute("y", String(y));
-      e.setAttribute("text-anchor", anchor || "start");
-      if (dy) e.setAttribute("dominant-baseline", dy);
-      e.textContent = str;
-      parent.appendChild(e);
-    }
-    function render2() {
-      const st = deps.getState();
-      if (!st.data || !computeDataBounds(st.data, st.view)) {
-        svg.innerHTML = "";
-        last = null;
-        deps.onHover?.(null);
-        return;
-      }
-      const { inRange: pts, left, right, leftPrev, rightNext } = getRangeNeighbors(
-        st.data,
-        st.view,
-        st.viewRange
-      );
-      const width = container.clientWidth;
-      const height = container.clientHeight;
-      svg.setAttribute("width", String(width));
-      svg.setAttribute("height", String(height));
-      svg.innerHTML = "";
-      const innerW = width - M.left - M.right;
-      const innerH = height - M.top - M.bottom;
-      if (innerW <= 0 || innerH <= 0) return;
-      const vr = st.viewRange || (left ? { start: left.t, end: right ? right.t : left.t } : { start: 0, end: 1 });
-      const t0 = vr.start;
-      const t1 = vr.end;
-      const xOf = (t) => M.left + (t - t0) / (t1 - t0) * innerW;
-      const ySource = pts.length ? pts : [left, right].filter(Boolean);
-      let yMin = Infinity;
-      let yMax = -Infinity;
-      for (const p of ySource) {
-        if (p.total < yMin) yMin = p.total;
-        if (p.total > yMax) yMax = p.total;
-      }
-      let padY = (yMax - yMin) * 0.08 || Math.max(1, Math.abs(yMax) * 0.05);
-      if (padY === 0) padY = 1;
-      yMin -= padY;
-      yMax += padY;
-      const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
-      const currency = (pts[0] || left || right)?.currency || "CNY";
-      const gY = document.createElementNS(ns, "g");
-      gY.setAttribute("class", "axis");
-      svg.appendChild(gY);
-      for (const v of niceTicks(yMin, yMax, 5)) {
-        const y = yOf(v);
-        line(gY, M.left, y, width - M.right, y, "grid");
-        text(gY, M.left - 8, y, fmtAxisMoney(v, currency), "end", "middle");
-      }
-      const dur = t1 - t0;
-      const step = niceTimeStep(dur);
-      const gX = document.createElementNS(ns, "g");
-      gX.setAttribute("class", "axis");
-      svg.appendChild(gX);
-      const first = Math.ceil(t0 / step) * step;
-      for (let t = first; t <= t1; t += step) {
-        const x = xOf(t);
-        line(gX, x, M.top, x, height - M.bottom, "grid");
-        text(gX, x, height - M.bottom + 16, fmtAxisTime(t, step, st.view), "middle", "hanging");
-      }
-      const lineStyle = st.lineStyle || "straight";
-      const connectorStyle = st.connectorStyle || "dashed";
-      const connectorColor = st.connectorColor || "";
-      const plotX = M.left;
-      const plotY = M.top;
-      const plotW = width - M.right;
-      const plotH = height - M.bottom;
-      const drawConnector = (a, b, p0, p3) => {
-        if (connectorStyle === "none") return;
-        let d;
-        if (lineStyle === "smooth") {
-          d = polylineToClippedPath(
-            flattenSmoothSegment(p0 ?? a, a, b, p3 ?? b, xOf, yOf),
-            plotX,
-            plotY,
-            plotW,
-            plotH
-          );
-        } else {
-          const seg = clipSegmentToRect(
-            xOf(a.t),
-            yOf(a.total),
-            xOf(b.t),
-            yOf(b.total),
-            plotX,
-            plotY,
-            plotW,
-            plotH
-          );
-          if (!seg) return;
-          d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
-        }
-        if (!d) return;
-        const e = document.createElementNS(ns, "path");
-        e.setAttribute("d", d);
-        e.setAttribute("class", "connector" + (connectorStyle === "solid" ? " solid" : ""));
-        if (connectorColor) e.style.stroke = connectorColor;
-        svg.appendChild(e);
-      };
-      if (pts.length > 0) {
-        const decimated = decimate(pts, 4e3);
-        const gapMs = effectiveGapMs(decimated, st.view);
-        const segments = buildSegments(decimated, gapMs);
-        const baseY = yOf(yMin);
-        const linePath = (seg) => lineStyle === "smooth" ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
-        const firstP = pts[0];
-        const lastP = pts[pts.length - 1];
-        if (left && firstP.t - left.t > gapMs) {
-          drawConnector(left, firstP, leftPrev, pts[1] ?? right);
-        }
-        if (right && right.t - lastP.t > gapMs) {
-          drawConnector(lastP, right, pts[pts.length - 2] ?? left, rightNext);
-        }
-        for (let i = 0; i < segments.length - 1; i++) {
-          const segA = segments[i];
-          const segB = segments[i + 1];
-          drawConnector(
-            segA[segA.length - 1],
-            segB[0],
-            segA.length >= 2 ? segA[segA.length - 2] : null,
-            segB.length >= 2 ? segB[1] : null
-          );
-        }
-        for (const seg of segments) {
-          if (seg.length >= 2) {
-            const dPath = linePath(seg);
-            const area = document.createElementNS(ns, "path");
-            area.setAttribute(
-              "d",
-              `${dPath} L${xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${xOf(
-                seg[0].t
-              ).toFixed(1)},${baseY.toFixed(1)} Z`
-            );
-            area.setAttribute("class", "area");
-            svg.appendChild(area);
-            const path = document.createElementNS(ns, "path");
-            path.setAttribute("d", dPath);
-            path.setAttribute("class", "line");
-            svg.appendChild(path);
-          } else {
-            const c = document.createElementNS(ns, "circle");
-            c.setAttribute("cx", String(xOf(seg[0].t)));
-            c.setAttribute("cy", String(yOf(seg[0].total)));
-            c.setAttribute("r", "3");
-            c.setAttribute("class", "line isolated");
-            svg.appendChild(c);
-          }
-        }
-      } else if (left && right) {
-        drawConnector(left, right, leftPrev, rightNext);
-      }
-      last = { xOf, yOf, pts, vr, currency, width, height };
-      drawHover();
-    }
-    function drawHover() {
-      svg.querySelectorAll(".crosshair,.hover-dot").forEach((n) => n.remove());
-      if (!last || !last.pts.length) {
-        deps.onHover?.(null);
-        return;
-      }
-      const { xOf, yOf, pts, currency } = last;
-      const st = deps.getState();
-      const pinned = pinT !== null && Date.now() < pinUntil;
-      let idx = -1;
-      let best = Infinity;
-      if (pinned) {
-        for (let i = 0; i < pts.length; i++) {
-          const dx = Math.abs(pts[i].t - pinT);
-          if (dx < best) {
-            best = dx;
-            idx = i;
-          }
-        }
-      } else if (mouseX >= 0) {
-        for (let i = 0; i < pts.length; i++) {
-          const dx = Math.abs(xOf(pts[i].t) - mouseX);
-          if (dx < best) {
-            best = dx;
-            idx = i;
-          }
-        }
-        if (best > 80) idx = -1;
-      }
-      if (idx < 0) {
-        deps.onHover?.(null);
-        return;
-      }
-      const p = pts[idx];
-      const x = xOf(p.t);
-      const y = yOf(p.total);
-      const c = document.createElementNS(ns, "line");
-      c.setAttribute("class", "crosshair");
-      c.setAttribute("x1", String(x));
-      c.setAttribute("y1", String(M.top));
-      c.setAttribute("x2", String(x));
-      c.setAttribute("y2", String(container.clientHeight - M.bottom));
-      svg.appendChild(c);
-      const dot = document.createElementNS(ns, "circle");
-      dot.setAttribute("class", "hover-dot");
-      dot.setAttribute("cx", String(x));
-      dot.setAttribute("cy", String(y));
-      dot.setAttribute("r", "4");
-      svg.appendChild(dot);
-      const title = st.view === "monthly" ? fmtMonth(p.t) : st.view === "daily" ? fmtDay(p.t) : fmtDayShort(p.t) + " " + fmtClock(p.t);
-      deps.onHover?.({
-        pointX: x,
-        pointY: y,
-        title,
-        rows: [
-          { label: "\u603B\u4F59\u989D", value: fmtMoney(p.total, currency) },
-          { label: "\u5145\u503C", value: fmtMoney(p.toppedUp, currency) },
-          { label: "\u8D60\u9001", value: fmtMoney(p.granted, currency) }
-        ]
-      });
-    }
-    function onWheel(e) {
-      e.preventDefault();
-      const st = deps.getState();
-      if (!last || !st.viewRange) return;
-      const now = Date.now();
-      const rect = svg.getBoundingClientRect();
-      const innerW = rect.width - M.left - M.right;
-      if (innerW <= 0) return;
-      const mx = e.clientX - rect.left;
-      const vr = st.viewRange;
-      const tCursor = vr.start + (mx - M.left) / innerW * (vr.end - vr.start);
-      if (now - lastWheelTs > 300) {
-        const pts = last.pts;
-        let best = Infinity;
-        let bt = tCursor;
-        for (const p of pts) {
-          const dx = Math.abs(p.t - tCursor);
-          if (dx < best) {
-            best = dx;
-            bt = p.t;
-          }
-        }
-        const snapLimit = (vr.end - vr.start) * 0.15;
-        zoomAnchorT = best <= snapLimit ? bt : tCursor;
-        zoomAnchorFrac = (zoomAnchorT - vr.start) / (vr.end - vr.start);
-      }
-      lastWheelTs = now;
-      pinT = zoomAnchorT;
-      pinUntil = now + 350;
-      const factor = Math.pow(1.15, -e.deltaY / 120);
-      let dur = (vr.end - vr.start) * factor;
-      dur = Math.min(st.maxWindow, Math.max(st.minWindow, dur));
-      const bounds = computeDataBounds(st.data, st.view);
-      const r = bounds ? clampRange(zoomAnchorT - zoomAnchorFrac * dur, zoomAnchorT + (1 - zoomAnchorFrac) * dur, bounds, st.minWindow) : { start: zoomAnchorT - zoomAnchorFrac * dur, end: zoomAnchorT + (1 - zoomAnchorFrac) * dur };
-      deps.onViewChange?.(r, false);
-    }
-    function onPointerDown(e) {
-      const st = deps.getState();
-      if (e.button !== 0 || !st.viewRange) return;
-      drag = { startX: e.clientX, startRange: { ...st.viewRange } };
-      mouseX = -1;
-      container.setPointerCapture(e.pointerId);
-    }
-    function onPointerMove(e) {
-      const st = deps.getState();
-      if (!drag || !st.viewRange) return;
-      const rect = svg.getBoundingClientRect();
-      const innerW = rect.width - M.left - M.right;
-      const dur = drag.startRange.end - drag.startRange.start;
-      const shift = (drag.startX - e.clientX) / innerW * dur;
-      const bounds = computeDataBounds(st.data, st.view);
-      const r = bounds ? clampRange(drag.startRange.start + shift, drag.startRange.end + shift, bounds, st.minWindow) : { start: drag.startRange.start + shift, end: drag.startRange.end + shift };
-      deps.onViewChange?.(r, false);
-    }
-    function onPointerEnd() {
-      drag = null;
-    }
-    function onMouseMove(e) {
-      if (drag) return;
-      const rect = svg.getBoundingClientRect();
-      mouseX = e.clientX - rect.left;
-      pinUntil = 0;
-      drawHover();
-    }
-    function onMouseLeave() {
-      mouseX = -1;
-      drawHover();
-    }
-    function onDblClick() {
-      deps.onReset?.();
-    }
-    const ro = new ResizeObserver(() => {
-      if (deps.getState().data) render2();
-    });
-    ro.observe(container);
-    container.addEventListener("wheel", onWheel, { passive: false });
-    container.addEventListener("pointerdown", onPointerDown);
-    container.addEventListener("pointermove", onPointerMove);
-    container.addEventListener("pointerup", onPointerEnd);
-    container.addEventListener("pointercancel", onPointerEnd);
-    container.addEventListener("mousemove", onMouseMove);
-    container.addEventListener("mouseleave", onMouseLeave);
-    container.addEventListener("dblclick", onDblClick);
-    return {
-      render: render2,
-      dispose() {
-        ro.disconnect();
-        container.removeEventListener("wheel", onWheel);
-        container.removeEventListener("pointerdown", onPointerDown);
-        container.removeEventListener("pointermove", onPointerMove);
-        container.removeEventListener("pointerup", onPointerEnd);
-        container.removeEventListener("pointercancel", onPointerEnd);
-        container.removeEventListener("mousemove", onMouseMove);
-        container.removeEventListener("mouseleave", onMouseLeave);
-        container.removeEventListener("dblclick", onDblClick);
-      }
-    };
-  }
-
   // webview/logic/todaySpend.ts
   function computeTodaySpend(data) {
     if (!data || !data.snapshots || !data.snapshots.length) return null;
@@ -2398,37 +1848,248 @@
   }
   delegateEvents(["click"]);
 
-  // webview/components/Empty.tsx
-  var _tmpl$6 = /* @__PURE__ */ template(`<button class="btn primary">\u8BBE\u7F6E API Key`);
-  var _tmpl$25 = /* @__PURE__ */ template(`<div class=empty><div class=empty-icon><i class="codicon codicon-graph-line"></i></div><div class=empty-text>`);
-  function Empty() {
-    const info = createMemo(() => emptyInfo());
-    return createComponent(Show, {
-      get when() {
-        return info();
-      },
-      get children() {
-        var _el$ = _tmpl$25(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
-        insert(_el$3, () => info().msg);
-        insert(_el$, createComponent(Show, {
-          get when() {
-            return info().showAction;
-          },
-          get children() {
-            var _el$4 = _tmpl$6();
-            addEventListener(_el$4, "click", setApiKey, true);
-            return _el$4;
-          }
-        }), null);
-        return _el$;
+  // webview/logic/segments.ts
+  function decimate(pts, max) {
+    if (pts.length <= max) return pts;
+    const out = [];
+    const bucket = Math.ceil(pts.length / max);
+    for (let i = 0; i < pts.length; i += bucket) {
+      const slice = pts.slice(i, i + bucket);
+      let minP = slice[0];
+      let maxP = slice[0];
+      for (const p of slice) {
+        if (p.total < minP.total) minP = p;
+        if (p.total > maxP.total) maxP = p;
       }
-    });
+      out.push(slice[0]);
+      if (minP !== slice[0] && minP !== slice[slice.length - 1]) out.push(minP);
+      if (maxP !== slice[0] && maxP !== slice[slice.length - 1] && maxP !== minP) out.push(maxP);
+      out.push(slice[slice.length - 1]);
+    }
+    return out;
   }
-  delegateEvents(["click"]);
+  function medianDt(pts) {
+    if (pts.length < 2) return 0;
+    const ds = [];
+    for (let i = 1; i < pts.length; i++) ds.push(pts[i].t - pts[i - 1].t);
+    ds.sort((a, b) => a - b);
+    return ds[Math.floor(ds.length / 2)];
+  }
+  function effectiveGapMs(pts, view) {
+    if (view === "hourly") {
+      return Math.max(10 * 6e4, medianDt(pts) * 3);
+    }
+    return view === "daily" ? 2 * 864e5 : 60 * 864e5;
+  }
+  function computeChartGeometry(points, vr, gapMs) {
+    const solid = [];
+    const isolated = [];
+    const gaps = [];
+    let run = [];
+    const flush = () => {
+      if (run.length === 1) isolated.push(run[0]);
+      else if (run.length >= 2) solid.push(run);
+      run = [];
+    };
+    for (let i = 0; i < points.length; i++) {
+      const p = points[i];
+      const gapBefore = i > 0 && p.t - points[i - 1].t > gapMs;
+      if (gapBefore) {
+        const a = points[i - 1];
+        const b = p;
+        if (b.t >= vr.start && a.t <= vr.end) {
+          gaps.push({
+            from: a,
+            to: b,
+            prev: points[i - 2] ?? null,
+            next: points[i + 1] ?? null
+          });
+        }
+        flush();
+      }
+      if (p.t >= vr.start && p.t <= vr.end) run.push(p);
+      else flush();
+    }
+    flush();
+    return { solid, isolated, gaps };
+  }
+
+  // webview/logic/paths.ts
+  function straightPath(pts, xOf, yOf) {
+    return pts.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`).join(" ");
+  }
+  function smoothPath(pts, xOf, yOf) {
+    const n = pts.length;
+    if (n < 2) return "";
+    const s = new Array(n - 1);
+    for (let i = 0; i < n - 1; i++) {
+      const h = pts[i + 1].t - pts[i].t;
+      s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
+    }
+    const m = new Array(n);
+    m[0] = s[0];
+    m[n - 1] = s[n - 2];
+    for (let i = 1; i < n - 1; i++) {
+      m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
+    }
+    for (let i = 0; i < n - 1; i++) {
+      if (s[i] === 0) {
+        m[i] = 0;
+        m[i + 1] = 0;
+        continue;
+      }
+      const alpha = m[i] / s[i];
+      const beta = m[i + 1] / s[i];
+      const a2b2 = alpha * alpha + beta * beta;
+      if (a2b2 > 9) {
+        const tau = 3 / Math.sqrt(a2b2);
+        m[i] = tau * alpha * s[i];
+        m[i + 1] = tau * beta * s[i];
+      }
+    }
+    let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
+    for (let i = 0; i < n - 1; i++) {
+      const h = pts[i + 1].t - pts[i].t;
+      const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+      const c1y = yOf(pts[i].total + m[i] * h / 3);
+      const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
+      const c2y = yOf(pts[i + 1].total - m[i + 1] * h / 3);
+      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
+        pts[i + 1].t
+      ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
+    }
+    return d;
+  }
+  function flattenSmoothSegment(p0, p1, p2, p3, xOf, yOf) {
+    const h = p2.t - p1.t;
+    if (h <= 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
+    const s = (p2.total - p1.total) / h;
+    if (s === 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
+    let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
+    let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
+    if (m1 * s <= 0) m1 = 0;
+    if (m2 * s <= 0) m2 = 0;
+    const alpha = m1 / s;
+    const beta = m2 / s;
+    const a2b2 = alpha * alpha + beta * beta;
+    if (a2b2 > 9) {
+      const tau = 3 / Math.sqrt(a2b2);
+      m1 = tau * alpha * s;
+      m2 = tau * beta * s;
+    }
+    const bx0 = xOf(p1.t);
+    const by0 = yOf(p1.total);
+    const bx3 = xOf(p2.t);
+    const by3 = yOf(p2.total);
+    const c1x = bx0 + (bx3 - bx0) / 3;
+    const c1y = yOf(p1.total + m1 * h / 3);
+    const c2x = bx3 - (bx3 - bx0) / 3;
+    const c2y = yOf(p2.total - m2 * h / 3);
+    const STEPS = 64;
+    const out = [[bx0, by0]];
+    for (let i = 1; i < STEPS; i++) {
+      const u = i / STEPS;
+      const w = 1 - u;
+      out.push([
+        w * w * w * bx0 + 3 * w * w * u * c1x + 3 * w * u * u * c2x + u * u * u * bx3,
+        w * w * w * by0 + 3 * w * w * u * c1y + 3 * w * u * u * c2y + u * u * u * by3
+      ]);
+    }
+    out.push([bx3, by3]);
+    return out;
+  }
+  function clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax) {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let t0 = 0;
+    let t1 = 1;
+    const p = [-dx, dx, -dy, dy];
+    const q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) {
+        if (q[i] < 0) return null;
+      } else {
+        const r = q[i] / p[i];
+        if (p[i] < 0) {
+          if (r > t1) return null;
+          if (r > t0) t0 = r;
+        } else {
+          if (r < t0) return null;
+          if (r < t1) t1 = r;
+        }
+      }
+    }
+    return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+  }
+  function polylineToClippedPath(poly, xmin, ymin, xmax, ymax) {
+    let d = "";
+    for (let i = 0; i < poly.length - 1; i++) {
+      const [x0, y0] = poly[i];
+      const [x1, y1] = poly[i + 1];
+      const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
+      if (!seg) continue;
+      d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+    }
+    return d;
+  }
+
+  // webview/logic/axis.ts
+  var M = { top: 16, right: 18, bottom: 30, left: 66 };
+  var TIME_STEPS = [
+    6e4,
+    5 * 6e4,
+    15 * 6e4,
+    30 * 6e4,
+    36e5,
+    2 * 36e5,
+    6 * 36e5,
+    12 * 36e5,
+    24 * 36e5,
+    2 * 864e5,
+    7 * 864e5,
+    14 * 864e5,
+    30 * 864e5,
+    60 * 864e5,
+    90 * 864e5,
+    180 * 864e5,
+    365 * 864e5
+  ];
+  function niceTicks(min, max, count) {
+    const span = max - min;
+    if (span <= 0) return [min];
+    const step0 = span / count;
+    const mag = Math.pow(10, Math.floor(Math.log10(step0)));
+    const norm = step0 / mag;
+    const step = (norm <= 1 ? 1 : norm <= 2 ? 2 : norm <= 5 ? 5 : 10) * mag;
+    const out = [];
+    for (let v = Math.ceil(min / step) * step; v <= max + 1e-9; v += step) {
+      out.push(Number(v.toFixed(10)));
+    }
+    return out;
+  }
+  function niceTimeStep(dur) {
+    const target = dur / 8;
+    for (const s of TIME_STEPS) {
+      if (s >= target) return s;
+    }
+    return 365 * 864e5;
+  }
+  function fmtAxisTime(t, step, view) {
+    if (view === "monthly" || step >= 30 * 864e5) return fmtMonth(t);
+    if (view === "daily" || step >= 24 * 36e5) return fmtDayShort(t);
+    return fmtClock(t);
+  }
+  function estimateTextWidth(text, fontSize = 11) {
+    let w = 0;
+    for (const ch of text) {
+      w += ch.charCodeAt(0) > 255 ? fontSize : fontSize * 0.55;
+    }
+    return Math.max(28, w + 4);
+  }
 
   // webview/components/Tooltip.tsx
-  var _tmpl$7 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
-  var _tmpl$26 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
+  var _tmpl$6 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
+  var _tmpl$25 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
   function Tooltip() {
     let ref;
     const [pos, setPos] = createSignal(null);
@@ -2457,7 +2118,7 @@
         return tooltipInfo();
       },
       get children() {
-        var _el$ = _tmpl$7(), _el$2 = _el$.firstChild;
+        var _el$ = _tmpl$6(), _el$2 = _el$.firstChild;
         var _ref$ = ref;
         typeof _ref$ === "function" ? use(_ref$, _el$) : ref = _el$;
         insert(_el$2, () => tooltipInfo().title);
@@ -2466,7 +2127,7 @@
             return tooltipInfo().rows;
           },
           children: (r) => (() => {
-            var _el$3 = _tmpl$26(), _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling;
+            var _el$3 = _tmpl$25(), _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling;
             insert(_el$4, () => r.label);
             insert(_el$5, () => r.value);
             return _el$3;
@@ -2486,10 +2147,682 @@
     });
   }
 
+  // webview/components/Empty.tsx
+  var _tmpl$7 = /* @__PURE__ */ template(`<button class="btn primary">\u8BBE\u7F6E API Key`);
+  var _tmpl$26 = /* @__PURE__ */ template(`<div class=empty><div class=empty-icon><i class="codicon codicon-graph-line"></i></div><div class=empty-text>`);
+  function Empty() {
+    const info = createMemo(() => emptyInfo());
+    return createComponent(Show, {
+      get when() {
+        return info();
+      },
+      get children() {
+        var _el$ = _tmpl$26(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+        insert(_el$3, () => info().msg);
+        insert(_el$, createComponent(Show, {
+          get when() {
+            return info().showAction;
+          },
+          get children() {
+            var _el$4 = _tmpl$7();
+            addEventListener(_el$4, "click", setApiKey, true);
+            return _el$4;
+          }
+        }), null);
+        return _el$;
+      }
+    });
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/Chart.tsx
+  var _tmpl$8 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
+  var _tmpl$27 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
+  var _tmpl$32 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
+  var _tmpl$42 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
+  var _tmpl$52 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
+  var _tmpl$62 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$72 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
+  var _tmpl$82 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
+  var _tmpl$9 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
+  var _tmpl$0 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
+  var _tmpl$1 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
+  function Chart() {
+    let wrapRef;
+    let svgRef;
+    const [size, setSize] = createSignal({
+      w: 0,
+      h: 0
+    });
+    const [mouseX, setMouseX] = createSignal(-1);
+    const [pinT, setPinT] = createSignal(null);
+    const [pinUntil, setPinUntil] = createSignal(0);
+    let zoomAnchorT = null;
+    let zoomAnchorFrac = 0;
+    let lastWheelTs = 0;
+    let drag = null;
+    onMount(() => {
+      const ro = new ResizeObserver(() => {
+        if (wrapRef) setSize({
+          w: wrapRef.clientWidth,
+          h: wrapRef.clientHeight
+        });
+      });
+      ro.observe(wrapRef);
+      if (wrapRef) setSize({
+        w: wrapRef.clientWidth,
+        h: wrapRef.clientHeight
+      });
+      onCleanup(() => ro.disconnect());
+    });
+    const chartData = createMemo(() => {
+      const data = store.data;
+      const view = store.view;
+      if (!data) return null;
+      const all = viewPoints(data, view);
+      if (!all.length) return null;
+      const bounds = {
+        minT: all[0].t,
+        maxT: all[all.length - 1].t
+      };
+      const vr = store.viewRange ?? {
+        start: bounds.minT,
+        end: bounds.maxT
+      };
+      const decimated = decimate(all, 4e3);
+      const gapMs = effectiveGapMs(decimated, view);
+      return {
+        view,
+        vr,
+        bounds,
+        geom: computeChartGeometry(decimated, vr, gapMs)
+      };
+    });
+    const layout = createMemo(() => {
+      const cd = chartData();
+      const {
+        w,
+        h
+      } = size();
+      if (!cd || w <= 0 || h <= 0) return null;
+      const {
+        vr,
+        geom,
+        view
+      } = cd;
+      const t0 = vr.start;
+      const t1 = vr.end;
+      const yPts = [];
+      for (const seg of geom.solid) for (const p of seg) yPts.push(p);
+      for (const p of geom.isolated) yPts.push(p);
+      for (const g of geom.gaps) {
+        yPts.push(g.from);
+        yPts.push(g.to);
+      }
+      let yMin = Infinity;
+      let yMax = -Infinity;
+      for (const p of yPts) {
+        if (p.total < yMin) yMin = p.total;
+        if (p.total > yMax) yMax = p.total;
+      }
+      if (!isFinite(yMin)) {
+        yMin = 0;
+        yMax = 1;
+      }
+      const startAtZero = yMin <= yMax * 0.2;
+      if (startAtZero) yMin = 0;
+      let padY = (yMax - yMin) * 0.08 || Math.max(1, Math.abs(yMax) * 0.05);
+      if (padY === 0) padY = 1;
+      yMin = Math.max(0, yMin - padY);
+      yMax += padY;
+      const currency = yPts[0]?.currency || "CNY";
+      const yTicks = niceTicks(yMin, yMax, 5);
+      const yLabelW = yTicks.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency))), 0);
+      const plotLeft = Math.max(M.left, yLabelW + 14);
+      const plotRight = w - M.right;
+      const innerW = w - plotLeft - M.right;
+      const innerH = h - M.top - M.bottom;
+      if (innerW <= 0 || innerH <= 0) return null;
+      const xOf = (t) => plotLeft + (t - t0) / (t1 - t0) * innerW;
+      const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
+      const yLabels = [];
+      {
+        let lastY = Infinity;
+        for (let i = 0; i < yTicks.length; i++) {
+          const v = yTicks[i];
+          const y = yOf(v);
+          const isEdge = i === 0 || i === yTicks.length - 1;
+          if (!isEdge && lastY - y < 16) continue;
+          yLabels.push({
+            v,
+            y,
+            text: fmtAxisMoney(v, currency)
+          });
+          lastY = y;
+        }
+      }
+      const dur = t1 - t0;
+      const xStep = niceTimeStep(dur);
+      const xTicks = [];
+      for (let t = Math.ceil(t0 / xStep) * xStep; t <= t1 + 1e-9; t += xStep) xTicks.push(t);
+      const xLabels = [];
+      {
+        const all = xTicks.map((t) => {
+          const x = xOf(t);
+          const text = fmtAxisTime(t, xStep, view);
+          return {
+            t,
+            x,
+            text,
+            w: estimateTextWidth(text)
+          };
+        });
+        if (all.length === 1) {
+          xLabels.push({
+            ...all[0],
+            anchor: "middle"
+          });
+        } else if (all.length >= 2) {
+          const firstL = {
+            ...all[0],
+            anchor: "start"
+          };
+          const lastL = {
+            ...all[all.length - 1],
+            anchor: "end"
+          };
+          xLabels.push(firstL);
+          let prevRight = firstL.x + firstL.w;
+          for (let i = 1; i < all.length - 1; i++) {
+            const lbl = all[i];
+            const l = lbl.x - lbl.w / 2;
+            const r = lbl.x + lbl.w / 2;
+            if (l < prevRight + 10) continue;
+            if (r > plotRight - 4) continue;
+            xLabels.push({
+              ...lbl,
+              anchor: "middle"
+            });
+            prevRight = r;
+          }
+          const lastLeft = lastL.x - lastL.w;
+          while (xLabels.length > 1 && lastLeft < prevRight + 10) {
+            xLabels.pop();
+            const prev = xLabels[xLabels.length - 1];
+            prevRight = prev.x + (prev.anchor === "start" ? prev.w : prev.w / 2);
+          }
+          xLabels.push(lastL);
+        }
+      }
+      return {
+        xOf,
+        yOf,
+        yMin,
+        yMax,
+        currency,
+        w,
+        h,
+        xStep,
+        xTicks,
+        xLabels,
+        yTicks,
+        yLabels,
+        plotLeft,
+        plotRight
+      };
+    });
+    const solidDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay) return [];
+      const smooth = (store.config?.lineStyle ?? "straight") === "smooth";
+      const baseY = lay.yOf(lay.yMin);
+      return cd.geom.solid.map((seg) => {
+        const d = smooth ? smoothPath(seg, lay.xOf, lay.yOf) : straightPath(seg, lay.xOf, lay.yOf);
+        return {
+          d,
+          area: `${d} L${lay.xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${lay.xOf(seg[0].t).toFixed(1)},${baseY.toFixed(1)} Z`
+        };
+      });
+    });
+    const connectorDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay) return [];
+      const style2 = store.config?.connectorStyle ?? "dashed";
+      if (style2 === "none") return [];
+      const color = store.config?.connectorColor ?? "";
+      const smooth = (store.config?.lineStyle ?? "straight") === "smooth";
+      const {
+        xOf,
+        yOf
+      } = lay;
+      const plotX = lay.plotLeft;
+      const plotY = M.top;
+      const plotW = lay.plotRight - lay.plotLeft;
+      const plotH = lay.h - M.bottom;
+      const out = [];
+      for (const g of cd.geom.gaps) {
+        let d;
+        if (smooth) {
+          d = polylineToClippedPath(flattenSmoothSegment(g.prev ?? g.from, g.from, g.to, g.next ?? g.to, xOf, yOf), plotX, plotY, plotW, plotH);
+        } else {
+          const seg = clipSegmentToRect(xOf(g.from.t), yOf(g.from.total), xOf(g.to.t), yOf(g.to.total), plotX, plotY, plotW, plotH);
+          if (!seg) continue;
+          d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+        }
+        if (d) out.push({
+          d,
+          solid: style2 === "solid",
+          color
+        });
+      }
+      return out;
+    });
+    const hover = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay) return null;
+      const pts = [];
+      for (const seg of cd.geom.solid) for (const p2 of seg) pts.push(p2);
+      for (const p2 of cd.geom.isolated) pts.push(p2);
+      if (!pts.length) return null;
+      const {
+        xOf,
+        yOf
+      } = lay;
+      const pinned = pinT() !== null && Date.now() < pinUntil();
+      let idx = -1;
+      let best = Infinity;
+      if (pinned) {
+        const pt = pinT();
+        for (let i = 0; i < pts.length; i++) {
+          const dx = Math.abs(pts[i].t - pt);
+          if (dx < best) {
+            best = dx;
+            idx = i;
+          }
+        }
+      } else if (mouseX() >= 0) {
+        for (let i = 0; i < pts.length; i++) {
+          const dx = Math.abs(xOf(pts[i].t) - mouseX());
+          if (dx < best) {
+            best = dx;
+            idx = i;
+          }
+        }
+        if (best > 80) idx = -1;
+      }
+      if (idx < 0) return null;
+      const p = pts[idx];
+      return {
+        x: xOf(p.t),
+        y: yOf(p.total),
+        p
+      };
+    });
+    createEffect(() => {
+      const h = hover();
+      const lay = layout();
+      if (!h || !lay) {
+        setTooltipInfo(null);
+        return;
+      }
+      const title = store.view === "monthly" ? fmtMonth(h.p.t) : store.view === "daily" ? fmtDay(h.p.t) : fmtDayShort(h.p.t) + " " + fmtClock(h.p.t);
+      setTooltipInfo({
+        pointX: h.x,
+        pointY: h.y,
+        title,
+        rows: [{
+          label: "\u603B\u4F59\u989D",
+          value: fmtMoney(h.p.total, lay.currency)
+        }, {
+          label: "\u5145\u503C",
+          value: fmtMoney(h.p.toppedUp, lay.currency)
+        }, {
+          label: "\u8D60\u9001",
+          value: fmtMoney(h.p.granted, lay.currency)
+        }]
+      });
+    });
+    onMount(() => {
+      const svg = svgRef;
+      const container = wrapRef;
+      function onWheel(e) {
+        e.preventDefault();
+        if (!store.viewRange) return;
+        const lay = layout();
+        if (!lay) return;
+        const now = Date.now();
+        const rect = svg.getBoundingClientRect();
+        const innerW = rect.width - lay.plotLeft - M.right;
+        if (innerW <= 0) return;
+        const mx = e.clientX - rect.left;
+        const vr = store.viewRange;
+        const tCursor = vr.start + (mx - lay.plotLeft) / innerW * (vr.end - vr.start);
+        if (now - lastWheelTs > 300) {
+          const cd = chartData();
+          let best = Infinity;
+          let bt = tCursor;
+          if (cd) {
+            for (const seg of cd.geom.solid) {
+              for (const p of seg) {
+                const dx = Math.abs(p.t - tCursor);
+                if (dx < best) {
+                  best = dx;
+                  bt = p.t;
+                }
+              }
+            }
+            for (const p of cd.geom.isolated) {
+              const dx = Math.abs(p.t - tCursor);
+              if (dx < best) {
+                best = dx;
+                bt = p.t;
+              }
+            }
+          }
+          const snapLimit = (vr.end - vr.start) * 0.15;
+          zoomAnchorT = best <= snapLimit ? bt : tCursor;
+          zoomAnchorFrac = (zoomAnchorT - vr.start) / (vr.end - vr.start);
+        }
+        lastWheelTs = now;
+        setPinT(zoomAnchorT);
+        setPinUntil(now + 350);
+        const factor = Math.pow(1.15, -e.deltaY / 120);
+        let dur = (vr.end - vr.start) * factor;
+        dur = Math.min(store.maxWindow, Math.max(store.minWindow, dur));
+        const bounds = computeDataBounds(store.data, store.view);
+        const r = bounds ? clampRange(zoomAnchorT - zoomAnchorFrac * dur, zoomAnchorT + (1 - zoomAnchorFrac) * dur, bounds, store.minWindow) : {
+          start: zoomAnchorT - zoomAnchorFrac * dur,
+          end: zoomAnchorT + (1 - zoomAnchorFrac) * dur
+        };
+        setViewRange(r, false);
+      }
+      function onPointerDown(e) {
+        if (e.button !== 0 || !store.viewRange) return;
+        drag = {
+          startX: e.clientX,
+          startRange: {
+            ...store.viewRange
+          }
+        };
+        setMouseX(-1);
+        container.setPointerCapture(e.pointerId);
+      }
+      function onPointerMove(e) {
+        if (!drag || !store.viewRange) return;
+        const lay = layout();
+        if (!lay) return;
+        const rect = svg.getBoundingClientRect();
+        const innerW = rect.width - lay.plotLeft - M.right;
+        const dur = drag.startRange.end - drag.startRange.start;
+        const shift = (drag.startX - e.clientX) / innerW * dur;
+        const bounds = computeDataBounds(store.data, store.view);
+        const r = bounds ? clampRange(drag.startRange.start + shift, drag.startRange.end + shift, bounds, store.minWindow) : {
+          start: drag.startRange.start + shift,
+          end: drag.startRange.end + shift
+        };
+        setViewRange(r, false);
+      }
+      function onPointerEnd() {
+        drag = null;
+      }
+      function onMouseMove(e) {
+        if (drag) return;
+        const rect = svg.getBoundingClientRect();
+        setMouseX(e.clientX - rect.left);
+        setPinUntil(0);
+      }
+      function onMouseLeave() {
+        setMouseX(-1);
+      }
+      function onDblClick() {
+        resetView();
+      }
+      container.addEventListener("wheel", onWheel, {
+        passive: false
+      });
+      container.addEventListener("pointerdown", onPointerDown);
+      container.addEventListener("pointermove", onPointerMove);
+      container.addEventListener("pointerup", onPointerEnd);
+      container.addEventListener("pointercancel", onPointerEnd);
+      container.addEventListener("mousemove", onMouseMove);
+      container.addEventListener("mouseleave", onMouseLeave);
+      container.addEventListener("dblclick", onDblClick);
+      onCleanup(() => {
+        container.removeEventListener("wheel", onWheel);
+        container.removeEventListener("pointerdown", onPointerDown);
+        container.removeEventListener("pointermove", onPointerMove);
+        container.removeEventListener("pointerup", onPointerEnd);
+        container.removeEventListener("pointercancel", onPointerEnd);
+        container.removeEventListener("mousemove", onMouseMove);
+        container.removeEventListener("mouseleave", onMouseLeave);
+        container.removeEventListener("dblclick", onDblClick);
+      });
+    });
+    return (() => {
+      var _el$ = _tmpl$42(), _el$2 = _el$.firstChild;
+      var _ref$ = wrapRef;
+      typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
+      var _ref$2 = svgRef;
+      typeof _ref$2 === "function" ? use(_ref$2, _el$2) : svgRef = _el$2;
+      insert(_el$2, createComponent(Show, {
+        get when() {
+          return layout();
+        },
+        get children() {
+          return [(() => {
+            var _el$3 = _tmpl$8();
+            insert(_el$3, createComponent(For, {
+              get each() {
+                return layout().yTicks;
+              },
+              children: (v) => {
+                const lay = layout();
+                const y = lay.yOf(v);
+                return (() => {
+                  var _el$7 = _tmpl$52();
+                  setAttribute(_el$7, "y1", y);
+                  setAttribute(_el$7, "y2", y);
+                  createRenderEffect((_p$) => {
+                    var _v$9 = lay.plotLeft, _v$0 = lay.plotRight;
+                    _v$9 !== _p$.e && setAttribute(_el$7, "x1", _p$.e = _v$9);
+                    _v$0 !== _p$.t && setAttribute(_el$7, "x2", _p$.t = _v$0);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0
+                  });
+                  return _el$7;
+                })();
+              }
+            }), null);
+            insert(_el$3, createComponent(For, {
+              get each() {
+                return layout().yLabels;
+              },
+              children: (lbl) => {
+                const lay = layout();
+                return (() => {
+                  var _el$8 = _tmpl$62();
+                  insert(_el$8, () => lbl.text);
+                  createRenderEffect((_p$) => {
+                    var _v$1 = lay.plotLeft - 8, _v$10 = lbl.y;
+                    _v$1 !== _p$.e && setAttribute(_el$8, "x", _p$.e = _v$1);
+                    _v$10 !== _p$.t && setAttribute(_el$8, "y", _p$.t = _v$10);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0
+                  });
+                  return _el$8;
+                })();
+              }
+            }), null);
+            return _el$3;
+          })(), (() => {
+            var _el$4 = _tmpl$8();
+            insert(_el$4, createComponent(For, {
+              get each() {
+                return layout().xTicks;
+              },
+              children: (t) => {
+                const lay = layout();
+                const x = lay.xOf(t);
+                return (() => {
+                  var _el$9 = _tmpl$52();
+                  setAttribute(_el$9, "x1", x);
+                  setAttribute(_el$9, "x2", x);
+                  createRenderEffect((_p$) => {
+                    var _v$11 = M.top, _v$12 = lay.h - M.bottom;
+                    _v$11 !== _p$.e && setAttribute(_el$9, "y1", _p$.e = _v$11);
+                    _v$12 !== _p$.t && setAttribute(_el$9, "y2", _p$.t = _v$12);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0
+                  });
+                  return _el$9;
+                })();
+              }
+            }), null);
+            insert(_el$4, createComponent(For, {
+              get each() {
+                return layout().xLabels;
+              },
+              children: (lbl) => {
+                const lay = layout();
+                return (() => {
+                  var _el$0 = _tmpl$72();
+                  insert(_el$0, () => lbl.text);
+                  createRenderEffect((_p$) => {
+                    var _v$13 = lbl.x, _v$14 = lay.h - M.bottom + 16, _v$15 = lbl.anchor;
+                    _v$13 !== _p$.e && setAttribute(_el$0, "x", _p$.e = _v$13);
+                    _v$14 !== _p$.t && setAttribute(_el$0, "y", _p$.t = _v$14);
+                    _v$15 !== _p$.a && setAttribute(_el$0, "text-anchor", _p$.a = _v$15);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0,
+                    a: void 0
+                  });
+                  return _el$0;
+                })();
+              }
+            }), null);
+            return _el$4;
+          })(), createComponent(For, {
+            get each() {
+              return connectorDraws();
+            },
+            children: (c) => (() => {
+              var _el$1 = _tmpl$82();
+              createRenderEffect((_p$) => {
+                var _v$16 = "connector" + (c.solid ? " solid" : ""), _v$17 = c.d, _v$18 = c.color ? {
+                  stroke: c.color
+                } : void 0;
+                _v$16 !== _p$.e && setAttribute(_el$1, "class", _p$.e = _v$16);
+                _v$17 !== _p$.t && setAttribute(_el$1, "d", _p$.t = _v$17);
+                _p$.a = style(_el$1, _v$18, _p$.a);
+                return _p$;
+              }, {
+                e: void 0,
+                t: void 0,
+                a: void 0
+              });
+              return _el$1;
+            })()
+          }), createComponent(For, {
+            get each() {
+              return solidDraws();
+            },
+            children: (s) => [(() => {
+              var _el$10 = _tmpl$9();
+              createRenderEffect(() => setAttribute(_el$10, "d", s.area));
+              return _el$10;
+            })(), (() => {
+              var _el$11 = _tmpl$0();
+              createRenderEffect(() => setAttribute(_el$11, "d", s.d));
+              return _el$11;
+            })()]
+          }), createComponent(For, {
+            get each() {
+              return chartData().geom.isolated;
+            },
+            children: (p) => {
+              const lay = layout();
+              return (() => {
+                var _el$12 = _tmpl$1();
+                createRenderEffect((_p$) => {
+                  var _v$19 = lay.xOf(p.t), _v$20 = lay.yOf(p.total);
+                  _v$19 !== _p$.e && setAttribute(_el$12, "cx", _p$.e = _v$19);
+                  _v$20 !== _p$.t && setAttribute(_el$12, "cy", _p$.t = _v$20);
+                  return _p$;
+                }, {
+                  e: void 0,
+                  t: void 0
+                });
+                return _el$12;
+              })();
+            }
+          }), createComponent(Show, {
+            get when() {
+              return hover();
+            },
+            get children() {
+              return [(() => {
+                var _el$5 = _tmpl$27();
+                createRenderEffect((_p$) => {
+                  var _v$ = hover().x, _v$2 = M.top, _v$3 = hover().x, _v$4 = size().h - M.bottom;
+                  _v$ !== _p$.e && setAttribute(_el$5, "x1", _p$.e = _v$);
+                  _v$2 !== _p$.t && setAttribute(_el$5, "y1", _p$.t = _v$2);
+                  _v$3 !== _p$.a && setAttribute(_el$5, "x2", _p$.a = _v$3);
+                  _v$4 !== _p$.o && setAttribute(_el$5, "y2", _p$.o = _v$4);
+                  return _p$;
+                }, {
+                  e: void 0,
+                  t: void 0,
+                  a: void 0,
+                  o: void 0
+                });
+                return _el$5;
+              })(), (() => {
+                var _el$6 = _tmpl$32();
+                createRenderEffect((_p$) => {
+                  var _v$5 = hover().x, _v$6 = hover().y;
+                  _v$5 !== _p$.e && setAttribute(_el$6, "cx", _p$.e = _v$5);
+                  _v$6 !== _p$.t && setAttribute(_el$6, "cy", _p$.t = _v$6);
+                  return _p$;
+                }, {
+                  e: void 0,
+                  t: void 0
+                });
+                return _el$6;
+              })()];
+            }
+          })];
+        }
+      }));
+      insert(_el$, createComponent(Tooltip, {}), null);
+      insert(_el$, createComponent(Empty, {}), null);
+      createRenderEffect((_p$) => {
+        var _v$7 = size().w, _v$8 = size().h;
+        _v$7 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$7);
+        _v$8 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$8);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0
+      });
+      return _el$;
+    })();
+  }
+
   // webview/components/Settings.tsx
-  var _tmpl$8 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$27 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><div class=settings-label>\u72B6\u6001\u680F</div><label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox></label><button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down"></i></button><div><div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898</label></div></div><div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0</button></div><div id=thresholdList></div><p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002</p></div></div><div class=settings-group><div class=settings-label>\u56FE\u8868</div><p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002</p><div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF</option></select></div><div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5</option></select></div><div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272</label></div></div></div><div class=settings-group><div class=settings-label>\u5E38\u89C4</div><div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number></div><div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number></div><label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox></label></div><div class=settings-group><div class=settings-label>API Key</div><div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664</button></div></div></div><div class=settings-group><div class=settings-label>\u6570\u636E</div><div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2</button></div></div><div class=settings-group><div class=settings-label>\u5176\u4ED6</div><div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4</button></div></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
-  var _tmpl$32 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
+  var _tmpl$10 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
+  var _tmpl$28 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><div class=settings-label>\u72B6\u6001\u680F</div><label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox></label><button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down"></i></button><div><div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898</label></div></div><div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0</button></div><div id=thresholdList></div><p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002</p></div></div><div class=settings-group><div class=settings-label>\u56FE\u8868</div><p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002</p><div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF</option></select></div><div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5</option></select></div><div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272</label></div></div></div><div class=settings-group><div class=settings-label>\u5E38\u89C4</div><div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number></div><div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number></div><label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox></label></div><div class=settings-group><div class=settings-label>API Key</div><div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664</button></div></div></div><div class=settings-group><div class=settings-label>\u6570\u636E</div><div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2</button></div></div><div class=settings-group><div class=settings-label>\u5176\u4ED6</div><div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4</button></div></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
+  var _tmpl$33 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function Settings(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
     const [consent, setConsent] = createSignal(false);
@@ -2533,7 +2866,7 @@
       }]);
     }
     return (() => {
-      var _el$ = _tmpl$27(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling, _el$10 = _el$9.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.firstChild, _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling, _el$15 = _el$14.firstChild, _el$16 = _el$15.nextSibling, _el$17 = _el$16.firstChild, _el$18 = _el$12.nextSibling, _el$19 = _el$18.firstChild, _el$20 = _el$19.nextSibling, _el$21 = _el$18.nextSibling, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$24 = _el$23.nextSibling, _el$25 = _el$24.nextSibling, _el$26 = _el$25.firstChild, _el$27 = _el$26.nextSibling, _el$28 = _el$25.nextSibling, _el$29 = _el$28.firstChild, _el$30 = _el$29.nextSibling, _el$31 = _el$28.nextSibling, _el$32 = _el$31.firstChild, _el$33 = _el$32.nextSibling, _el$34 = _el$33.firstChild, _el$35 = _el$34.nextSibling, _el$36 = _el$35.firstChild, _el$37 = _el$22.nextSibling, _el$38 = _el$37.firstChild, _el$39 = _el$38.nextSibling, _el$40 = _el$39.firstChild, _el$41 = _el$40.nextSibling, _el$42 = _el$39.nextSibling, _el$43 = _el$42.firstChild, _el$44 = _el$43.nextSibling, _el$45 = _el$42.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$53 = _el$37.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling, _el$56 = _el$55.firstChild, _el$57 = _el$56.nextSibling, _el$58 = _el$57.firstChild, _el$59 = _el$58.nextSibling, _el$60 = _el$53.nextSibling, _el$61 = _el$60.firstChild, _el$62 = _el$61.nextSibling, _el$63 = _el$62.firstChild, _el$64 = _el$63.nextSibling, _el$65 = _el$60.nextSibling, _el$66 = _el$65.firstChild, _el$67 = _el$66.nextSibling, _el$68 = _el$67.firstChild, _el$69 = _el$68.nextSibling, _el$70 = _el$6.nextSibling, _el$71 = _el$70.firstChild, _el$72 = _el$71.nextSibling, _el$73 = _el$72.nextSibling;
+      var _el$ = _tmpl$28(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling, _el$10 = _el$9.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.firstChild, _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling, _el$15 = _el$14.firstChild, _el$16 = _el$15.nextSibling, _el$17 = _el$16.firstChild, _el$18 = _el$12.nextSibling, _el$19 = _el$18.firstChild, _el$20 = _el$19.nextSibling, _el$21 = _el$18.nextSibling, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$24 = _el$23.nextSibling, _el$25 = _el$24.nextSibling, _el$26 = _el$25.firstChild, _el$27 = _el$26.nextSibling, _el$28 = _el$25.nextSibling, _el$29 = _el$28.firstChild, _el$30 = _el$29.nextSibling, _el$31 = _el$28.nextSibling, _el$32 = _el$31.firstChild, _el$33 = _el$32.nextSibling, _el$34 = _el$33.firstChild, _el$35 = _el$34.nextSibling, _el$36 = _el$35.firstChild, _el$37 = _el$22.nextSibling, _el$38 = _el$37.firstChild, _el$39 = _el$38.nextSibling, _el$40 = _el$39.firstChild, _el$41 = _el$40.nextSibling, _el$42 = _el$39.nextSibling, _el$43 = _el$42.firstChild, _el$44 = _el$43.nextSibling, _el$45 = _el$42.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$53 = _el$37.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling, _el$56 = _el$55.firstChild, _el$57 = _el$56.nextSibling, _el$58 = _el$57.firstChild, _el$59 = _el$58.nextSibling, _el$60 = _el$53.nextSibling, _el$61 = _el$60.firstChild, _el$62 = _el$61.nextSibling, _el$63 = _el$62.firstChild, _el$64 = _el$63.nextSibling, _el$65 = _el$60.nextSibling, _el$66 = _el$65.firstChild, _el$67 = _el$66.nextSibling, _el$68 = _el$67.firstChild, _el$69 = _el$68.nextSibling, _el$70 = _el$6.nextSibling, _el$71 = _el$70.firstChild, _el$72 = _el$71.nextSibling, _el$73 = _el$72.nextSibling;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -2553,7 +2886,7 @@
           return staged?.thresholds ?? [];
         },
         children: (t, i) => (() => {
-          var _el$74 = _tmpl$32(), _el$75 = _el$74.firstChild, _el$76 = _el$75.nextSibling, _el$77 = _el$76.nextSibling, _el$78 = _el$77.nextSibling;
+          var _el$74 = _tmpl$33(), _el$75 = _el$74.firstChild, _el$76 = _el$75.nextSibling, _el$77 = _el$76.nextSibling, _el$78 = _el$77.nextSibling;
           _el$75.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
           _el$77.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
           _el$78.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
@@ -2590,7 +2923,7 @@
           return consent();
         },
         get children() {
-          var _el$48 = _tmpl$8(), _el$49 = _el$48.firstChild, _el$50 = _el$49.nextSibling, _el$51 = _el$50.firstChild, _el$52 = _el$51.nextSibling;
+          var _el$48 = _tmpl$10(), _el$49 = _el$48.firstChild, _el$50 = _el$49.nextSibling, _el$51 = _el$50.firstChild, _el$52 = _el$51.nextSibling;
           _el$51.$$click = () => {
             setStaged("showTodaySpend", true);
             setConsent(false);
@@ -2649,33 +2982,8 @@
   delegateEvents(["pointerdown", "click", "input"]);
 
   // webview/components/App.tsx
-  var _tmpl$9 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><main id=chartWrap><svg id=chart width=0 height=0></svg></main><footer>`);
+  var _tmpl$11 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
-    let wrapRef;
-    let svgRef;
-    onMount(() => {
-      const engine = createChartEngine({
-        svg: svgRef,
-        container: wrapRef,
-        getState: () => ({
-          data: store.data,
-          view: store.view,
-          viewRange: store.viewRange,
-          maxWindow: store.maxWindow,
-          minWindow: store.minWindow,
-          connectorStyle: store.config?.connectorStyle ?? "dashed",
-          connectorColor: store.config?.connectorColor ?? "",
-          lineStyle: store.config?.lineStyle ?? "straight"
-        }),
-        onHover: (info) => setTooltipInfo(info),
-        onViewChange: (vr, followLive) => setViewRange(vr, followLive),
-        onReset: () => resetView()
-      });
-      createEffect(on(() => [store.data, store.config, store.view, store.rangeKey, store.viewRange, store.themeTick], () => engine.render(), {
-        defer: true
-      }));
-      onCleanup(() => engine.dispose());
-    });
     createEffect(() => {
       const r = store.refreshResult;
       if (!r) return;
@@ -2695,20 +3003,15 @@
       return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
     });
     return (() => {
-      var _el$ = _tmpl$9(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling;
+      var _el$ = _tmpl$11(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling;
       insert(_el$2, createComponent(Header, {}), _el$3);
       insert(_el$3, createComponent(Ranges, {}), _el$4);
       insert(_el$3, createComponent(Tabs, {}), _el$4);
       addEventListener(_el$4, "click", resetView, true);
       addEventListener(_el$5, "click", checkNow, true);
       addEventListener(_el$7, "click", openUsage, true);
-      var _ref$ = wrapRef;
-      typeof _ref$ === "function" ? use(_ref$, _el$8) : wrapRef = _el$8;
-      var _ref$2 = svgRef;
-      typeof _ref$2 === "function" ? use(_ref$2, _el$9) : svgRef = _el$9;
-      insert(_el$8, createComponent(Tooltip, {}), null);
-      insert(_el$8, createComponent(Empty, {}), null);
-      insert(_el$0, createComponent(Footer, {}));
+      insert(_el$, createComponent(Chart, {}), _el$8);
+      insert(_el$8, createComponent(Footer, {}));
       insert(_el$, createComponent(Show, {
         get when() {
           return store.settingsOpen;

@@ -1,7 +1,15 @@
 /** Solid store：单一状态源 + actions（替代 chart.js 的全局 state + 手动 renderXxx）。 */
 import { createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import type { ConnectorStyle, InitPayload, LineStyle, PanelConfig, Snapshot, Threshold } from './types';
+import type {
+  ConnectorStyle,
+  InitPayload,
+  LineStyle,
+  PanelConfig,
+  Snapshot,
+  Threshold,
+  TooltipInfo,
+} from './types';
 import type { ViewKey, ViewRange, ViewState } from './logic/viewport';
 import {
   onNewData,
@@ -10,7 +18,6 @@ import {
   viewPoints,
   VIEWS,
 } from './logic/viewport';
-import type { TooltipInfo } from './engine/chartEngine';
 import { postMessage, type SaveSettingsPayload } from './messaging';
 
 export interface AppState {

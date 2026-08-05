@@ -58,3 +58,16 @@ export interface ChartPoint {
   granted: number;
   currency: string;
 }
+
+export interface TooltipRow {
+  label: string;
+  value: string;
+}
+
+/** 悬停信息（pointX/pointY 为图表坐标，相对 container 左上角；位置由 Tooltip 组件计算）。 */
+export interface TooltipInfo {
+  pointX: number;
+  pointY: number;
+  title: string;
+  rows: TooltipRow[];
+}

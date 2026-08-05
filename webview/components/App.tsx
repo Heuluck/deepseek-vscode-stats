@@ -1,67 +1,21 @@
-/** 应用根组件：布局 + 引擎挂载 + 响应式自动重绘。 */
-import { createEffect, createMemo, on, onCleanup, onMount, Show } from 'solid-js';
-import { createChartEngine } from '../engine/chartEngine';
+/** 应用根组件：布局 + 图表（Solid 声明式）+ 设置面板。 */
+import { createEffect, createMemo, onCleanup, Show } from 'solid-js';
 import {
   checkNow,
   clearRefreshFeedback,
   closeSettings,
   openUsage,
   resetView,
-  setTooltipInfo,
-  setViewRange,
   store,
 } from '../store';
 import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Ranges } from './Ranges';
 import { Footer } from './Footer';
-import { Empty } from './Empty';
-import { Tooltip } from './Tooltip';
+import { Chart } from './Chart';
 import { Settings } from './Settings';
 
 export function App() {
-  let wrapRef: HTMLElement | undefined;
-  let svgRef: SVGSVGElement | undefined;
-
-  onMount(() => {
-    const engine = createChartEngine({
-      svg: svgRef!,
-      container: wrapRef!,
-      getState: () => ({
-        data: store.data,
-        view: store.view,
-        viewRange: store.viewRange,
-        maxWindow: store.maxWindow,
-        minWindow: store.minWindow,
-        connectorStyle: store.config?.connectorStyle ?? 'dashed',
-        connectorColor: store.config?.connectorColor ?? '',
-        lineStyle: store.config?.lineStyle ?? 'straight',
-      }),
-      onHover: (info) => setTooltipInfo(info),
-      onViewChange: (vr, followLive) => setViewRange(vr, followLive),
-      onReset: () => resetView(),
-    });
-
-    // 自动重绘：图表相关状态变化 → 引擎重绘（替代手动 renderAll）
-    createEffect(
-      on(
-        () =>
-          [
-            store.data,
-            store.config,
-            store.view,
-            store.rangeKey,
-            store.viewRange,
-            store.themeTick,
-          ] as const,
-        () => engine.render(),
-        { defer: true }
-      )
-    );
-
-    onCleanup(() => engine.dispose());
-  });
-
   // 刷新反馈：结果（ok/fail）短暂显示后自动复原为普通刷新图标
   createEffect(() => {
     const r = store.refreshResult;
@@ -109,11 +63,7 @@ export function App() {
           </button>
         </div>
       </header>
-      <main id="chartWrap" ref={wrapRef}>
-        <svg id="chart" width="0" height="0" ref={svgRef}></svg>
-        <Tooltip />
-        <Empty />
-      </main>
+      <Chart />
       <footer>
         <Footer />
       </footer>
