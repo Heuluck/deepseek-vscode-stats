@@ -2028,12 +2028,20 @@
   }
   function polylineToClippedPath(poly, xmin, ymin, xmax, ymax) {
     let d = "";
+    let drawing = false;
     for (let i = 0; i < poly.length - 1; i++) {
       const [x0, y0] = poly[i];
       const [x1, y1] = poly[i + 1];
       const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
-      if (!seg) continue;
-      d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+      if (!seg) {
+        drawing = false;
+        continue;
+      }
+      if (!drawing) {
+        d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)}`;
+        drawing = true;
+      }
+      d += `L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
     }
     return d;
   }

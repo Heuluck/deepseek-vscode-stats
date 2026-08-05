@@ -153,7 +153,11 @@ export function clipSegmentToRect(
   return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
 }
 
-/** 折线逐段裁剪成路径；全部在外返回空串。 */
+/** 折线逐段裁剪成路径；全部在外返回空串。
+ *  相邻可见段合并为同一子路径（首个可见段 M、后续 L），保证虚线相位在可见区内连续——
+ *  若每段独立 M L，SVG 的 stroke-dasharray 会逐段重置，折线化（如曲线连接线 64 段）后
+ *  每段都短于虚线周期，拼起来像实线。
+ *  仅在进/出绘图区边界（被裁剪的段）处断开，使虚线从屏幕边缘重新起算。 */
 export function polylineToClippedPath(
   poly: Array<[number, number]>,
   xmin: number,
@@ -162,12 +166,20 @@ export function polylineToClippedPath(
   ymax: number
 ): string {
   let d = '';
+  let drawing = false;
   for (let i = 0; i < poly.length - 1; i++) {
     const [x0, y0] = poly[i];
     const [x1, y1] = poly[i + 1];
     const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
-    if (!seg) continue;
-    d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+    if (!seg) {
+      drawing = false;
+      continue;
+    }
+    if (!drawing) {
+      d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)}`;
+      drawing = true;
+    }
+    d += `L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
   }
   return d;
 }
