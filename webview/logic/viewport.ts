@@ -133,6 +133,47 @@ export function getPts(
   return pts.filter((p) => p.t >= viewRange.start && p.t <= viewRange.end);
 }
 
+/** 视口区间上下文：区间内数据点 + 两侧最近点（用于空区间渲染 / 断档连接线）。 */
+export interface RangeNeighbors {
+  inRange: ChartPoint[];
+  /** 区间左侧最近点（最后一个 < start 的点）。 */
+  left: ChartPoint | null;
+  /** 区间右侧最近点（第一个 > end 的点）。 */
+  right: ChartPoint | null;
+  /** left 再往前一个点（曲线连接线控制点用）。 */
+  leftPrev: ChartPoint | null;
+  /** right 再往后一个点（曲线连接线控制点用）。 */
+  rightNext: ChartPoint | null;
+}
+
+export function getRangeNeighbors(
+  data: InitPayload | null,
+  view: ViewKey,
+  viewRange: ViewRange | null
+): RangeNeighbors {
+  const pts = viewPoints(data, view);
+  if (!viewRange) return { inRange: pts, left: null, right: null, leftPrev: null, rightNext: null };
+  const inRange: ChartPoint[] = [];
+  let left: ChartPoint | null = null;
+  let leftPrev: ChartPoint | null = null;
+  let right: ChartPoint | null = null;
+  let rightNext: ChartPoint | null = null;
+  for (let i = 0; i < pts.length; i++) {
+    const p = pts[i];
+    if (p.t < viewRange.start) {
+      leftPrev = left;
+      left = p;
+    } else if (p.t > viewRange.end) {
+      right = p;
+      rightNext = pts[i + 1] ?? null;
+      break;
+    } else {
+      inRange.push(p);
+    }
+  }
+  return { inRange, left, right, leftPrev, rightNext };
+}
+
 /** 重置视图范围到当前 range 预设（返回需写入 store 的字段）。 */
 export function resetViewRange(
   data: InitPayload | null,

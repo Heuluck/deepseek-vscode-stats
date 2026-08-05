@@ -1434,10 +1434,28 @@
     if (!pts.length) return null;
     return { minT: pts[0].t, maxT: pts[pts.length - 1].t };
   }
-  function getPts(data, view, viewRange) {
+  function getRangeNeighbors(data, view, viewRange) {
     const pts = viewPoints(data, view);
-    if (!viewRange) return pts;
-    return pts.filter((p) => p.t >= viewRange.start && p.t <= viewRange.end);
+    if (!viewRange) return { inRange: pts, left: null, right: null, leftPrev: null, rightNext: null };
+    const inRange = [];
+    let left = null;
+    let leftPrev = null;
+    let right = null;
+    let rightNext = null;
+    for (let i = 0; i < pts.length; i++) {
+      const p = pts[i];
+      if (p.t < viewRange.start) {
+        leftPrev = left;
+        left = p;
+      } else if (p.t > viewRange.end) {
+        right = p;
+        rightNext = pts[i + 1] ?? null;
+        break;
+      } else {
+        inRange.push(p);
+      }
+    }
+    return { inRange, left, right, leftPrev, rightNext };
   }
   function resetViewRange(data, view, rangeKey) {
     const bounds = computeDataBounds(data, view);
@@ -1672,14 +1690,12 @@
   function emptyInfo() {
     const data = store.data;
     if (!data) return { msg: "\u52A0\u8F7D\u4E2D\u2026", showAction: false };
-    const bounds = computeDataBounds(data, store.view);
-    const pts = getPts(data, store.view, store.viewRange);
-    if (!bounds || pts.length === 0) {
+    if (!viewPoints(data, store.view).length) {
       const total = (data.snapshots || []).length + (data.daily || []).length;
       if (total === 0) {
         return data.hasKey ? { msg: "\u7B49\u5F85\u9996\u6B21\u67E5\u8BE2\u7ED3\u679C\u2026", showAction: false } : { msg: "\u672A\u914D\u7F6E API Key", showAction: true };
       }
-      return { msg: "\u6240\u9009\u8303\u56F4\u5185\u6682\u65E0\u6570\u636E", showAction: false };
+      return { msg: "\u8BE5\u89C6\u56FE\u6682\u65E0\u6570\u636E", showAction: false };
     }
     return null;
   }
@@ -1831,11 +1847,11 @@
       }
       return d;
     }
-    function smoothSegment(p0, p1, p2, p3, xOf, yOf) {
+    function flattenSmoothSegment(p0, p1, p2, p3, xOf, yOf) {
       const h = p2.t - p1.t;
-      if (h <= 0) return straightPath([p1, p2], xOf, yOf);
+      if (h <= 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
       const s = (p2.total - p1.total) / h;
-      if (s === 0) return straightPath([p1, p2], xOf, yOf);
+      if (s === 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
       let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
       let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
       if (m1 * s <= 0) m1 = 0;
@@ -1848,13 +1864,60 @@
         m1 = tau * alpha * s;
         m2 = tau * beta * s;
       }
-      const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p1.t)) / 3;
+      const bx0 = xOf(p1.t);
+      const by0 = yOf(p1.total);
+      const bx3 = xOf(p2.t);
+      const by3 = yOf(p2.total);
+      const c1x = bx0 + (bx3 - bx0) / 3;
       const c1y = yOf(p1.total + m1 * h / 3);
-      const c2x = xOf(p2.t) - (xOf(p2.t) - xOf(p1.t)) / 3;
+      const c2x = bx3 - (bx3 - bx0) / 3;
       const c2y = yOf(p2.total - m2 * h / 3);
-      return `M${xOf(p1.t).toFixed(1)},${yOf(p1.total).toFixed(1)} C${c1x.toFixed(1)},${c1y.toFixed(
-        1
-      )} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(p2.t).toFixed(1)},${yOf(p2.total).toFixed(1)}`;
+      const STEPS = 64;
+      const out = [[bx0, by0]];
+      for (let i = 1; i < STEPS; i++) {
+        const u = i / STEPS;
+        const w = 1 - u;
+        out.push([
+          w * w * w * bx0 + 3 * w * w * u * c1x + 3 * w * u * u * c2x + u * u * u * bx3,
+          w * w * w * by0 + 3 * w * w * u * c1y + 3 * w * u * u * c2y + u * u * u * by3
+        ]);
+      }
+      out.push([bx3, by3]);
+      return out;
+    }
+    function clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax) {
+      const dx = x1 - x0;
+      const dy = y1 - y0;
+      let t0 = 0;
+      let t1 = 1;
+      const p = [-dx, dx, -dy, dy];
+      const q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
+      for (let i = 0; i < 4; i++) {
+        if (p[i] === 0) {
+          if (q[i] < 0) return null;
+        } else {
+          const r = q[i] / p[i];
+          if (p[i] < 0) {
+            if (r > t1) return null;
+            if (r > t0) t0 = r;
+          } else {
+            if (r < t0) return null;
+            if (r < t1) t1 = r;
+          }
+        }
+      }
+      return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+    }
+    function polylineToClippedPath(poly, xmin, ymin, xmax, ymax) {
+      let d = "";
+      for (let i = 0; i < poly.length - 1; i++) {
+        const [x0, y0] = poly[i];
+        const [x1, y1] = poly[i + 1];
+        const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
+        if (!seg) continue;
+        d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+      }
+      return d;
     }
     function line(parent, x1, y1, x2, y2, cls) {
       const e = document.createElementNS(ns, "line");
@@ -1876,14 +1939,17 @@
     }
     function render2() {
       const st = deps.getState();
-      const pts = getPts(st.data, st.view, st.viewRange);
-      const bounds = computeDataBounds(st.data, st.view);
-      if (!st.data || !bounds || pts.length === 0) {
+      if (!st.data || !computeDataBounds(st.data, st.view)) {
         svg.innerHTML = "";
         last = null;
         deps.onHover?.(null);
         return;
       }
+      const { inRange: pts, left, right, leftPrev, rightNext } = getRangeNeighbors(
+        st.data,
+        st.view,
+        st.viewRange
+      );
       const width = container.clientWidth;
       const height = container.clientHeight;
       svg.setAttribute("width", String(width));
@@ -1892,13 +1958,14 @@
       const innerW = width - M.left - M.right;
       const innerH = height - M.top - M.bottom;
       if (innerW <= 0 || innerH <= 0) return;
-      const vr = st.viewRange || { start: pts[0].t, end: pts[pts.length - 1].t };
+      const vr = st.viewRange || (left ? { start: left.t, end: right ? right.t : left.t } : { start: 0, end: 1 });
       const t0 = vr.start;
       const t1 = vr.end;
       const xOf = (t) => M.left + (t - t0) / (t1 - t0) * innerW;
+      const ySource = pts.length ? pts : [left, right].filter(Boolean);
       let yMin = Infinity;
       let yMax = -Infinity;
-      for (const p of pts) {
+      for (const p of ySource) {
         if (p.total < yMin) yMin = p.total;
         if (p.total > yMax) yMax = p.total;
       }
@@ -1907,7 +1974,7 @@
       yMin -= padY;
       yMax += padY;
       const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
-      const currency = pts[0].currency || "CNY";
+      const currency = (pts[0] || left || right)?.currency || "CNY";
       const gY = document.createElementNS(ns, "g");
       gY.setAttribute("class", "axis");
       svg.appendChild(gY);
@@ -1927,64 +1994,96 @@
         line(gX, x, M.top, x, height - M.bottom, "grid");
         text(gX, x, height - M.bottom + 16, fmtAxisTime(t, step, st.view), "middle", "hanging");
       }
-      const decimated = decimate(pts, 4e3);
-      const gapMs = effectiveGapMs(decimated, st.view);
-      const segments = buildSegments(decimated, gapMs);
-      const baseY = yOf(yMin);
       const lineStyle = st.lineStyle || "straight";
-      const linePath = (seg) => lineStyle === "smooth" ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
       const connectorStyle = st.connectorStyle || "dashed";
       const connectorColor = st.connectorColor || "";
-      if (connectorStyle !== "none" && segments.length > 1) {
+      const plotX = M.left;
+      const plotY = M.top;
+      const plotW = width - M.right;
+      const plotH = height - M.bottom;
+      const drawConnector = (a, b, p0, p3) => {
+        if (connectorStyle === "none") return;
+        let d;
+        if (lineStyle === "smooth") {
+          d = polylineToClippedPath(
+            flattenSmoothSegment(p0 ?? a, a, b, p3 ?? b, xOf, yOf),
+            plotX,
+            plotY,
+            plotW,
+            plotH
+          );
+        } else {
+          const seg = clipSegmentToRect(
+            xOf(a.t),
+            yOf(a.total),
+            xOf(b.t),
+            yOf(b.total),
+            plotX,
+            plotY,
+            plotW,
+            plotH
+          );
+          if (!seg) return;
+          d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+        }
+        if (!d) return;
+        const e = document.createElementNS(ns, "path");
+        e.setAttribute("d", d);
+        e.setAttribute("class", "connector" + (connectorStyle === "solid" ? " solid" : ""));
+        if (connectorColor) e.style.stroke = connectorColor;
+        svg.appendChild(e);
+      };
+      if (pts.length > 0) {
+        const decimated = decimate(pts, 4e3);
+        const gapMs = effectiveGapMs(decimated, st.view);
+        const segments = buildSegments(decimated, gapMs);
+        const baseY = yOf(yMin);
+        const linePath = (seg) => lineStyle === "smooth" ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
+        const firstP = pts[0];
+        const lastP = pts[pts.length - 1];
+        if (left && firstP.t - left.t > gapMs) {
+          drawConnector(left, firstP, leftPrev, pts[1] ?? right);
+        }
+        if (right && right.t - lastP.t > gapMs) {
+          drawConnector(lastP, right, pts[pts.length - 2] ?? left, rightNext);
+        }
         for (let i = 0; i < segments.length - 1; i++) {
           const segA = segments[i];
           const segB = segments[i + 1];
-          const a = segA[segA.length - 1];
-          const b = segB[0];
-          const e = document.createElementNS(ns, "path");
-          e.setAttribute(
-            "d",
-            lineStyle === "smooth" ? (
-              // 用缺口两侧的实际相邻点做控制点，曲线与主线条相切连续
-              smoothSegment(
-                segA.length >= 2 ? segA[segA.length - 2] : a,
-                a,
-                b,
-                segB.length >= 2 ? segB[1] : b,
-                xOf,
-                yOf
-              )
-            ) : straightPath([a, b], xOf, yOf)
+          drawConnector(
+            segA[segA.length - 1],
+            segB[0],
+            segA.length >= 2 ? segA[segA.length - 2] : null,
+            segB.length >= 2 ? segB[1] : null
           );
-          e.setAttribute("class", "connector" + (connectorStyle === "solid" ? " solid" : ""));
-          if (connectorColor) e.style.stroke = connectorColor;
-          svg.appendChild(e);
         }
-      }
-      for (const seg of segments) {
-        if (seg.length >= 2) {
-          const dPath = linePath(seg);
-          const area = document.createElementNS(ns, "path");
-          area.setAttribute(
-            "d",
-            `${dPath} L${xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${xOf(
-              seg[0].t
-            ).toFixed(1)},${baseY.toFixed(1)} Z`
-          );
-          area.setAttribute("class", "area");
-          svg.appendChild(area);
-          const path = document.createElementNS(ns, "path");
-          path.setAttribute("d", dPath);
-          path.setAttribute("class", "line");
-          svg.appendChild(path);
-        } else {
-          const c = document.createElementNS(ns, "circle");
-          c.setAttribute("cx", String(xOf(seg[0].t)));
-          c.setAttribute("cy", String(yOf(seg[0].total)));
-          c.setAttribute("r", "3");
-          c.setAttribute("class", "line isolated");
-          svg.appendChild(c);
+        for (const seg of segments) {
+          if (seg.length >= 2) {
+            const dPath = linePath(seg);
+            const area = document.createElementNS(ns, "path");
+            area.setAttribute(
+              "d",
+              `${dPath} L${xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${xOf(
+                seg[0].t
+              ).toFixed(1)},${baseY.toFixed(1)} Z`
+            );
+            area.setAttribute("class", "area");
+            svg.appendChild(area);
+            const path = document.createElementNS(ns, "path");
+            path.setAttribute("d", dPath);
+            path.setAttribute("class", "line");
+            svg.appendChild(path);
+          } else {
+            const c = document.createElementNS(ns, "circle");
+            c.setAttribute("cx", String(xOf(seg[0].t)));
+            c.setAttribute("cy", String(yOf(seg[0].total)));
+            c.setAttribute("r", "3");
+            c.setAttribute("class", "line isolated");
+            svg.appendChild(c);
+          }
         }
+      } else if (left && right) {
+        drawConnector(left, right, leftPrev, rightNext);
       }
       last = { xOf, yOf, pts, vr, currency, width, height };
       drawHover();

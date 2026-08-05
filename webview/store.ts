@@ -4,11 +4,10 @@ import { createStore } from 'solid-js/store';
 import type { ConnectorStyle, InitPayload, LineStyle, PanelConfig, Snapshot, Threshold } from './types';
 import type { ViewKey, ViewRange, ViewState } from './logic/viewport';
 import {
-  computeDataBounds,
-  getPts,
   onNewData,
   resetViewRange,
   upsertDailyLocal,
+  viewPoints,
   VIEWS,
 } from './logic/viewport';
 import type { TooltipInfo } from './engine/chartEngine';
@@ -247,16 +246,15 @@ export interface EmptyInfo {
 export function emptyInfo(): EmptyInfo | null {
   const data = store.data;
   if (!data) return { msg: '加载中…', showAction: false };
-  const bounds = computeDataBounds(data, store.view);
-  const pts = getPts(data, store.view, store.viewRange);
-  if (!bounds || pts.length === 0) {
+  if (!viewPoints(data, store.view).length) {
     const total = (data.snapshots || []).length + (data.daily || []).length;
     if (total === 0) {
       return data.hasKey
         ? { msg: '等待首次查询结果…', showAction: false }
         : { msg: '未配置 API Key', showAction: true };
     }
-    return { msg: '所选范围内暂无数据', showAction: false };
+    // 该视图下没有聚合数据（如分时视图尚无快照）——中性提示，非缩放阻断
+    return { msg: '该视图暂无数据', showAction: false };
   }
   return null;
 }

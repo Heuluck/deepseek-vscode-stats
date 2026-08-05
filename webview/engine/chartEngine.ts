@@ -8,7 +8,7 @@
  */
 import type { ChartPoint, InitPayload } from '../types';
 import type { ViewKey, ViewRange } from '../logic/viewport';
-import { clampRange, computeDataBounds, getPts } from '../logic/viewport';
+import { clampRange, computeDataBounds, getRangeNeighbors } from '../logic/viewport';
 import { fmtAxisMoney, fmtClock, fmtDay, fmtDayShort, fmtMoney, fmtMonth } from '../logic/format';
 
 const M = { top: 16, right: 18, bottom: 30, left: 66 };
@@ -227,19 +227,23 @@ export function createChartEngine(deps: EngineDeps) {
     return d;
   }
 
-  /** 保单调单段曲线（p1→p2）：切线取两侧相邻斜率，方向不一致的归零并做 Fritsch–Carlson 限制，曲线不越过两端值。 */
-  function smoothSegment(
+  /**
+   * 保单调单段曲线（p1→p2）的像素坐标折线近似（24 段），
+   * 切线取两侧相邻斜率，方向不一致的归零并做 Fritsch–Carlson 限制，曲线不越过两端值。
+   * 折线化后供连接线裁剪用（避免虚线相位在出屏端点上错乱）。
+   */
+  function flattenSmoothSegment(
     p0: ChartPoint,
     p1: ChartPoint,
     p2: ChartPoint,
     p3: ChartPoint,
     xOf: (t: number) => number,
     yOf: (v: number) => number
-  ): string {
+  ): Array<[number, number]> {
     const h = p2.t - p1.t;
-    if (h <= 0) return straightPath([p1, p2], xOf, yOf);
+    if (h <= 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
     const s = (p2.total - p1.total) / h;
-    if (s === 0) return straightPath([p1, p2], xOf, yOf);
+    if (s === 0) return [[xOf(p1.t), yOf(p1.total)], [xOf(p2.t), yOf(p2.total)]];
     let m1 = p1.t > p0.t ? (p1.total - p0.total) / (p1.t - p0.t) : s;
     let m2 = p3.t > p2.t ? (p3.total - p2.total) / (p3.t - p2.t) : s;
     // 与缺口方向不一致的切线归零，保证段内单调
@@ -253,13 +257,79 @@ export function createChartEngine(deps: EngineDeps) {
       m1 = tau * alpha * s;
       m2 = tau * beta * s;
     }
-    const c1x = xOf(p1.t) + (xOf(p2.t) - xOf(p1.t)) / 3;
+    const bx0 = xOf(p1.t);
+    const by0 = yOf(p1.total);
+    const bx3 = xOf(p2.t);
+    const by3 = yOf(p2.total);
+    const c1x = bx0 + (bx3 - bx0) / 3;
     const c1y = yOf(p1.total + (m1 * h) / 3);
-    const c2x = xOf(p2.t) - (xOf(p2.t) - xOf(p1.t)) / 3;
+    const c2x = bx3 - (bx3 - bx0) / 3;
     const c2y = yOf(p2.total - (m2 * h) / 3);
-    return `M${xOf(p1.t).toFixed(1)},${yOf(p1.total).toFixed(1)} C${c1x.toFixed(1)},${c1y.toFixed(
-      1
-    )} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(p2.t).toFixed(1)},${yOf(p2.total).toFixed(1)}`;
+    const STEPS = 64;
+    const out: Array<[number, number]> = [[bx0, by0]];
+    for (let i = 1; i < STEPS; i++) {
+      const u = i / STEPS;
+      const w = 1 - u;
+      out.push([
+        w * w * w * bx0 + 3 * w * w * u * c1x + 3 * w * u * u * c2x + u * u * u * bx3,
+        w * w * w * by0 + 3 * w * w * u * c1y + 3 * w * u * u * c2y + u * u * u * by3,
+      ]);
+    }
+    out.push([bx3, by3]);
+    return out;
+  }
+
+  /** Liang–Barsky 线段裁剪到矩形。返回裁剪后的 [x0,y0,x1,y1]；整条在外返回 null。 */
+  function clipSegmentToRect(
+    x0: number,
+    y0: number,
+    x1: number,
+    y1: number,
+    xmin: number,
+    ymin: number,
+    xmax: number,
+    ymax: number
+  ): [number, number, number, number] | null {
+    const dx = x1 - x0;
+    const dy = y1 - y0;
+    let t0 = 0;
+    let t1 = 1;
+    const p = [-dx, dx, -dy, dy];
+    const q = [x0 - xmin, xmax - x0, y0 - ymin, ymax - y0];
+    for (let i = 0; i < 4; i++) {
+      if (p[i] === 0) {
+        if (q[i] < 0) return null;
+      } else {
+        const r = q[i] / p[i];
+        if (p[i] < 0) {
+          if (r > t1) return null;
+          if (r > t0) t0 = r;
+        } else {
+          if (r < t0) return null;
+          if (r < t1) t1 = r;
+        }
+      }
+    }
+    return [x0 + t0 * dx, y0 + t0 * dy, x0 + t1 * dx, y0 + t1 * dy];
+  }
+
+  /** 折线逐段裁剪成路径；全部在外返回空串。 */
+  function polylineToClippedPath(
+    poly: Array<[number, number]>,
+    xmin: number,
+    ymin: number,
+    xmax: number,
+    ymax: number
+  ): string {
+    let d = '';
+    for (let i = 0; i < poly.length - 1; i++) {
+      const [x0, y0] = poly[i];
+      const [x1, y1] = poly[i + 1];
+      const seg = clipSegmentToRect(x0, y0, x1, y1, xmin, ymin, xmax, ymax);
+      if (!seg) continue;
+      d += `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+    }
+    return d;
   }
 
   // ---------- SVG 辅助 ----------
@@ -300,15 +370,18 @@ export function createChartEngine(deps: EngineDeps) {
   // ---------- 渲染 ----------
   function render(): void {
     const st = deps.getState();
-    const pts = getPts(st.data, st.view, st.viewRange);
-    const bounds = computeDataBounds(st.data, st.view);
-    if (!st.data || !bounds || pts.length === 0) {
+    if (!st.data || !computeDataBounds(st.data, st.view)) {
       // 空态 overlay 由 Solid 组件渲染，这里只清空画布
       svg.innerHTML = '';
       last = null;
       deps.onHover?.(null);
       return;
     }
+    const { inRange: pts, left, right, leftPrev, rightNext } = getRangeNeighbors(
+      st.data,
+      st.view,
+      st.viewRange
+    );
 
     const width = container.clientWidth;
     const height = container.clientHeight;
@@ -320,14 +393,19 @@ export function createChartEngine(deps: EngineDeps) {
     const innerH = height - M.top - M.bottom;
     if (innerW <= 0 || innerH <= 0) return;
 
-    const vr = st.viewRange || { start: pts[0].t, end: pts[pts.length - 1].t };
+    // 视口内没有点（放大到断档区间）时，坐标轴仍按当前 viewRange 渲染，缩放/平移保持可用
+    const vr =
+      st.viewRange ||
+      (left ? { start: left.t, end: right ? right.t : left.t } : { start: 0, end: 1 });
     const t0 = vr.start;
     const t1 = vr.end;
     const xOf = (t: number) => M.left + ((t - t0) / (t1 - t0)) * innerW;
 
+    // y 范围：优先区间内数据点；空区间退回两侧最近点，保证坐标轴/连接线有意义
+    const ySource = pts.length ? pts : ([left, right].filter(Boolean) as ChartPoint[]);
     let yMin = Infinity;
     let yMax = -Infinity;
-    for (const p of pts) {
+    for (const p of ySource) {
       if (p.total < yMin) yMin = p.total;
       if (p.total > yMax) yMax = p.total;
     }
@@ -337,7 +415,7 @@ export function createChartEngine(deps: EngineDeps) {
     yMax += padY;
     const yOf = (v: number) => M.top + innerH - ((v - yMin) / (yMax - yMin)) * innerH;
 
-    const currency = pts[0].currency || 'CNY';
+    const currency = (pts[0] || left || right)?.currency || 'CNY';
 
     // 网格 + Y 轴
     const gY = document.createElementNS(ns, 'g');
@@ -362,72 +440,119 @@ export function createChartEngine(deps: EngineDeps) {
       text(gX, x, height - M.bottom + 16, fmtAxisTime(t, step, st.view), 'middle', 'hanging');
     }
 
-    // 折线（断线分段）+ 面积
-    const decimated = decimate(pts, 4000);
-    const gapMs = effectiveGapMs(decimated, st.view);
-    const segments = buildSegments(decimated, gapMs);
-    const baseY = yOf(yMin);
     const lineStyle = st.lineStyle || 'straight';
-    const linePath = (seg: ChartPoint[]) =>
-      lineStyle === 'smooth' ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
-
-    // 断点连接线：数据缺口两端用虚线/实线相连（先画，垫在主线条下方；不参与面积填充）
     const connectorStyle = st.connectorStyle || 'dashed';
     const connectorColor = st.connectorColor || '';
-    if (connectorStyle !== 'none' && segments.length > 1) {
+    // 连接线裁剪到绘图区：端点出屏时虚线从屏幕边缘重新起算，避免相位错乱
+    const plotX = M.left;
+    const plotY = M.top;
+    const plotW = width - M.right;
+    const plotH = height - M.bottom;
+    /** 断点连接线：a→b 用虚线/实线相连（垫在主线条下方；不参与面积填充）。 */
+    const drawConnector = (
+      a: ChartPoint,
+      b: ChartPoint,
+      p0: ChartPoint | null,
+      p3: ChartPoint | null
+    ): void => {
+      if (connectorStyle === 'none') return;
+      let d: string;
+      if (lineStyle === 'smooth') {
+        d = polylineToClippedPath(
+          flattenSmoothSegment(p0 ?? a, a, b, p3 ?? b, xOf, yOf),
+          plotX,
+          plotY,
+          plotW,
+          plotH
+        );
+      } else {
+        const seg = clipSegmentToRect(
+          xOf(a.t),
+          yOf(a.total),
+          xOf(b.t),
+          yOf(b.total),
+          plotX,
+          plotY,
+          plotW,
+          plotH
+        );
+        if (!seg) return;
+        d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
+      }
+      if (!d) return;
+      const e = document.createElementNS(ns, 'path');
+      e.setAttribute('d', d);
+      e.setAttribute('class', 'connector' + (connectorStyle === 'solid' ? ' solid' : ''));
+      // 自定义颜色用内联样式（CSS 的 stroke 规则优先级高于 SVG 属性）
+      if (connectorColor) e.style.stroke = connectorColor;
+      svg.appendChild(e);
+    };
+
+    if (pts.length > 0) {
+      // 折线（断线分段）+ 面积 + 连接线。
+      // 只用视口内点分段——不把离屏点并入段，避免生成从屏外跨入的"实线+面积"伪正常线。
+      const decimated = decimate(pts, 4000);
+      const gapMs = effectiveGapMs(decimated, st.view);
+      const segments = buildSegments(decimated, gapMs);
+      const baseY = yOf(yMin);
+      const linePath = (seg: ChartPoint[]) =>
+        lineStyle === 'smooth' ? smoothPath(seg, xOf, yOf) : straightPath(seg, xOf, yOf);
+
+      // 左/右边缘断档连接线：视口边缘切过缺口时，从最近的离屏点连到首/末可见点。
+      // 曲线控制点保留视口外的端点（leftPrev/rightNext），内部侧回退到 right/left，
+      // 让缩放跨越数据点时连接线曲率连续稳定。
+      const firstP = pts[0];
+      const lastP = pts[pts.length - 1];
+      if (left && firstP.t - left.t > gapMs) {
+        drawConnector(left, firstP, leftPrev, pts[1] ?? right);
+      }
+      if (right && right.t - lastP.t > gapMs) {
+        drawConnector(lastP, right, pts[pts.length - 2] ?? left, rightNext);
+      }
+
+      // 段间连接线（仅视口内的缺口）
       for (let i = 0; i < segments.length - 1; i++) {
         const segA = segments[i];
         const segB = segments[i + 1];
-        const a = segA[segA.length - 1];
-        const b = segB[0];
-        const e = document.createElementNS(ns, 'path');
-        e.setAttribute(
-          'd',
-          lineStyle === 'smooth'
-            ? // 用缺口两侧的实际相邻点做控制点，曲线与主线条相切连续
-              smoothSegment(
-                segA.length >= 2 ? segA[segA.length - 2] : a,
-                a,
-                b,
-                segB.length >= 2 ? segB[1] : b,
-                xOf,
-                yOf
-              )
-            : straightPath([a, b], xOf, yOf)
+        drawConnector(
+          segA[segA.length - 1],
+          segB[0],
+          segA.length >= 2 ? segA[segA.length - 2] : null,
+          segB.length >= 2 ? segB[1] : null
         );
-        e.setAttribute('class', 'connector' + (connectorStyle === 'solid' ? ' solid' : ''));
-        // 自定义颜色用内联样式（CSS 的 stroke 规则优先级高于 SVG 属性）
-        if (connectorColor) e.style.stroke = connectorColor;
-        svg.appendChild(e);
       }
+
+      for (const seg of segments) {
+        if (seg.length >= 2) {
+          const dPath = linePath(seg);
+          const area = document.createElementNS(ns, 'path');
+          area.setAttribute(
+            'd',
+            `${dPath} L${xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${xOf(
+              seg[0].t
+            ).toFixed(1)},${baseY.toFixed(1)} Z`
+          );
+          area.setAttribute('class', 'area');
+          svg.appendChild(area);
+          const path = document.createElementNS(ns, 'path');
+          path.setAttribute('d', dPath);
+          path.setAttribute('class', 'line');
+          svg.appendChild(path);
+        } else {
+          const c = document.createElementNS(ns, 'circle');
+          c.setAttribute('cx', String(xOf(seg[0].t)));
+          c.setAttribute('cy', String(yOf(seg[0].total)));
+          c.setAttribute('r', '3');
+          c.setAttribute('class', 'line isolated');
+          svg.appendChild(c);
+        }
+      }
+    } else if (left && right) {
+      // 视口落在断档区间内：画一条横穿视口的连接线，明确"这里没有采样"（尊重连接线设置）
+      drawConnector(left, right, leftPrev, rightNext);
     }
 
-    for (const seg of segments) {
-      if (seg.length >= 2) {
-        const dPath = linePath(seg);
-        const area = document.createElementNS(ns, 'path');
-        area.setAttribute(
-          'd',
-          `${dPath} L${xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${xOf(
-            seg[0].t
-          ).toFixed(1)},${baseY.toFixed(1)} Z`
-        );
-        area.setAttribute('class', 'area');
-        svg.appendChild(area);
-        const path = document.createElementNS(ns, 'path');
-        path.setAttribute('d', dPath);
-        path.setAttribute('class', 'line');
-        svg.appendChild(path);
-      } else {
-        const c = document.createElementNS(ns, 'circle');
-        c.setAttribute('cx', String(xOf(seg[0].t)));
-        c.setAttribute('cy', String(yOf(seg[0].total)));
-        c.setAttribute('r', '3');
-        c.setAttribute('class', 'line isolated');
-        svg.appendChild(c);
-      }
-    }
-
+    // 只要视图下有数据就保留 last 上下文，缩放/平移在空区间也保持可用
     last = { xOf, yOf, pts, vr, currency, width, height };
     drawHover();
   }
