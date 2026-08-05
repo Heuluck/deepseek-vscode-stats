@@ -10,6 +10,7 @@ import {
   type StagedConfig,
 } from '../store';
 import { postMessage } from '../messaging';
+import { Collapse } from './Collapse';
 
 interface SettingsProps {
   onClose: () => void;
@@ -18,6 +19,15 @@ interface SettingsProps {
 export function Settings(props: SettingsProps) {
   const [colorOpen, setColorOpen] = createSignal(false);
   const [consent, setConsent] = createSignal(false);
+  // 分组折叠：设置类默认展开，操作类默认收起
+  const [groupsOpen, setGroupsOpen] = createStore<Record<string, boolean>>({
+    statusBar: true,
+    chart: true,
+    general: true,
+    apiKey: false,
+    data: false,
+    misc: false,
+  });
   // 挂载时从当前配置初始化暂存；编辑只改本地 staged，保存才提交
   const [staged, setStaged] = createStore<StagedConfig>(stagedFromConfig(store.config));
   // 图表 Y 轴最小跨度比例：webview 本地设置（不写入 VS Code 设置），保存时才提交
@@ -87,7 +97,17 @@ export function Settings(props: SettingsProps) {
         </div>
         <div class="settings-body">
           <div class="settings-group">
-            <div class="settings-label">状态栏</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.statusBar ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('statusBar', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-account"></i>状态栏
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.statusBar}>
             <label class="settings-row">
               <span>显示余额</span>
               <input
@@ -104,7 +124,7 @@ export function Settings(props: SettingsProps) {
               <span>阈值颜色</span>
               <i class="codicon codicon-chevron-down"></i>
             </button>
-            <div class={'settings-collapse' + (colorOpen() ? ' open' : '')}>
+            <Collapse open={colorOpen()}>
               <div class="settings-row">
                 <span>默认颜色</span>
                 <div class="settings-controls">
@@ -170,11 +190,22 @@ export function Settings(props: SettingsProps) {
                 </For>
               </div>
               <p class="settings-hint">余额低于阈值（不含）时显示对应颜色。</p>
-            </div>
+            </Collapse>
+            </Collapse>
           </div>
 
           <div class="settings-group">
-            <div class="settings-label">图表</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.chart ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('chart', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-graph-line"></i>图表
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.chart}>
             <p class="settings-hint first">数据轮询出现断档时，用连接线把缺口两端连起来。</p>
             <div class="settings-row">
               <label for="lineStyleEl">线条样式</label>
@@ -244,10 +275,21 @@ export function Settings(props: SettingsProps) {
               />
             </div>
             <p class="settings-hint">Y 轴跨度至少为最大值的该比例，限制曲线纵向放大；0 表示完全自适应。</p>
+            </Collapse>
           </div>
 
           <div class="settings-group">
-            <div class="settings-label">常规</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.general ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('general', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-gear"></i>常规
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.general}>
             <div class="settings-row">
               <label for="pollMinutesEl">查询间隔（分钟）</label>
               <input
@@ -320,12 +362,23 @@ export function Settings(props: SettingsProps) {
                 </div>
               </div>
             </Show>
+            </Collapse>
           </div>
 
           <div class="settings-group">
-            <div class="settings-label">API Key</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.apiKey ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('apiKey', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-key"></i>API Key
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.apiKey}>
             <div class="settings-row">
-              <span>{store.data && store.data.hasKey ? '已配置（存储于系统钥匙串）' : '未配置'}</span>
+              <span>{store.data && store.data.hasKey ? '已配置（安全存储）' : '未配置'}</span>
               <div class="settings-controls">
                 <button class="btn" onClick={() => postMessage({ type: 'setApiKey' })}>
                   设置 / 更换
@@ -335,26 +388,49 @@ export function Settings(props: SettingsProps) {
                 </button>
               </div>
             </div>
+            </Collapse>
           </div>
 
           <div class="settings-group">
-            <div class="settings-label">数据</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.data ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('data', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-database"></i>数据
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.data}>
             <div class="settings-row">
               <span>历史快照（仅 VS Code 打开期间记录）</span>
               <button class="btn danger" onClick={() => postMessage({ type: 'clearHistory' })}>
                 清除历史
               </button>
             </div>
+            </Collapse>
           </div>
 
           <div class="settings-group">
-            <div class="settings-label">其他</div>
+            <button
+              class={'settings-group-head' + (groupsOpen.misc ? ' open' : '')}
+              type="button"
+              onClick={() => setGroupsOpen('misc', (o) => !o)}
+            >
+              <span class="settings-group-title">
+                <i class="codicon codicon-ellipsis"></i>其他
+              </span>
+              <i class="codicon codicon-chevron-down"></i>
+            </button>
+            <Collapse open={groupsOpen.misc}>
             <div class="settings-row">
               <span>恢复默认设置</span>
               <button class="btn danger" onClick={() => postMessage({ type: 'resetSettings' })}>
                 恢复默认
               </button>
             </div>
+            </Collapse>
           </div>
         </div>
         <div class="settings-foot">
