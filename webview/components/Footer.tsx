@@ -1,6 +1,6 @@
-/** 页脚：数据说明 / 错误 / 设置入口。 */
+/** 页脚：数据说明 / 错误 / 状态页入口 / 设置入口。 */
 import { createMemo } from 'solid-js';
-import { openSettings, store } from '../store';
+import { openSettings, openStatusPage, store } from '../store';
 
 export function Footer() {
   const info = createMemo(() => {
@@ -21,6 +21,9 @@ export function Footer() {
       <span>{info()}</span>
       <span class="footer-right">
         <span class="err">{store.lastError ? `⚠ ${store.lastError}` : ''}</span>
+        <button class="btn" title="打开 DeepSeek 状态页" onClick={openStatusPage}>
+          <i class="codicon codicon-pulse"></i>状态
+        </button>
         <button class="btn" title="设置" onClick={openSettings}>
           <i class="codicon codicon-gear"></i>设置
         </button>

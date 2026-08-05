@@ -1687,6 +1687,9 @@
   function openUsage() {
     postMessage({ type: "openUsage" });
   }
+  function openStatusPage() {
+    postMessage({ type: "openStatusPage" });
+  }
   function setApiKey() {
     postMessage({ type: "setApiKey" });
   }
@@ -1825,7 +1828,7 @@
 
   // webview/components/Footer.tsx
   var _tmpl$5 = /* @__PURE__ */ template(`<span>`);
-  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><button class=btn title=\u8BBE\u7F6E><i class="codicon codicon-gear"></i>\u8BBE\u7F6E`);
+  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><button class=btn title="\u6253\u5F00 DeepSeek \u72B6\u6001\u9875"><i class="codicon codicon-pulse"></i>\u72B6\u6001</button><button class=btn title=\u8BBE\u7F6E><i class="codicon codicon-gear"></i>\u8BBE\u7F6E`);
   function Footer() {
     const info = createMemo(() => {
       const d = store.data;
@@ -1842,12 +1845,13 @@
       insert(_el$, info);
       return _el$;
     })(), (() => {
-      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling;
+      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.nextSibling;
       insert(_el$3, (() => {
         var _c$ = memo(() => !!store.lastError);
         return () => _c$() ? `\u26A0 ${store.lastError}` : "";
       })());
-      addEventListener(_el$4, "click", openSettings, true);
+      addEventListener(_el$4, "click", openStatusPage, true);
+      addEventListener(_el$5, "click", openSettings, true);
       return _el$2;
     })()];
   }

@@ -249,6 +249,10 @@ export function openUsage(): void {
   postMessage({ type: 'openUsage' });
 }
 
+export function openStatusPage(): void {
+  postMessage({ type: 'openStatusPage' });
+}
+
 export function setApiKey(): void {
   postMessage({ type: 'setApiKey' });
 }

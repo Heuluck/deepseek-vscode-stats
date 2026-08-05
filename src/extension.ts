@@ -5,6 +5,9 @@ import { StatusBar } from './statusBar';
 import { fetchBalance, pickBalanceInfo } from './balanceClient';
 import { getPanelConfig, getPollIntervalMinutes } from './config';
 
+/** DeepSeek 官方状态页地址。 */
+const STATUS_PAGE_URL = 'https://status.deepseek.com/';
+
 const API_KEY_SECRET = 'deepseekStats.apiKey';
 /** 图表 UI 设置（webview 本地，存 globalState，非 VS Code 设置）：Y 轴最小跨度比例默认值。 */
 const DEFAULT_Y_MIN_SPAN_RATIO = 0.2;
@@ -49,6 +52,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       pushDataToPanel();
     } else if (msg.type === 'checkNow') {
       void checkNow();
+    } else if (msg.type === 'openStatusPage') {
+      void vscode.env.openExternal(vscode.Uri.parse(STATUS_PAGE_URL));
     }
   }
 
