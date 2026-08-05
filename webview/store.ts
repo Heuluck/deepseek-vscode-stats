@@ -19,6 +19,11 @@ import {
   VIEWS,
 } from './logic/viewport';
 import { postMessage, type SaveSettingsPayload } from './messaging';
+import {
+  advanceTodaySpendCache,
+  buildTodaySpendCache,
+  type TodaySpendCache,
+} from './logic/todaySpend';
 
 export interface AppState {
   data: InitPayload | null;
@@ -38,6 +43,8 @@ export interface AppState {
   refreshResult: 'ok' | 'fail' | null;
   /** 图表 Y 轴最小跨度比例（webview 本地设置，存扩展 globalState；0 = 关闭约束）。 */
   yMinSpanRatio: number;
+  /** 今日花费增量缓存（基准 + 累计充值），跨天自动重建。 */
+  todayCache: TodaySpendCache | null;
 }
 
 export const [store, setStore] = createStore<AppState>({
@@ -55,6 +62,7 @@ export const [store, setStore] = createStore<AppState>({
   refreshing: false,
   refreshResult: null,
   yMinSpanRatio: 0.2,
+  todayCache: null,
 });
 
 /** 悬停信息（高频，独立 signal，避免穿透组件树）。 */
@@ -142,6 +150,7 @@ export function init(payload: InitPayload): void {
     maxWindow: r.maxWindow ?? 0,
     minWindow: r.minWindow ?? 60e3,
     yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
+    todayCache: buildTodaySpendCache(payload),
     lastError: '',
   });
 }
@@ -159,6 +168,7 @@ export function onSnapshot(s: Snapshot): void {
   // 手动刷新成功后：停转并给出成功反馈（自动轮询来的 snapshot 不影响刷新状态）
   setStore({
     data,
+    todayCache: advanceTodaySpendCache(store.todayCache, data),
     ...patch,
     ...(store.refreshing ? { refreshing: false, refreshResult: 'ok' as const } : {}),
   });

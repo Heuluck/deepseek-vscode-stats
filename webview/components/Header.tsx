@@ -2,7 +2,7 @@
 import { createMemo, Show } from 'solid-js';
 import { spendPreview, store } from '../store';
 import { fmtMoney } from '../logic/format';
-import { computeTodaySpend } from '../logic/todaySpend';
+import { todaySpendFromCache } from '../logic/todaySpend';
 
 export function Header() {
   const balance = createMemo(() => {
@@ -30,15 +30,18 @@ export function Header() {
 
   const spend = createMemo(() => {
     if (!showSpend()) return null;
-    const info = computeTodaySpend(store.data);
-    if (!info || info.spend == null) {
-      return { value: '—', title: '数据不足，无法估算今日花费' };
+    const info = todaySpendFromCache(
+      store.todayCache,
+      (store.data && store.data.current) || null
+    );
+    if (!info) {
+      return { value: '-', title: '数据不足或含充值，无法可靠估算今日花费' };
     }
     const currency =
       (store.data && store.data.current && store.data.current.currency) || 'CNY';
     return {
       value: `~${fmtMoney(info.spend, currency)}`,
-      title: `估算：基于${info.source} ¥${info.baseline} 推算，可能因充值或数据断档而不准确`,
+      title: `估算：基于${info.source} ¥${info.baseline} 推算（已按今日充值校正）`,
     };
   });
 

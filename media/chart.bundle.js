@@ -1532,6 +1532,81 @@
     return next;
   }
 
+  // webview/logic/todaySpend.ts
+  var EPS = 1e-6;
+  function findBaseline(data, todayStart) {
+    const yesterdayStart = todayStart - 864e5;
+    const yesterdayDaily = (data.daily || []).find((x) => x.day === yesterdayStart);
+    if (yesterdayDaily) {
+      return { baseline: yesterdayDaily.total, source: "\u6628\u65E5\u4F59\u989D" };
+    }
+    const firstToday = data.snapshots.find((s) => s.t >= todayStart);
+    if (firstToday) {
+      return { baseline: firstToday.total, source: "\u4ECA\u65E5\u9996\u6761\u5FEB\u7167" };
+    }
+    return null;
+  }
+  function scanToday(snapshots, todayStart, baseline) {
+    let recharge = 0;
+    let prev = baseline;
+    let lastT = 0;
+    for (const s of snapshots) {
+      if (s.t < todayStart) continue;
+      const gain = s.total - prev;
+      if (gain > EPS) recharge += gain;
+      prev = s.total;
+      lastT = s.t;
+    }
+    return [recharge, prev, lastT];
+  }
+  function buildTodaySpendCache(data, now = Date.now()) {
+    if (!data || !data.snapshots.length) return null;
+    const snapshots = data.snapshots;
+    const todayStart = startOfDay(snapshots[snapshots.length - 1].t);
+    if (todayStart !== startOfDay(now)) return null;
+    const base = findBaseline(data, todayStart);
+    if (!base) return null;
+    const [recharge, prevTotal, lastT] = scanToday(snapshots, todayStart, base.baseline);
+    return {
+      day: todayStart,
+      baseline: base.baseline,
+      source: base.source,
+      recharge,
+      lastT,
+      prevTotal
+    };
+  }
+  function advanceTodaySpendCache(cache, data, now = Date.now()) {
+    if (!data || !data.snapshots.length) return cache;
+    const snapshots = data.snapshots;
+    const day = startOfDay(snapshots[snapshots.length - 1].t);
+    if (!cache || cache.day !== day) {
+      return buildTodaySpendCache(data, now);
+    }
+    let i = snapshots.length - 1;
+    while (i >= 0 && snapshots[i].t > cache.lastT) i--;
+    let { recharge, prevTotal } = cache;
+    let lastT = cache.lastT;
+    for (let j = i + 1; j < snapshots.length; j++) {
+      const s = snapshots[j];
+      const gain = s.total - prevTotal;
+      if (gain > EPS) recharge += gain;
+      prevTotal = s.total;
+      lastT = s.t;
+    }
+    return { ...cache, recharge, lastT, prevTotal };
+  }
+  function todaySpendFromCache(cache, current) {
+    if (!cache || !current) return null;
+    const spend = cache.baseline + cache.recharge - current.total;
+    if (!Number.isFinite(spend)) return null;
+    if (spend < 0) {
+      if (spend > -EPS) return { spend: 0, source: cache.source, baseline: cache.baseline };
+      return null;
+    }
+    return { spend, source: cache.source, baseline: cache.baseline };
+  }
+
   // webview/store.ts
   var [store, setStore] = createStore({
     data: null,
@@ -1547,7 +1622,8 @@
     themeTick: 0,
     refreshing: false,
     refreshResult: null,
-    yMinSpanRatio: 0.2
+    yMinSpanRatio: 0.2,
+    todayCache: null
   });
   var [tooltipInfo, setTooltipInfo] = createSignal(null);
   function stagedFromConfig(cfg) {
@@ -1606,6 +1682,7 @@
       maxWindow: r.maxWindow ?? 0,
       minWindow: r.minWindow ?? 6e4,
       yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
+      todayCache: buildTodaySpendCache(payload),
       lastError: ""
     });
   }
@@ -1621,6 +1698,7 @@
     const patch = onNewData(data, viewState());
     setStore({
       data,
+      todayCache: advanceTodaySpendCache(store.todayCache, data),
       ...patch,
       ...store.refreshing ? { refreshing: false, refreshResult: "ok" } : {}
     });
@@ -1706,30 +1784,6 @@
     return null;
   }
 
-  // webview/logic/todaySpend.ts
-  function computeTodaySpend(data) {
-    if (!data || !data.snapshots || !data.snapshots.length) return null;
-    const snapshots = data.snapshots.slice().sort((a, b) => a.t - b.t);
-    const current = snapshots[snapshots.length - 1];
-    const todayStart = startOfDay(Date.now());
-    const yesterdayStart = todayStart - 864e5;
-    let baseline = null;
-    let source = "";
-    const yesterdayDaily = (data.daily || []).find((x) => x.day === yesterdayStart);
-    if (yesterdayDaily) {
-      baseline = yesterdayDaily.total;
-      source = "\u6628\u65E5\u4F59\u989D";
-    } else {
-      const firstToday = snapshots.find((s) => s.t >= todayStart);
-      if (firstToday) {
-        baseline = firstToday.total;
-        source = "\u4ECA\u65E5\u9996\u6761\u5FEB\u7167";
-      }
-    }
-    if (baseline == null) return { spend: null, source: null, baseline: null };
-    return { spend: Math.max(0, baseline - current.total), source, baseline };
-  }
-
   // webview/components/Header.tsx
   var _tmpl$ = /* @__PURE__ */ template(`<div class=stat><span class=stat-label>\u4ECA\u65E5\u82B1\u8D39</span><span class=stat-value>`);
   var _tmpl$2 = /* @__PURE__ */ template(`<div class=head-left><div class=stats><div class=stat><span class=stat-label>\u5F53\u524D\u4F59\u989D</span><span class=stat-value></span></div></div><div class=current-meta><span class=meta>`);
@@ -1748,17 +1802,17 @@
     const showSpend = createMemo(() => spendPreview() !== null ? spendPreview() : !!(store.config && store.config.showTodaySpend));
     const spend = createMemo(() => {
       if (!showSpend()) return null;
-      const info = computeTodaySpend(store.data);
-      if (!info || info.spend == null) {
+      const info = todaySpendFromCache(store.todayCache, store.data && store.data.current || null);
+      if (!info) {
         return {
-          value: "\u2014",
-          title: "\u6570\u636E\u4E0D\u8DB3\uFF0C\u65E0\u6CD5\u4F30\u7B97\u4ECA\u65E5\u82B1\u8D39"
+          value: "-",
+          title: "\u6570\u636E\u4E0D\u8DB3\u6216\u542B\u5145\u503C\uFF0C\u65E0\u6CD5\u53EF\u9760\u4F30\u7B97\u4ECA\u65E5\u82B1\u8D39"
         };
       }
       const currency = store.data && store.data.current && store.data.current.currency || "CNY";
       return {
         value: `~${fmtMoney(info.spend, currency)}`,
-        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} \xA5${info.baseline} \u63A8\u7B97\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E`
+        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} \xA5${info.baseline} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF09`
       };
     });
     return (() => {
