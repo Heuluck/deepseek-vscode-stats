@@ -11,6 +11,7 @@ import {
 } from '../store';
 import { postMessage } from '../messaging';
 import { Collapse } from './Collapse';
+import { SettingRow } from './SettingRow';
 
 interface SettingsProps {
   onClose: () => void;
@@ -108,14 +109,14 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.statusBar}>
-            <label class="settings-row">
-              <span>显示余额</span>
+            <SettingRow label="显示余额" for="statusBarShowEl">
               <input
+                id="statusBarShowEl"
                 type="checkbox"
                 checked={staged?.statusBarShow}
                 onChange={(e) => setStaged('statusBarShow', e.currentTarget.checked)}
               />
-            </label>
+            </SettingRow>
             <button
               class={'settings-toggle' + (colorOpen() ? ' open' : '')}
               type="button"
@@ -125,30 +126,27 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={colorOpen()}>
-              <div class="settings-row">
-                <span>默认颜色</span>
-                <div class="settings-controls">
+              <SettingRow label="默认颜色">
+                <input
+                  type="color"
+                  value={staged?.defaultColor || '#000000'}
+                  disabled={!staged?.defaultColor}
+                  onChange={(e) => {
+                    setStaged('defaultColor', e.currentTarget.value);
+                  }}
+                />
+                <label class="settings-inline">
                   <input
-                    type="color"
-                    value={staged?.defaultColor || '#000000'}
-                    disabled={!staged?.defaultColor}
+                    type="checkbox"
+                    checked={!staged?.defaultColor}
                     onChange={(e) => {
-                      setStaged('defaultColor', e.currentTarget.value);
+                      const theme = e.currentTarget.checked;
+                      setStaged('defaultColor', theme ? '' : '#000000');
                     }}
                   />
-                  <label class="settings-inline">
-                    <input
-                      type="checkbox"
-                      checked={!staged?.defaultColor}
-                      onChange={(e) => {
-                        const theme = e.currentTarget.checked;
-                        setStaged('defaultColor', theme ? '' : '#000000');
-                      }}
-                    />
-                    跟随主题
-                  </label>
-                </div>
-              </div>
+                  跟随主题
+                </label>
+              </SettingRow>
               <div class="threshold-head">
                 <span>余额阈值（低于 → 颜色）</span>
                 <button class="btn small" onClick={addThreshold}>
@@ -206,9 +204,7 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.chart}>
-            <p class="settings-hint first">数据轮询出现断档时，用连接线把缺口两端连起来。</p>
-            <div class="settings-row">
-              <label for="lineStyleEl">线条样式</label>
+            <SettingRow label="线条样式" for="lineStyleEl">
               <select
                 id="lineStyleEl"
                 class="settings-select"
@@ -220,9 +216,12 @@ export function Settings(props: SettingsProps) {
                 <option value="straight">直线</option>
                 <option value="smooth">曲线</option>
               </select>
-            </div>
-            <div class="settings-row">
-              <label for="connectorStyleEl">断点连接线</label>
+            </SettingRow>
+            <SettingRow
+              label="断点连接线"
+              for="connectorStyleEl"
+              hint="轮询断档时用连接线补齐缺口"
+            >
               <select
                 id="connectorStyleEl"
                 class="settings-select"
@@ -235,31 +234,31 @@ export function Settings(props: SettingsProps) {
                 <option value="solid">实线</option>
                 <option value="none">不连接</option>
               </select>
-            </div>
-            <div class="settings-row">
-              <span>连接线颜色</span>
-              <div class="settings-controls">
+            </SettingRow>
+            <SettingRow label="连接线颜色">
+              <input
+                type="color"
+                value={staged?.connectorColor || '#000000'}
+                disabled={!staged?.connectorColor}
+                onChange={(e) => setStaged('connectorColor', e.currentTarget.value)}
+              />
+              <label class="settings-inline">
                 <input
-                  type="color"
-                  value={staged?.connectorColor || '#000000'}
-                  disabled={!staged?.connectorColor}
-                  onChange={(e) => setStaged('connectorColor', e.currentTarget.value)}
+                  type="checkbox"
+                  checked={!staged?.connectorColor}
+                  onChange={(e) => {
+                    const theme = e.currentTarget.checked;
+                    setStaged('connectorColor', theme ? '' : '#000000');
+                  }}
                 />
-                <label class="settings-inline">
-                  <input
-                    type="checkbox"
-                    checked={!staged?.connectorColor}
-                    onChange={(e) => {
-                      const theme = e.currentTarget.checked;
-                      setStaged('connectorColor', theme ? '' : '#000000');
-                    }}
-                  />
-                  跟随主色
-                </label>
-              </div>
-            </div>
-            <div class="settings-row">
-              <label for="yMinSpanRatioEl">纵向最小跨度</label>
+                跟随主色
+              </label>
+            </SettingRow>
+            <SettingRow
+              label="纵向最小跨度"
+              for="yMinSpanRatioEl"
+              hint="限制曲线纵向放大；0 为完全自适应"
+            >
               <input
                 type="number"
                 id="yMinSpanRatioEl"
@@ -273,8 +272,7 @@ export function Settings(props: SettingsProps) {
                   if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
                 }}
               />
-            </div>
-            <p class="settings-hint">Y 轴跨度至少为最大值的该比例，限制曲线纵向放大；0 表示完全自适应。</p>
+            </SettingRow>
             </Collapse>
           </div>
 
@@ -290,8 +288,7 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.general}>
-            <div class="settings-row">
-              <label for="pollMinutesEl">查询间隔（分钟）</label>
+            <SettingRow label="查询间隔（分钟）" for="pollMinutesEl">
               <input
                 type="number"
                 id="pollMinutesEl"
@@ -304,9 +301,8 @@ export function Settings(props: SettingsProps) {
                   if (Number.isFinite(v) && v >= 1) setStaged('pollMinutes', v);
                 }}
               />
-            </div>
-            <div class="settings-row">
-              <label for="rawRetentionEl">分钟级快照保留（天）</label>
+            </SettingRow>
+            <SettingRow label="分钟级快照保留（天）" for="rawRetentionEl">
               <input
                 type="number"
                 id="rawRetentionEl"
@@ -319,10 +315,10 @@ export function Settings(props: SettingsProps) {
                   if (Number.isFinite(v) && v >= 1) setStaged('rawRetentionDays', v);
                 }}
               />
-            </div>
-            <label class="settings-row">
-              <span>显示今日花费（估算）</span>
+            </SettingRow>
+            <SettingRow label="显示今日花费（估算）" for="showTodaySpendEl">
               <input
+                id="showTodaySpendEl"
                 type="checkbox"
                 checked={staged?.showTodaySpend || consent()}
                 onChange={(e) => {
@@ -334,7 +330,7 @@ export function Settings(props: SettingsProps) {
                   }
                 }}
               />
-            </label>
+            </SettingRow>
             <Show when={consent()}>
               <div class="settings-consent">
                 <p class="settings-hint">
@@ -377,17 +373,14 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.apiKey}>
-            <div class="settings-row">
-              <span>{store.data && store.data.hasKey ? '已配置（安全存储）' : '未配置'}</span>
-              <div class="settings-controls">
-                <button class="btn" onClick={() => postMessage({ type: 'setApiKey' })}>
-                  设置 / 更换
-                </button>
-                <button class="btn danger" onClick={() => postMessage({ type: 'clearApiKey' })}>
-                  清除
-                </button>
-              </div>
-            </div>
+            <SettingRow label={store.data && store.data.hasKey ? '已配置（安全存储）' : '未配置'}>
+              <button class="btn" onClick={() => postMessage({ type: 'setApiKey' })}>
+                设置 / 更换
+              </button>
+              <button class="btn danger" onClick={() => postMessage({ type: 'clearApiKey' })}>
+                清除
+              </button>
+            </SettingRow>
             </Collapse>
           </div>
 
@@ -403,12 +396,11 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.data}>
-            <div class="settings-row">
-              <span>历史快照（仅 VS Code 打开期间记录）</span>
+            <SettingRow label="历史快照（仅 VS Code 打开期间记录）">
               <button class="btn danger" onClick={() => postMessage({ type: 'clearHistory' })}>
                 清除历史
               </button>
-            </div>
+            </SettingRow>
             </Collapse>
           </div>
 
@@ -424,12 +416,11 @@ export function Settings(props: SettingsProps) {
               <i class="codicon codicon-chevron-down"></i>
             </button>
             <Collapse open={groupsOpen.misc}>
-            <div class="settings-row">
-              <span>恢复默认设置</span>
+            <SettingRow label="恢复默认设置">
               <button class="btn danger" onClick={() => postMessage({ type: 'resetSettings' })}>
                 恢复默认
               </button>
-            </div>
+            </SettingRow>
             </Collapse>
           </div>
         </div>

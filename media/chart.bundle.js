@@ -2901,26 +2901,60 @@
     })();
   }
 
+  // webview/components/SettingRow.tsx
+  var _tmpl$13 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
+  var _tmpl$28 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
+  var _tmpl$33 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
+  var _tmpl$43 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
+  function SettingRow(props) {
+    return (() => {
+      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      insert(_el$2, (() => {
+        var _c$ = memo(() => !!props.for);
+        return () => _c$() ? (() => {
+          var _el$4 = _tmpl$28();
+          insert(_el$4, () => props.label);
+          createRenderEffect(() => setAttribute(_el$4, "for", props.for));
+          return _el$4;
+        })() : (() => {
+          var _el$5 = _tmpl$33();
+          insert(_el$5, () => props.label);
+          return _el$5;
+        })();
+      })(), null);
+      insert(_el$2, (() => {
+        var _c$2 = memo(() => !!props.hint);
+        return () => _c$2() ? (() => {
+          var _el$6 = _tmpl$43();
+          insert(_el$6, () => props.hint);
+          return _el$6;
+        })() : null;
+      })(), null);
+      insert(_el$3, () => props.children);
+      return _el$;
+    })();
+  }
+
   // webview/components/Settings.tsx
-  var _tmpl$13 = /* @__PURE__ */ template(`<label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox>`);
-  var _tmpl$28 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
-  var _tmpl$33 = /* @__PURE__ */ template(`<div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
-  var _tmpl$43 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
-  var _tmpl$53 = /* @__PURE__ */ template(`<div id=thresholdList>`);
-  var _tmpl$63 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
-  var _tmpl$73 = /* @__PURE__ */ template(`<p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002`);
-  var _tmpl$83 = /* @__PURE__ */ template(`<div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
-  var _tmpl$92 = /* @__PURE__ */ template(`<div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5`);
-  var _tmpl$02 = /* @__PURE__ */ template(`<div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
-  var _tmpl$14 = /* @__PURE__ */ template(`<div class=settings-row><label for=yMinSpanRatioEl>\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6</label><input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
-  var _tmpl$102 = /* @__PURE__ */ template(`<p class=settings-hint>Y \u8F74\u8DE8\u5EA6\u81F3\u5C11\u4E3A\u6700\u5927\u503C\u7684\u8BE5\u6BD4\u4F8B\uFF0C\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u8868\u793A\u5B8C\u5168\u81EA\u9002\u5E94\u3002`);
-  var _tmpl$112 = /* @__PURE__ */ template(`<div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
-  var _tmpl$122 = /* @__PURE__ */ template(`<div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
-  var _tmpl$132 = /* @__PURE__ */ template(`<label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox>`);
-  var _tmpl$142 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664`);
-  var _tmpl$16 = /* @__PURE__ */ template(`<div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2`);
-  var _tmpl$17 = /* @__PURE__ */ template(`<div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
+  var _tmpl$14 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
+  var _tmpl$29 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$34 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$44 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
+  var _tmpl$53 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
+  var _tmpl$63 = /* @__PURE__ */ template(`<div id=thresholdList>`);
+  var _tmpl$73 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
+  var _tmpl$83 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
+  var _tmpl$92 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5`);
+  var _tmpl$02 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
+  var _tmpl$15 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
+  var _tmpl$102 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
+  var _tmpl$112 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
+  var _tmpl$122 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
+  var _tmpl$132 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
+  var _tmpl$142 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
+  var _tmpl$152 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
+  var _tmpl$16 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
+  var _tmpl$17 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
   var _tmpl$18 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-account"></i>\u72B6\u6001\u680F</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-graph-line"></i>\u56FE\u8868</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-gear"></i>\u5E38\u89C4</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-key"></i>API Key</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-database"></i>\u6570\u636E</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-ellipsis"></i>\u5176\u4ED6</span><i class="codicon codicon-chevron-down"></i></button></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
   var _tmpl$19 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function Settings(props) {
@@ -2983,7 +3017,7 @@
       }]);
     }
     return (() => {
-      var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$41 = _el$22.nextSibling, _el$42 = _el$41.firstChild, _el$57 = _el$41.nextSibling, _el$58 = _el$57.firstChild, _el$64 = _el$57.nextSibling, _el$65 = _el$64.firstChild, _el$69 = _el$64.nextSibling, _el$70 = _el$69.firstChild, _el$74 = _el$6.nextSibling, _el$75 = _el$74.firstChild, _el$76 = _el$75.nextSibling, _el$77 = _el$76.nextSibling;
+      var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$17 = _el$7.nextSibling, _el$18 = _el$17.firstChild, _el$25 = _el$17.nextSibling, _el$26 = _el$25.firstChild, _el$35 = _el$25.nextSibling, _el$36 = _el$35.firstChild, _el$39 = _el$35.nextSibling, _el$40 = _el$39.firstChild, _el$42 = _el$39.nextSibling, _el$43 = _el$42.firstChild, _el$45 = _el$6.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$48 = _el$47.nextSibling;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -2994,207 +3028,274 @@
           return groupsOpen.statusBar;
         },
         get children() {
-          return [(() => {
-            var _el$9 = _tmpl$13(), _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling;
-            _el$1.addEventListener("change", (e) => setStaged("statusBarShow", e.currentTarget.checked));
-            createRenderEffect(() => _el$1.checked = staged?.statusBarShow);
-            return _el$9;
-          })(), (() => {
-            var _el$10 = _tmpl$28();
-            _el$10.$$click = () => setColorOpen((o) => !o);
-            createRenderEffect(() => className(_el$10, "settings-toggle" + (colorOpen() ? " open" : "")));
-            return _el$10;
+          return [createComponent(SettingRow, {
+            label: "\u663E\u793A\u4F59\u989D",
+            "for": "statusBarShowEl",
+            get children() {
+              var _el$9 = _tmpl$14();
+              _el$9.addEventListener("change", (e) => setStaged("statusBarShow", e.currentTarget.checked));
+              createRenderEffect(() => _el$9.checked = staged?.statusBarShow);
+              return _el$9;
+            }
+          }), (() => {
+            var _el$0 = _tmpl$29();
+            _el$0.$$click = () => setColorOpen((o) => !o);
+            createRenderEffect(() => className(_el$0, "settings-toggle" + (colorOpen() ? " open" : "")));
+            return _el$0;
           })(), createComponent(Collapse, {
             get open() {
               return colorOpen();
             },
             get children() {
-              return [(() => {
-                var _el$11 = _tmpl$33(), _el$12 = _el$11.firstChild, _el$13 = _el$12.nextSibling, _el$14 = _el$13.firstChild, _el$15 = _el$14.nextSibling, _el$16 = _el$15.firstChild;
-                _el$14.addEventListener("change", (e) => {
-                  setStaged("defaultColor", e.currentTarget.value);
-                });
-                _el$16.addEventListener("change", (e) => {
-                  const theme = e.currentTarget.checked;
-                  setStaged("defaultColor", theme ? "" : "#000000");
-                });
-                createRenderEffect(() => _el$14.disabled = !staged?.defaultColor);
-                createRenderEffect(() => _el$14.value = staged?.defaultColor || "#000000");
-                createRenderEffect(() => _el$16.checked = !staged?.defaultColor);
-                return _el$11;
+              return [createComponent(SettingRow, {
+                label: "\u9ED8\u8BA4\u989C\u8272",
+                get children() {
+                  return [(() => {
+                    var _el$1 = _tmpl$34();
+                    _el$1.addEventListener("change", (e) => {
+                      setStaged("defaultColor", e.currentTarget.value);
+                    });
+                    createRenderEffect(() => _el$1.disabled = !staged?.defaultColor);
+                    createRenderEffect(() => _el$1.value = staged?.defaultColor || "#000000");
+                    return _el$1;
+                  })(), (() => {
+                    var _el$10 = _tmpl$44(), _el$11 = _el$10.firstChild;
+                    _el$11.addEventListener("change", (e) => {
+                      const theme = e.currentTarget.checked;
+                      setStaged("defaultColor", theme ? "" : "#000000");
+                    });
+                    createRenderEffect(() => _el$11.checked = !staged?.defaultColor);
+                    return _el$10;
+                  })()];
+                }
+              }), (() => {
+                var _el$12 = _tmpl$53(), _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling;
+                _el$14.$$click = addThreshold;
+                return _el$12;
               })(), (() => {
-                var _el$17 = _tmpl$43(), _el$18 = _el$17.firstChild, _el$19 = _el$18.nextSibling;
-                _el$19.$$click = addThreshold;
-                return _el$17;
-              })(), (() => {
-                var _el$20 = _tmpl$53();
-                insert(_el$20, createComponent(For, {
+                var _el$15 = _tmpl$63();
+                insert(_el$15, createComponent(For, {
                   get each() {
                     return staged?.thresholds ?? [];
                   },
                   children: (t, i) => (() => {
-                    var _el$78 = _tmpl$19(), _el$79 = _el$78.firstChild, _el$80 = _el$79.nextSibling, _el$81 = _el$80.nextSibling, _el$82 = _el$81.nextSibling;
-                    _el$79.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
-                    _el$81.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
-                    _el$82.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
-                    createRenderEffect(() => _el$79.value = t.below);
-                    createRenderEffect(() => _el$81.value = t.color);
-                    return _el$78;
+                    var _el$49 = _tmpl$19(), _el$50 = _el$49.firstChild, _el$51 = _el$50.nextSibling, _el$52 = _el$51.nextSibling, _el$53 = _el$52.nextSibling;
+                    _el$50.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
+                    _el$52.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
+                    _el$53.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
+                    createRenderEffect(() => _el$50.value = t.below);
+                    createRenderEffect(() => _el$52.value = t.color);
+                    return _el$49;
                   })()
                 }));
-                return _el$20;
-              })(), _tmpl$63()];
+                return _el$15;
+              })(), _tmpl$73()];
             }
           })];
         }
       }), null);
-      _el$23.$$click = () => setGroupsOpen("chart", (o) => !o);
-      insert(_el$22, createComponent(Collapse, {
+      _el$18.$$click = () => setGroupsOpen("chart", (o) => !o);
+      insert(_el$17, createComponent(Collapse, {
         get open() {
           return groupsOpen.chart;
         },
         get children() {
-          return [_tmpl$73(), (() => {
-            var _el$25 = _tmpl$83(), _el$26 = _el$25.firstChild, _el$27 = _el$26.nextSibling;
-            _el$27.addEventListener("change", (e) => setStaged("lineStyle", e.currentTarget.value));
-            createRenderEffect(() => _el$27.value = staged?.lineStyle ?? "straight");
-            return _el$25;
-          })(), (() => {
-            var _el$28 = _tmpl$92(), _el$29 = _el$28.firstChild, _el$30 = _el$29.nextSibling;
-            _el$30.addEventListener("change", (e) => setStaged("connectorStyle", e.currentTarget.value));
-            createRenderEffect(() => _el$30.value = staged?.connectorStyle ?? "dashed");
-            return _el$28;
-          })(), (() => {
-            var _el$31 = _tmpl$02(), _el$32 = _el$31.firstChild, _el$33 = _el$32.nextSibling, _el$34 = _el$33.firstChild, _el$35 = _el$34.nextSibling, _el$36 = _el$35.firstChild;
-            _el$34.addEventListener("change", (e) => setStaged("connectorColor", e.currentTarget.value));
-            _el$36.addEventListener("change", (e) => {
-              const theme = e.currentTarget.checked;
-              setStaged("connectorColor", theme ? "" : "#000000");
-            });
-            createRenderEffect(() => _el$34.disabled = !staged?.connectorColor);
-            createRenderEffect(() => _el$34.value = staged?.connectorColor || "#000000");
-            createRenderEffect(() => _el$36.checked = !staged?.connectorColor);
-            return _el$31;
-          })(), (() => {
-            var _el$37 = _tmpl$14(), _el$38 = _el$37.firstChild, _el$39 = _el$38.nextSibling;
-            _el$39.addEventListener("change", (e) => {
-              const v = Number(e.currentTarget.value);
-              if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
-            });
-            createRenderEffect(() => _el$39.value = yRatio());
-            return _el$37;
-          })(), _tmpl$102()];
-        }
-      }), null);
-      _el$42.$$click = () => setGroupsOpen("general", (o) => !o);
-      insert(_el$41, createComponent(Collapse, {
-        get open() {
-          return groupsOpen.general;
-        },
-        get children() {
-          return [(() => {
-            var _el$43 = _tmpl$112(), _el$44 = _el$43.firstChild, _el$45 = _el$44.nextSibling;
-            _el$45.addEventListener("change", (e) => {
-              const v = parseInt(e.currentTarget.value, 10);
-              if (Number.isFinite(v) && v >= 1) setStaged("pollMinutes", v);
-            });
-            createRenderEffect(() => _el$45.value = staged?.pollMinutes);
-            return _el$43;
-          })(), (() => {
-            var _el$46 = _tmpl$122(), _el$47 = _el$46.firstChild, _el$48 = _el$47.nextSibling;
-            _el$48.addEventListener("change", (e) => {
-              const v = parseInt(e.currentTarget.value, 10);
-              if (Number.isFinite(v) && v >= 1) setStaged("rawRetentionDays", v);
-            });
-            createRenderEffect(() => _el$48.value = staged?.rawRetentionDays);
-            return _el$46;
-          })(), (() => {
-            var _el$49 = _tmpl$132(), _el$50 = _el$49.firstChild, _el$51 = _el$50.nextSibling;
-            _el$51.addEventListener("change", (e) => {
-              if (e.currentTarget.checked) {
-                setConsent(true);
-              } else {
-                setStaged("showTodaySpend", false);
-                setConsent(false);
-              }
-            });
-            createRenderEffect(() => _el$51.checked = staged?.showTodaySpend || consent());
-            return _el$49;
-          })(), createComponent(Show, {
-            get when() {
-              return consent();
-            },
+          return [createComponent(SettingRow, {
+            label: "\u7EBF\u6761\u6837\u5F0F",
+            "for": "lineStyleEl",
             get children() {
-              var _el$52 = _tmpl$142(), _el$53 = _el$52.firstChild, _el$54 = _el$53.nextSibling, _el$55 = _el$54.firstChild, _el$56 = _el$55.nextSibling;
-              _el$55.$$click = () => {
-                setStaged("showTodaySpend", true);
-                setConsent(false);
-              };
-              _el$56.$$click = () => {
-                setStaged("showTodaySpend", false);
-                setConsent(false);
-              };
-              return _el$52;
+              var _el$19 = _tmpl$83();
+              _el$19.addEventListener("change", (e) => setStaged("lineStyle", e.currentTarget.value));
+              createRenderEffect(() => _el$19.value = staged?.lineStyle ?? "straight");
+              return _el$19;
+            }
+          }), createComponent(SettingRow, {
+            label: "\u65AD\u70B9\u8FDE\u63A5\u7EBF",
+            "for": "connectorStyleEl",
+            hint: "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
+            get children() {
+              var _el$20 = _tmpl$92();
+              _el$20.addEventListener("change", (e) => setStaged("connectorStyle", e.currentTarget.value));
+              createRenderEffect(() => _el$20.value = staged?.connectorStyle ?? "dashed");
+              return _el$20;
+            }
+          }), createComponent(SettingRow, {
+            label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
+            get children() {
+              return [(() => {
+                var _el$21 = _tmpl$34();
+                _el$21.addEventListener("change", (e) => setStaged("connectorColor", e.currentTarget.value));
+                createRenderEffect(() => _el$21.disabled = !staged?.connectorColor);
+                createRenderEffect(() => _el$21.value = staged?.connectorColor || "#000000");
+                return _el$21;
+              })(), (() => {
+                var _el$22 = _tmpl$02(), _el$23 = _el$22.firstChild;
+                _el$23.addEventListener("change", (e) => {
+                  const theme = e.currentTarget.checked;
+                  setStaged("connectorColor", theme ? "" : "#000000");
+                });
+                createRenderEffect(() => _el$23.checked = !staged?.connectorColor);
+                return _el$22;
+              })()];
+            }
+          }), createComponent(SettingRow, {
+            label: "\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6",
+            "for": "yMinSpanRatioEl",
+            hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
+            get children() {
+              var _el$24 = _tmpl$15();
+              _el$24.addEventListener("change", (e) => {
+                const v = Number(e.currentTarget.value);
+                if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
+              });
+              createRenderEffect(() => _el$24.value = yRatio());
+              return _el$24;
             }
           })];
         }
       }), null);
-      _el$58.$$click = () => setGroupsOpen("apiKey", (o) => !o);
-      insert(_el$57, createComponent(Collapse, {
+      _el$26.$$click = () => setGroupsOpen("general", (o) => !o);
+      insert(_el$25, createComponent(Collapse, {
+        get open() {
+          return groupsOpen.general;
+        },
+        get children() {
+          return [createComponent(SettingRow, {
+            label: "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
+            "for": "pollMinutesEl",
+            get children() {
+              var _el$27 = _tmpl$102();
+              _el$27.addEventListener("change", (e) => {
+                const v = parseInt(e.currentTarget.value, 10);
+                if (Number.isFinite(v) && v >= 1) setStaged("pollMinutes", v);
+              });
+              createRenderEffect(() => _el$27.value = staged?.pollMinutes);
+              return _el$27;
+            }
+          }), createComponent(SettingRow, {
+            label: "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
+            "for": "rawRetentionEl",
+            get children() {
+              var _el$28 = _tmpl$112();
+              _el$28.addEventListener("change", (e) => {
+                const v = parseInt(e.currentTarget.value, 10);
+                if (Number.isFinite(v) && v >= 1) setStaged("rawRetentionDays", v);
+              });
+              createRenderEffect(() => _el$28.value = staged?.rawRetentionDays);
+              return _el$28;
+            }
+          }), createComponent(SettingRow, {
+            label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
+            "for": "showTodaySpendEl",
+            get children() {
+              var _el$29 = _tmpl$122();
+              _el$29.addEventListener("change", (e) => {
+                if (e.currentTarget.checked) {
+                  setConsent(true);
+                } else {
+                  setStaged("showTodaySpend", false);
+                  setConsent(false);
+                }
+              });
+              createRenderEffect(() => _el$29.checked = staged?.showTodaySpend || consent());
+              return _el$29;
+            }
+          }), createComponent(Show, {
+            get when() {
+              return consent();
+            },
+            get children() {
+              var _el$30 = _tmpl$132(), _el$31 = _el$30.firstChild, _el$32 = _el$31.nextSibling, _el$33 = _el$32.firstChild, _el$34 = _el$33.nextSibling;
+              _el$33.$$click = () => {
+                setStaged("showTodaySpend", true);
+                setConsent(false);
+              };
+              _el$34.$$click = () => {
+                setStaged("showTodaySpend", false);
+                setConsent(false);
+              };
+              return _el$30;
+            }
+          })];
+        }
+      }), null);
+      _el$36.$$click = () => setGroupsOpen("apiKey", (o) => !o);
+      insert(_el$35, createComponent(Collapse, {
         get open() {
           return groupsOpen.apiKey;
         },
         get children() {
-          var _el$59 = _tmpl$15(), _el$60 = _el$59.firstChild, _el$61 = _el$60.nextSibling, _el$62 = _el$61.firstChild, _el$63 = _el$62.nextSibling;
-          insert(_el$60, () => store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B58\u50A8\u4E8E\u7CFB\u7EDF\u94A5\u5319\u4E32\uFF09" : "\u672A\u914D\u7F6E");
-          _el$62.$$click = () => postMessage({
-            type: "setApiKey"
+          return createComponent(SettingRow, {
+            get label() {
+              return store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B89\u5168\u5B58\u50A8\uFF09" : "\u672A\u914D\u7F6E";
+            },
+            get children() {
+              return [(() => {
+                var _el$37 = _tmpl$142();
+                _el$37.$$click = () => postMessage({
+                  type: "setApiKey"
+                });
+                return _el$37;
+              })(), (() => {
+                var _el$38 = _tmpl$152();
+                _el$38.$$click = () => postMessage({
+                  type: "clearApiKey"
+                });
+                return _el$38;
+              })()];
+            }
           });
-          _el$63.$$click = () => postMessage({
-            type: "clearApiKey"
-          });
-          return _el$59;
         }
       }), null);
-      _el$65.$$click = () => setGroupsOpen("data", (o) => !o);
-      insert(_el$64, createComponent(Collapse, {
+      _el$40.$$click = () => setGroupsOpen("data", (o) => !o);
+      insert(_el$39, createComponent(Collapse, {
         get open() {
           return groupsOpen.data;
         },
         get children() {
-          var _el$66 = _tmpl$16(), _el$67 = _el$66.firstChild, _el$68 = _el$67.nextSibling;
-          _el$68.$$click = () => postMessage({
-            type: "clearHistory"
+          return createComponent(SettingRow, {
+            label: "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
+            get children() {
+              var _el$41 = _tmpl$16();
+              _el$41.$$click = () => postMessage({
+                type: "clearHistory"
+              });
+              return _el$41;
+            }
           });
-          return _el$66;
         }
       }), null);
-      _el$70.$$click = () => setGroupsOpen("misc", (o) => !o);
-      insert(_el$69, createComponent(Collapse, {
+      _el$43.$$click = () => setGroupsOpen("misc", (o) => !o);
+      insert(_el$42, createComponent(Collapse, {
         get open() {
           return groupsOpen.misc;
         },
         get children() {
-          var _el$71 = _tmpl$17(), _el$72 = _el$71.firstChild, _el$73 = _el$72.nextSibling;
-          _el$73.$$click = () => postMessage({
-            type: "resetSettings"
+          return createComponent(SettingRow, {
+            label: "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
+            get children() {
+              var _el$44 = _tmpl$17();
+              _el$44.$$click = () => postMessage({
+                type: "resetSettings"
+              });
+              return _el$44;
+            }
           });
-          return _el$71;
         }
       }), null);
-      _el$75.$$click = () => postMessage({
+      _el$46.$$click = () => postMessage({
         type: "openNativeSettings"
       });
-      _el$76.$$click = close;
-      _el$77.$$click = save;
+      _el$47.$$click = close;
+      _el$48.$$click = save;
       createRenderEffect((_p$) => {
         var _v$ = "settings-group-head" + (groupsOpen.statusBar ? " open" : ""), _v$2 = "settings-group-head" + (groupsOpen.chart ? " open" : ""), _v$3 = "settings-group-head" + (groupsOpen.general ? " open" : ""), _v$4 = "settings-group-head" + (groupsOpen.apiKey ? " open" : ""), _v$5 = "settings-group-head" + (groupsOpen.data ? " open" : ""), _v$6 = "settings-group-head" + (groupsOpen.misc ? " open" : "");
         _v$ !== _p$.e && className(_el$8, _p$.e = _v$);
-        _v$2 !== _p$.t && className(_el$23, _p$.t = _v$2);
-        _v$3 !== _p$.a && className(_el$42, _p$.a = _v$3);
-        _v$4 !== _p$.o && className(_el$58, _p$.o = _v$4);
-        _v$5 !== _p$.i && className(_el$65, _p$.i = _v$5);
-        _v$6 !== _p$.n && className(_el$70, _p$.n = _v$6);
+        _v$2 !== _p$.t && className(_el$18, _p$.t = _v$2);
+        _v$3 !== _p$.a && className(_el$26, _p$.a = _v$3);
+        _v$4 !== _p$.o && className(_el$36, _p$.o = _v$4);
+        _v$5 !== _p$.i && className(_el$40, _p$.i = _v$5);
+        _v$6 !== _p$.n && className(_el$43, _p$.n = _v$6);
         return _p$;
       }, {
         e: void 0,
