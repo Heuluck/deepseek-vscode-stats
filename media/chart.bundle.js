@@ -2289,11 +2289,13 @@
       const t0 = vr.start;
       const t1 = vr.end;
       const yPts = [];
-      for (const seg of geom.solid) for (const p of seg) yPts.push(p);
-      for (const p of geom.isolated) yPts.push(p);
+      for (const seg of geom.solid) for (const p of seg) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
+      for (const p of geom.isolated) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
       for (const g of geom.gaps) {
-        yPts.push(g.from);
-        yPts.push(g.to);
+        if (g.to.t >= vr.start && g.from.t <= vr.end) {
+          yPts.push(g.from);
+          yPts.push(g.to);
+        }
       }
       let yMin = Infinity;
       let yMax = -Infinity;
@@ -2465,8 +2467,10 @@
       const lay = layout();
       if (!cd || !lay) return null;
       const pts = [];
-      for (const seg of cd.geom.solid) for (const p2 of seg) pts.push(p2);
-      for (const p2 of cd.geom.isolated) pts.push(p2);
+      const t0 = cd.vr.start;
+      const t1 = cd.vr.end;
+      for (const seg of cd.geom.solid) for (const p2 of seg) if (p2.t >= t0 && p2.t <= t1) pts.push(p2);
+      for (const p2 of cd.geom.isolated) if (p2.t >= t0 && p2.t <= t1) pts.push(p2);
       if (!pts.length) return null;
       const {
         xOf,

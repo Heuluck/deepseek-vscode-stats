@@ -126,11 +126,16 @@ export function Chart() {
     // y 范围：自适应基线——数据贴近 0（最小值 ≤ 量程 20%）才保留 0 基线；
     // 否则按数据范围缩放，避免高余额区间曲线被压成一条平线
     const yPts: ChartPoint[] = [];
-    for (const seg of geom.solid) for (const p of seg) yPts.push(p);
-    for (const p of geom.isolated) yPts.push(p);
+    // Y 轴只按真实视口内的点算；overscan 点是纯渲染预取，不参与自适应
+    for (const seg of geom.solid)
+      for (const p of seg) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
+    for (const p of geom.isolated) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
     for (const g of geom.gaps) {
-      yPts.push(g.from);
-      yPts.push(g.to);
+      // 与真实视口相交的缺口才计入（保留旧版边缘缺口端点参与 Y 轴的行为）
+      if (g.to.t >= vr.start && g.from.t <= vr.end) {
+        yPts.push(g.from);
+        yPts.push(g.to);
+      }
     }
     let yMin = Infinity;
     let yMax = -Infinity;
@@ -305,8 +310,12 @@ export function Chart() {
     const lay = layout();
     if (!cd || !lay) return null;
     const pts: ChartPoint[] = [];
-    for (const seg of cd.geom.solid) for (const p of seg) pts.push(p);
-    for (const p of cd.geom.isolated) pts.push(p);
+    // 交互只命中真实视口内的点；视口外 overscan 点是纯渲染预取，不参与悬停
+    const t0 = cd.vr.start;
+    const t1 = cd.vr.end;
+    for (const seg of cd.geom.solid)
+      for (const p of seg) if (p.t >= t0 && p.t <= t1) pts.push(p);
+    for (const p of cd.geom.isolated) if (p.t >= t0 && p.t <= t1) pts.push(p);
     if (!pts.length) return null;
     const { xOf, yOf } = lay;
     const pinned = pinT() !== null && Date.now() < pinUntil();
