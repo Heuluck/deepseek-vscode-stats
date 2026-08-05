@@ -2442,15 +2442,15 @@
       } = lay;
       const plotX = lay.plotLeft;
       const plotY = M.top;
-      const plotW = lay.plotRight - lay.plotLeft;
-      const plotH = lay.h - M.bottom;
+      const plotRight = lay.plotRight;
+      const plotBottom = lay.h - M.bottom;
       const out = [];
       for (const g of cd.geom.gaps) {
         let d;
         if (smooth) {
-          d = polylineToClippedPath(flattenSmoothSegment(g.prev ?? g.from, g.from, g.to, g.next ?? g.to, xOf, yOf), plotX, plotY, plotW, plotH);
+          d = polylineToClippedPath(flattenSmoothSegment(g.prev ?? g.from, g.from, g.to, g.next ?? g.to, xOf, yOf), plotX, plotY, plotRight, plotBottom);
         } else {
-          const seg = clipSegmentToRect(xOf(g.from.t), yOf(g.from.total), xOf(g.to.t), yOf(g.to.total), plotX, plotY, plotW, plotH);
+          const seg = clipSegmentToRect(xOf(g.from.t), yOf(g.from.total), xOf(g.to.t), yOf(g.to.total), plotX, plotY, plotRight, plotBottom);
           if (!seg) continue;
           d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
         }
