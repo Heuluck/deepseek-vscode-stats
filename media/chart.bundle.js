@@ -1546,7 +1546,8 @@
     settingsOpen: false,
     themeTick: 0,
     refreshing: false,
-    refreshResult: null
+    refreshResult: null,
+    yMinSpanRatio: 0.2
   });
   var [tooltipInfo, setTooltipInfo] = createSignal(null);
   function stagedFromConfig(cfg) {
@@ -1604,6 +1605,7 @@
       followLive: r.followLive ?? true,
       maxWindow: r.maxWindow ?? 0,
       minWindow: r.minWindow ?? 6e4,
+      yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
       lastError: ""
     });
   }
@@ -1629,8 +1631,11 @@
   function applySavedConfig(p) {
     setStore("config", (cfg) => cfg ? { ...cfg, ...p } : cfg);
   }
+  function setYMinSpanRatio(ratio) {
+    setStore({ yMinSpanRatio: ratio });
+  }
   function onSettingsReset() {
-    setStore({ settingsOpen: false });
+    setStore({ settingsOpen: false, yMinSpanRatio: 0.2 });
   }
   function onError(message) {
     setStore({
@@ -2086,6 +2091,14 @@
     }
     return Math.max(28, w + 4);
   }
+  function enforceMinSpan(yMin, yMax, ratio) {
+    if (!(ratio > 0) || !isFinite(yMax) || yMax <= 0) return { yMin, yMax };
+    const minSpan = yMax * ratio;
+    if (yMax - yMin >= minSpan) return { yMin, yMax };
+    const nyMin = Math.max(0, yMax - minSpan);
+    if (yMax - nyMin >= minSpan) return { yMin: nyMin, yMax };
+    return { yMin: nyMin, yMax: nyMin + minSpan };
+  }
 
   // webview/components/Tooltip.tsx
   var _tmpl$6 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
@@ -2275,6 +2288,11 @@
       if (padY === 0) padY = 1;
       yMin = Math.max(0, yMin - padY);
       yMax += padY;
+      const spanRatio = store.yMinSpanRatio ?? 0.2;
+      ({
+        yMin,
+        yMax
+      } = enforceMinSpan(yMin, yMax, spanRatio));
       const currency = yPts[0]?.currency || "CNY";
       const yTicks = niceTicks(yMin, yMax, 5);
       const yLabelW = yTicks.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency))), 0);
@@ -2821,12 +2839,13 @@
 
   // webview/components/Settings.tsx
   var _tmpl$10 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$28 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><div class=settings-label>\u72B6\u6001\u680F</div><label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox></label><button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down"></i></button><div><div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898</label></div></div><div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0</button></div><div id=thresholdList></div><p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002</p></div></div><div class=settings-group><div class=settings-label>\u56FE\u8868</div><p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002</p><div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF</option></select></div><div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5</option></select></div><div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272</label></div></div></div><div class=settings-group><div class=settings-label>\u5E38\u89C4</div><div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number></div><div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number></div><label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox></label></div><div class=settings-group><div class=settings-label>API Key</div><div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664</button></div></div></div><div class=settings-group><div class=settings-label>\u6570\u636E</div><div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2</button></div></div><div class=settings-group><div class=settings-label>\u5176\u4ED6</div><div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4</button></div></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
+  var _tmpl$28 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><div class=settings-label>\u72B6\u6001\u680F</div><label class=settings-row><span>\u663E\u793A\u4F59\u989D</span><input type=checkbox></label><button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down"></i></button><div><div class=settings-row><span>\u9ED8\u8BA4\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898</label></div></div><div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0</button></div><div id=thresholdList></div><p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002</p></div></div><div class=settings-group><div class=settings-label>\u56FE\u8868</div><p class="settings-hint first">\u6570\u636E\u8F6E\u8BE2\u51FA\u73B0\u65AD\u6863\u65F6\uFF0C\u7528\u8FDE\u63A5\u7EBF\u628A\u7F3A\u53E3\u4E24\u7AEF\u8FDE\u8D77\u6765\u3002</p><div class=settings-row><label for=lineStyleEl>\u7EBF\u6761\u6837\u5F0F</label><select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF</option></select></div><div class=settings-row><label for=connectorStyleEl>\u65AD\u70B9\u8FDE\u63A5\u7EBF</label><select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5</option></select></div><div class=settings-row><span>\u8FDE\u63A5\u7EBF\u989C\u8272</span><div class=settings-controls><input type=color><label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272</label></div></div><div class=settings-row><label for=yMinSpanRatioEl>\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6</label><input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number></div><p class=settings-hint>Y \u8F74\u8DE8\u5EA6\u81F3\u5C11\u4E3A\u6700\u5927\u503C\u7684\u8BE5\u6BD4\u4F8B\uFF0C\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u8868\u793A\u5B8C\u5168\u81EA\u9002\u5E94\u3002</p></div><div class=settings-group><div class=settings-label>\u5E38\u89C4</div><div class=settings-row><label for=pollMinutesEl>\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09</label><input type=number id=pollMinutesEl min=1 step=1 class=settings-number></div><div class=settings-row><label for=rawRetentionEl>\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09</label><input type=number id=rawRetentionEl min=1 step=1 class=settings-number></div><label class=settings-row><span>\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09</span><input type=checkbox></label></div><div class=settings-group><div class=settings-label>API Key</div><div class=settings-row><span></span><div class=settings-controls><button class=btn>\u8BBE\u7F6E / \u66F4\u6362</button><button class="btn danger">\u6E05\u9664</button></div></div></div><div class=settings-group><div class=settings-label>\u6570\u636E</div><div class=settings-row><span>\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09</span><button class="btn danger">\u6E05\u9664\u5386\u53F2</button></div></div><div class=settings-group><div class=settings-label>\u5176\u4ED6</div><div class=settings-row><span>\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E</span><button class="btn danger">\u6062\u590D\u9ED8\u8BA4</button></div></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
   var _tmpl$33 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function Settings(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
     const [consent, setConsent] = createSignal(false);
     const [staged, setStaged] = createStore(stagedFromConfig(store.config));
+    const [yRatio, setYRatio] = createSignal(store.yMinSpanRatio ?? 0.2);
     createEffect(() => setSpendPreview(staged.showTodaySpend));
     onCleanup(() => setSpendPreview(null));
     createEffect(on(() => store.config, () => {
@@ -2857,6 +2876,14 @@
         type: "saveSettings",
         payload
       });
+      const ratio = Math.min(1, Math.max(0, yRatio()));
+      setYMinSpanRatio(ratio);
+      postMessage({
+        type: "setYMinSpanRatio",
+        payload: {
+          ratio
+        }
+      });
       close();
     }
     function addThreshold() {
@@ -2866,7 +2893,7 @@
       }]);
     }
     return (() => {
-      var _el$ = _tmpl$28(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling, _el$10 = _el$9.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.firstChild, _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling, _el$15 = _el$14.firstChild, _el$16 = _el$15.nextSibling, _el$17 = _el$16.firstChild, _el$18 = _el$12.nextSibling, _el$19 = _el$18.firstChild, _el$20 = _el$19.nextSibling, _el$21 = _el$18.nextSibling, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$24 = _el$23.nextSibling, _el$25 = _el$24.nextSibling, _el$26 = _el$25.firstChild, _el$27 = _el$26.nextSibling, _el$28 = _el$25.nextSibling, _el$29 = _el$28.firstChild, _el$30 = _el$29.nextSibling, _el$31 = _el$28.nextSibling, _el$32 = _el$31.firstChild, _el$33 = _el$32.nextSibling, _el$34 = _el$33.firstChild, _el$35 = _el$34.nextSibling, _el$36 = _el$35.firstChild, _el$37 = _el$22.nextSibling, _el$38 = _el$37.firstChild, _el$39 = _el$38.nextSibling, _el$40 = _el$39.firstChild, _el$41 = _el$40.nextSibling, _el$42 = _el$39.nextSibling, _el$43 = _el$42.firstChild, _el$44 = _el$43.nextSibling, _el$45 = _el$42.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$53 = _el$37.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling, _el$56 = _el$55.firstChild, _el$57 = _el$56.nextSibling, _el$58 = _el$57.firstChild, _el$59 = _el$58.nextSibling, _el$60 = _el$53.nextSibling, _el$61 = _el$60.firstChild, _el$62 = _el$61.nextSibling, _el$63 = _el$62.firstChild, _el$64 = _el$63.nextSibling, _el$65 = _el$60.nextSibling, _el$66 = _el$65.firstChild, _el$67 = _el$66.nextSibling, _el$68 = _el$67.firstChild, _el$69 = _el$68.nextSibling, _el$70 = _el$6.nextSibling, _el$71 = _el$70.firstChild, _el$72 = _el$71.nextSibling, _el$73 = _el$72.nextSibling;
+      var _el$ = _tmpl$28(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling, _el$10 = _el$9.nextSibling, _el$11 = _el$10.nextSibling, _el$12 = _el$11.firstChild, _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling, _el$15 = _el$14.firstChild, _el$16 = _el$15.nextSibling, _el$17 = _el$16.firstChild, _el$18 = _el$12.nextSibling, _el$19 = _el$18.firstChild, _el$20 = _el$19.nextSibling, _el$21 = _el$18.nextSibling, _el$22 = _el$7.nextSibling, _el$23 = _el$22.firstChild, _el$24 = _el$23.nextSibling, _el$25 = _el$24.nextSibling, _el$26 = _el$25.firstChild, _el$27 = _el$26.nextSibling, _el$28 = _el$25.nextSibling, _el$29 = _el$28.firstChild, _el$30 = _el$29.nextSibling, _el$31 = _el$28.nextSibling, _el$32 = _el$31.firstChild, _el$33 = _el$32.nextSibling, _el$34 = _el$33.firstChild, _el$35 = _el$34.nextSibling, _el$36 = _el$35.firstChild, _el$37 = _el$31.nextSibling, _el$38 = _el$37.firstChild, _el$39 = _el$38.nextSibling, _el$40 = _el$22.nextSibling, _el$41 = _el$40.firstChild, _el$42 = _el$41.nextSibling, _el$43 = _el$42.firstChild, _el$44 = _el$43.nextSibling, _el$45 = _el$42.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$48 = _el$45.nextSibling, _el$49 = _el$48.firstChild, _el$50 = _el$49.nextSibling, _el$56 = _el$40.nextSibling, _el$57 = _el$56.firstChild, _el$58 = _el$57.nextSibling, _el$59 = _el$58.firstChild, _el$60 = _el$59.nextSibling, _el$61 = _el$60.firstChild, _el$62 = _el$61.nextSibling, _el$63 = _el$56.nextSibling, _el$64 = _el$63.firstChild, _el$65 = _el$64.nextSibling, _el$66 = _el$65.firstChild, _el$67 = _el$66.nextSibling, _el$68 = _el$63.nextSibling, _el$69 = _el$68.firstChild, _el$70 = _el$69.nextSibling, _el$71 = _el$70.firstChild, _el$72 = _el$71.nextSibling, _el$73 = _el$6.nextSibling, _el$74 = _el$73.firstChild, _el$75 = _el$74.nextSibling, _el$76 = _el$75.nextSibling;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -2886,13 +2913,13 @@
           return staged?.thresholds ?? [];
         },
         children: (t, i) => (() => {
-          var _el$74 = _tmpl$33(), _el$75 = _el$74.firstChild, _el$76 = _el$75.nextSibling, _el$77 = _el$76.nextSibling, _el$78 = _el$77.nextSibling;
-          _el$75.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
-          _el$77.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
-          _el$78.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
-          createRenderEffect(() => _el$75.value = t.below);
-          createRenderEffect(() => _el$77.value = t.color);
-          return _el$74;
+          var _el$77 = _tmpl$33(), _el$78 = _el$77.firstChild, _el$79 = _el$78.nextSibling, _el$80 = _el$79.nextSibling, _el$81 = _el$80.nextSibling;
+          _el$78.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
+          _el$80.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
+          _el$81.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
+          createRenderEffect(() => _el$78.value = t.below);
+          createRenderEffect(() => _el$80.value = t.color);
+          return _el$77;
         })()
       }));
       _el$27.addEventListener("change", (e) => setStaged("lineStyle", e.currentTarget.value));
@@ -2902,15 +2929,19 @@
         const theme = e.currentTarget.checked;
         setStaged("connectorColor", theme ? "" : "#000000");
       });
-      _el$41.addEventListener("change", (e) => {
-        const v = parseInt(e.currentTarget.value, 10);
-        if (Number.isFinite(v) && v >= 1) setStaged("pollMinutes", v);
+      _el$39.addEventListener("change", (e) => {
+        const v = Number(e.currentTarget.value);
+        if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
       });
       _el$44.addEventListener("change", (e) => {
         const v = parseInt(e.currentTarget.value, 10);
-        if (Number.isFinite(v) && v >= 1) setStaged("rawRetentionDays", v);
+        if (Number.isFinite(v) && v >= 1) setStaged("pollMinutes", v);
       });
       _el$47.addEventListener("change", (e) => {
+        const v = parseInt(e.currentTarget.value, 10);
+        if (Number.isFinite(v) && v >= 1) setStaged("rawRetentionDays", v);
+      });
+      _el$50.addEventListener("change", (e) => {
         if (e.currentTarget.checked) {
           setConsent(true);
         } else {
@@ -2918,41 +2949,41 @@
           setConsent(false);
         }
       });
-      insert(_el$37, createComponent(Show, {
+      insert(_el$40, createComponent(Show, {
         get when() {
           return consent();
         },
         get children() {
-          var _el$48 = _tmpl$10(), _el$49 = _el$48.firstChild, _el$50 = _el$49.nextSibling, _el$51 = _el$50.firstChild, _el$52 = _el$51.nextSibling;
-          _el$51.$$click = () => {
+          var _el$51 = _tmpl$10(), _el$52 = _el$51.firstChild, _el$53 = _el$52.nextSibling, _el$54 = _el$53.firstChild, _el$55 = _el$54.nextSibling;
+          _el$54.$$click = () => {
             setStaged("showTodaySpend", true);
             setConsent(false);
           };
-          _el$52.$$click = () => {
+          _el$55.$$click = () => {
             setStaged("showTodaySpend", false);
             setConsent(false);
           };
-          return _el$48;
+          return _el$51;
         }
       }), null);
-      insert(_el$56, () => store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B58\u50A8\u4E8E\u7CFB\u7EDF\u94A5\u5319\u4E32\uFF09" : "\u672A\u914D\u7F6E");
-      _el$58.$$click = () => postMessage({
+      insert(_el$59, () => store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B58\u50A8\u4E8E\u7CFB\u7EDF\u94A5\u5319\u4E32\uFF09" : "\u672A\u914D\u7F6E");
+      _el$61.$$click = () => postMessage({
         type: "setApiKey"
       });
-      _el$59.$$click = () => postMessage({
+      _el$62.$$click = () => postMessage({
         type: "clearApiKey"
       });
-      _el$64.$$click = () => postMessage({
+      _el$67.$$click = () => postMessage({
         type: "clearHistory"
       });
-      _el$69.$$click = () => postMessage({
+      _el$72.$$click = () => postMessage({
         type: "resetSettings"
       });
-      _el$71.$$click = () => postMessage({
+      _el$74.$$click = () => postMessage({
         type: "openNativeSettings"
       });
-      _el$72.$$click = close;
-      _el$73.$$click = save;
+      _el$75.$$click = close;
+      _el$76.$$click = save;
       createRenderEffect((_p$) => {
         var _v$ = "settings-toggle" + (colorOpen() ? " open" : ""), _v$2 = "settings-collapse" + (colorOpen() ? " open" : ""), _v$3 = !staged?.defaultColor, _v$4 = !staged?.connectorColor;
         _v$ !== _p$.e && className(_el$10, _p$.e = _v$);
@@ -2973,9 +3004,10 @@
       createRenderEffect(() => _el$30.value = staged?.connectorStyle ?? "dashed");
       createRenderEffect(() => _el$34.value = staged?.connectorColor || "#000000");
       createRenderEffect(() => _el$36.checked = !staged?.connectorColor);
-      createRenderEffect(() => _el$41.value = staged?.pollMinutes);
-      createRenderEffect(() => _el$44.value = staged?.rawRetentionDays);
-      createRenderEffect(() => _el$47.checked = staged?.showTodaySpend || consent());
+      createRenderEffect(() => _el$39.value = yRatio());
+      createRenderEffect(() => _el$44.value = staged?.pollMinutes);
+      createRenderEffect(() => _el$47.value = staged?.rawRetentionDays);
+      createRenderEffect(() => _el$50.checked = staged?.showTodaySpend || consent());
       return _el$;
     })();
   }

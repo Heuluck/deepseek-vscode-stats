@@ -36,7 +36,7 @@ export class ChartPanel {
     this.panel?.webview.postMessage({ type: 'snapshot', payload: s });
   }
 
-  postData(store: HistoryStore, config: PanelConfig, hasKey: boolean): void {
+  postData(store: HistoryStore, config: PanelConfig, hasKey: boolean, yMinSpanRatio: number): void {
     this.panel?.webview.postMessage({
       type: 'init',
       payload: {
@@ -45,6 +45,7 @@ export class ChartPanel {
         current: store.getLatest() || null,
         config,
         hasKey,
+        yMinSpanRatio,
       },
     });
   }

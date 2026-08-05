@@ -21,7 +21,14 @@ import {
   smoothPath,
   straightPath,
 } from '../logic/paths';
-import { estimateTextWidth, fmtAxisTime, M, niceTicks, niceTimeStep } from '../logic/axis';
+import {
+  enforceMinSpan,
+  estimateTextWidth,
+  fmtAxisTime,
+  M,
+  niceTicks,
+  niceTimeStep,
+} from '../logic/axis';
 import {
   fmtAxisMoney,
   fmtClock,
@@ -141,6 +148,9 @@ export function Chart() {
     if (padY === 0) padY = 1;
     yMin = Math.max(0, yMin - padY);
     yMax += padY;
+    // 最小跨度约束：限制纵向放大倍数（默认跨度 ≥ 最大值的 20%），0 表示关闭
+    const spanRatio = store.yMinSpanRatio ?? 0.2;
+    ({ yMin, yMax } = enforceMinSpan(yMin, yMax, spanRatio));
     const currency = yPts[0]?.currency || 'CNY';
     const yTicks = niceTicks(yMin, yMax, 5);
 

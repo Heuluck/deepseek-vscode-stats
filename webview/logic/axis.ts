@@ -50,3 +50,19 @@ export function estimateTextWidth(text: string, fontSize = 11): number {
   }
   return Math.max(28, w + 4);
 }
+
+/** Y 轴最小跨度约束：限制纵向放大倍数，避免小波动被画成陡崖。
+ *  域跨度不足最大值的 ratio 倍时向下扩展、锚定上限（顶部刻度 = 真实峰值）；
+ *  被 0 基线挡住仍不足时抬上限兜底。ratio <= 0 表示关闭约束。 */
+export function enforceMinSpan(
+  yMin: number,
+  yMax: number,
+  ratio: number
+): { yMin: number; yMax: number } {
+  if (!(ratio > 0) || !isFinite(yMax) || yMax <= 0) return { yMin, yMax };
+  const minSpan = yMax * ratio;
+  if (yMax - yMin >= minSpan) return { yMin, yMax };
+  const nyMin = Math.max(0, yMax - minSpan);
+  if (yMax - nyMin >= minSpan) return { yMin: nyMin, yMax };
+  return { yMin: nyMin, yMax: nyMin + minSpan };
+}

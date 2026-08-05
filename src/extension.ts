@@ -6,6 +6,15 @@ import { fetchBalance, pickBalanceInfo } from './balanceClient';
 import { getPanelConfig, getPollIntervalMinutes } from './config';
 
 const API_KEY_SECRET = 'deepseekStats.apiKey';
+/** 图表 UI 设置（webview 本地，存 globalState，非 VS Code 设置）：Y 轴最小跨度比例默认值。 */
+const DEFAULT_Y_MIN_SPAN_RATIO = 0.2;
+const Y_MIN_SPAN_RATIO_KEY = 'chartUi.yMinSpanRatio';
+
+function clampRatio(v: unknown): number {
+  const n = Number(v);
+  if (!Number.isFinite(n)) return DEFAULT_Y_MIN_SPAN_RATIO;
+  return Math.min(1, Math.max(0, n));
+}
 
 let timer: NodeJS.Timeout | undefined;
 
@@ -31,6 +40,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void vscode.env.openExternal(vscode.Uri.parse('https://platform.deepseek.com/usage'));
     } else if (msg.type === 'saveSettings') {
       void saveSettings(msg.payload);
+    } else if (msg.type === 'setYMinSpanRatio') {
+      void context.globalState.update(Y_MIN_SPAN_RATIO_KEY, clampRatio(msg.payload?.ratio));
     } else if (msg.type === 'openNativeSettings') {
       void vscode.commands.executeCommand('workbench.action.openSettings', 'deepseek-stats');
     } else if (msg.type === 'ready') {
@@ -51,7 +62,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
 
   function pushDataToPanel(): void {
     if (chart && chart.alive) {
-      chart.postData(store, getPanelConfig(), !!apiKey);
+      chart.postData(
+        store,
+        getPanelConfig(),
+        !!apiKey,
+        context.globalState.get<number>(Y_MIN_SPAN_RATIO_KEY, DEFAULT_Y_MIN_SPAN_RATIO)
+      );
     }
   }
 
@@ -123,6 +139,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     for (const k of keys) {
       await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);
     }
+    await context.globalState.update(Y_MIN_SPAN_RATIO_KEY, undefined);
     pushDataToPanel();
     if (chart && chart.alive) chart.postSettingsReset();
     vscode.window.showInformationMessage('DeepSeek Stats 设置已恢复默认');

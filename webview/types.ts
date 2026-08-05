@@ -48,6 +48,8 @@ export interface InitPayload {
   current: Snapshot | null;
   config: PanelConfig;
   hasKey: boolean;
+  /** 图表 Y 轴最小跨度比例（webview 本地设置，存扩展 globalState，非 VS Code 设置；0 = 关闭）。 */
+  yMinSpanRatio: number;
 }
 
 /** 图表数据点（viewPoints 归一化后的统一形态）。 */

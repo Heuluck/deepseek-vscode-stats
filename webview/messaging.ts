@@ -32,7 +32,8 @@ export type WebviewToExtension =
   | { type: 'clearHistory' }
   | { type: 'resetSettings' }
   | { type: 'openNativeSettings' }
-  | { type: 'saveSettings'; payload: SaveSettingsPayload };
+  | { type: 'saveSettings'; payload: SaveSettingsPayload }
+  | { type: 'setYMinSpanRatio'; payload: { ratio: number } };
 
 interface VsCodeApi {
   postMessage(msg: unknown): void;

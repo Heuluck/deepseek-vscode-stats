@@ -36,6 +36,8 @@ export interface AppState {
   refreshing: boolean;
   /** 最近一次手动刷新结果（成功/失败），短暂显示后由 clearRefreshFeedback 清除。 */
   refreshResult: 'ok' | 'fail' | null;
+  /** 图表 Y 轴最小跨度比例（webview 本地设置，存扩展 globalState；0 = 关闭约束）。 */
+  yMinSpanRatio: number;
 }
 
 export const [store, setStore] = createStore<AppState>({
@@ -52,6 +54,7 @@ export const [store, setStore] = createStore<AppState>({
   themeTick: 0,
   refreshing: false,
   refreshResult: null,
+  yMinSpanRatio: 0.2,
 });
 
 /** 悬停信息（高频，独立 signal，避免穿透组件树）。 */
@@ -138,6 +141,7 @@ export function init(payload: InitPayload): void {
     followLive: r.followLive ?? true,
     maxWindow: r.maxWindow ?? 0,
     minWindow: r.minWindow ?? 60e3,
+    yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
     lastError: '',
   });
 }
@@ -169,8 +173,13 @@ export function applySavedConfig(p: SaveSettingsPayload): void {
   setStore('config', (cfg) => (cfg ? { ...cfg, ...p } : cfg));
 }
 
+/** 图表 Y 轴最小跨度比例（webview 本地设置；乐观更新立即生效）。 */
+export function setYMinSpanRatio(ratio: number): void {
+  setStore({ yMinSpanRatio: ratio });
+}
+
 export function onSettingsReset(): void {
-  setStore({ settingsOpen: false });
+  setStore({ settingsOpen: false, yMinSpanRatio: 0.2 });
 }
 
 export function onError(message: string): void {

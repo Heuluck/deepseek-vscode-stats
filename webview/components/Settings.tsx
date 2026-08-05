@@ -1,7 +1,14 @@
 /** 设置面板：编辑先进 staged 暂存，保存才提交配置；取消/关闭丢弃。 */
 import { createEffect, createSignal, For, on, onCleanup, Show } from 'solid-js';
 import { createStore } from 'solid-js/store';
-import { applySavedConfig, setSpendPreview, stagedFromConfig, store, type StagedConfig } from '../store';
+import {
+  applySavedConfig,
+  setSpendPreview,
+  setYMinSpanRatio,
+  stagedFromConfig,
+  store,
+  type StagedConfig,
+} from '../store';
 import { postMessage } from '../messaging';
 
 interface SettingsProps {
@@ -13,6 +20,8 @@ export function Settings(props: SettingsProps) {
   const [consent, setConsent] = createSignal(false);
   // 挂载时从当前配置初始化暂存；编辑只改本地 staged，保存才提交
   const [staged, setStaged] = createStore<StagedConfig>(stagedFromConfig(store.config));
+  // 图表 Y 轴最小跨度比例：webview 本地设置（不写入 VS Code 设置），保存时才提交
+  const [yRatio, setYRatio] = createSignal<number>(store.yMinSpanRatio ?? 0.2);
 
   // 今日花费暂存预览同步给 Header
   createEffect(() => setSpendPreview(staged.showTodaySpend));
@@ -51,6 +60,10 @@ export function Settings(props: SettingsProps) {
     // 乐观更新本地 config：config 回传是异步的，先让 Header/Footer 立即用新值，避免闪回旧值
     applySavedConfig(payload);
     postMessage({ type: 'saveSettings', payload });
+    // 图表 UI 设置（非 VS Code 设置）：Y 轴最小跨度比例，存扩展 globalState
+    const ratio = Math.min(1, Math.max(0, yRatio()));
+    setYMinSpanRatio(ratio);
+    postMessage({ type: 'setYMinSpanRatio', payload: { ratio } });
     close();
   }
 
@@ -214,6 +227,23 @@ export function Settings(props: SettingsProps) {
                 </label>
               </div>
             </div>
+            <div class="settings-row">
+              <label for="yMinSpanRatioEl">纵向最小跨度</label>
+              <input
+                type="number"
+                id="yMinSpanRatioEl"
+                min="0"
+                max="1"
+                step="0.05"
+                class="settings-number"
+                value={yRatio()}
+                onChange={(e) => {
+                  const v = Number(e.currentTarget.value);
+                  if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
+                }}
+              />
+            </div>
+            <p class="settings-hint">Y 轴跨度至少为最大值的该比例，限制曲线纵向放大；0 表示完全自适应。</p>
           </div>
 
           <div class="settings-group">
