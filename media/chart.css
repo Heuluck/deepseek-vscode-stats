@@ -147,7 +147,8 @@ header {
 .btn {
   background: var(--secondary-bg);
   color: var(--secondary-fg);
-  border: none;
+  /* 统一占 1px 边框空间，避免 .btn.danger 因边框而比普通按钮高 */
+  border: 1px solid transparent;
   border-radius: 4px;
   padding: 4px 10px;
   font-size: 12px;
