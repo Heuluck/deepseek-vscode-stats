@@ -83,12 +83,12 @@ export function currentRangeMs(view: ViewKey, rangeKey: string | null): number {
 export function viewPoints(data: InitPayload | null, view: ViewKey): ChartPoint[] {
   if (!data) return [];
   if (view === 'hourly') {
-    return data.snapshots.slice().sort((a, b) => a.t - b.t);
+    // 数据已由扩展侧保证有序（构造时排序 + 追加单调递增），只做防御性复制，不再全量排序
+    return data.snapshots.slice();
   }
   if (view === 'daily') {
     return data.daily
       .slice()
-      .sort((a, b) => a.day - b.day)
       .map((x) => ({
         t: x.day,
         total: x.total,
@@ -144,12 +144,10 @@ export function resetViewRange(
     start = bounds.minT - padAmt;
     end = bounds.maxT + padAmt;
   } else {
+    // 右缘锚定最新数据：不钳制到 minT（数据不足时左侧留空），
+    // 与 onNewData 的右缘滑动保持一致，避免初始视图与刷新后视图跳变
     end = bounds.maxT;
     start = end - ms;
-    if (start < bounds.minT) {
-      start = bounds.minT;
-      end = start + ms;
-    }
   }
   return { viewRange: { start, end }, followLive: true, maxWindow, minWindow };
 }
@@ -187,8 +185,10 @@ export function onNewData(data: InitPayload | null, vs: ViewState): Partial<View
     return resetViewRange(data, vs.view, vs.rangeKey);
   }
   if (vs.followLive && bounds.maxT > vs.viewRange.end) {
-    // 新数据超出右缘时仅向右扩展，保持左缘与当前位置不动——刷新不重置视图
-    return { viewRange: { start: vs.viewRange.start, end: bounds.maxT } };
+    // 右缘锚定最新数据、宽度保持当前窗口：整体右滑（左侧旧数据滑出视野）。
+    // 不要钳制到 minT，数据不足时左侧留空即可——与 resetViewRange 一致，刷新不重置视图
+    const width = vs.viewRange.end - vs.viewRange.start;
+    return { viewRange: { start: bounds.maxT - width, end: bounds.maxT } };
   }
   return {};
 }
