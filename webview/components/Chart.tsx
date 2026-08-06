@@ -1,14 +1,13 @@
 /**
  * Solid 声明式图表：数据 + 视口 → 几何 → 路径，全部由 memo 派生；
- * 手势（缩放/平移/悬停/双击）只读写 store 与少量高频 signal，不直接操作 DOM。
- * 取代原命令式 chartEngine.ts。
+ * 手势（缩放/平移/悬停/双击）由 useChartGestures hook 管理，只读写 store 与高频 signal。
+ * 渲染拆为 ChartAxis / ChartSeries / ChartCrosshair 纯展示组件。
  */
-import { createEffect, createMemo, For, onCleanup, onMount, Show } from 'solid-js';
+import { createEffect, createMemo, onCleanup, onMount, Show } from 'solid-js';
 import { createSignal } from 'solid-js';
-import { resetView, setTooltipInfo, setViewRange, store } from '../store';
-import type { ViewRange } from '../logic/viewport';
-import { clampRange, computeDataBounds, viewPoints } from '../logic/viewport';
-import type { ChartPoint } from '../types';
+import { setTooltipInfo, store } from '../store';
+import { viewPoints } from '../logic/viewport';
+import type { ChartPoint, Layout, XLabel, YLabel } from '../types';
 import {
   computeChartGeometry,
   decimate,
@@ -39,53 +38,17 @@ import {
 } from '../logic/format';
 import { Tooltip } from './Tooltip';
 import { Empty } from './Empty';
-
-interface XLabel {
-  t: number;
-  x: number;
-  text: string;
-  w: number;
-  anchor: 'start' | 'middle' | 'end';
-}
-
-interface YLabel {
-  v: number;
-  y: number;
-  text: string;
-}
-
-interface Layout {
-  xOf: (t: number) => number;
-  yOf: (v: number) => number;
-  yMin: number;
-  yMax: number;
-  currency: string;
-  w: number;
-  h: number;
-  xStep: number;
-  xTicks: number[];
-  xLabels: XLabel[];
-  yTicks: number[];
-  yLabels: YLabel[];
-  plotLeft: number;
-  plotRight: number;
-}
+import { ChartAxis } from './ChartAxis';
+import { ChartSeries } from './ChartSeries';
+import { ChartCrosshair } from './ChartCrosshair';
+import { useChartGestures } from '../hooks/useChartGestures';
 
 export function Chart() {
   let wrapRef: HTMLDivElement | undefined;
   let svgRef: SVGSVGElement | undefined;
 
-  // ---------- 高频手势内部状态（不进 store） ----------
-  const [size, setSize] = createSignal({ w: 0, h: 0 });
-  const [mouseX, setMouseX] = createSignal(-1); // 悬停 x 像素坐标
-  const [pinT, setPinT] = createSignal<number | null>(null); // 缩放手势钉住的数据时刻
-  const [pinUntil, setPinUntil] = createSignal(0);
-  let zoomAnchorT: number | null = null; // 缩放手势锚点
-  let zoomAnchorFrac = 0;
-  let lastWheelTs = 0;
-  let drag: { startX: number; startRange: ViewRange } | null = null;
-
   // ---------- 尺寸（ResizeObserver → signal） ----------
+  const [size, setSize] = createSignal({ w: 0, h: 0 });
   onMount(() => {
     const ro = new ResizeObserver(() => {
       if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
@@ -93,6 +56,14 @@ export function Chart() {
     ro.observe(wrapRef!);
     if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
     onCleanup(() => ro.disconnect());
+  });
+
+  // ---------- 手势（只回写 store 与高频 signal；渲染由 memo 统一驱动） ----------
+  const { mouseX, pinT, pinUntil } = useChartGestures({
+    wrapRef: () => wrapRef,
+    svgRef: () => svgRef,
+    getLayout: () => layout(),
+    getChartData: () => chartData(),
   });
 
   // ---------- 数据 + 几何（纯函数派生） ----------
@@ -373,139 +344,6 @@ export function Chart() {
     });
   });
 
-  // ---------- 手势（只回写 store，渲染由 memo 统一驱动，无双重渲染） ----------
-  onMount(() => {
-    const svg = svgRef!;
-    const container = wrapRef!;
-
-    function onWheel(e: WheelEvent): void {
-      e.preventDefault();
-      if (!store.viewRange) return;
-      const lay = layout();
-      if (!lay) return;
-      const now = Date.now();
-      const rect = svg.getBoundingClientRect();
-      const innerW = rect.width - lay.plotLeft - M.right;
-      if (innerW <= 0) return;
-      const mx = e.clientX - rect.left;
-      const vr = store.viewRange;
-      const tCursor = vr.start + ((mx - lay.plotLeft) / innerW) * (vr.end - vr.start);
-      if (now - lastWheelTs > 300) {
-        // 手势开始：锚点吸附到最近的可见数据点（与悬浮线所指一致）
-        const cd = chartData();
-        let best = Infinity;
-        let bt = tCursor;
-        if (cd) {
-          for (const seg of cd.geom.solid) {
-            for (const p of seg) {
-              const dx = Math.abs(p.t - tCursor);
-              if (dx < best) {
-                best = dx;
-                bt = p.t;
-              }
-            }
-          }
-          for (const p of cd.geom.isolated) {
-            const dx = Math.abs(p.t - tCursor);
-            if (dx < best) {
-              best = dx;
-              bt = p.t;
-            }
-          }
-        }
-        const snapLimit = (vr.end - vr.start) * 0.15;
-        zoomAnchorT = best <= snapLimit ? bt : tCursor;
-        zoomAnchorFrac = (zoomAnchorT - vr.start) / (vr.end - vr.start);
-      }
-      lastWheelTs = now;
-      // 缩放进行中：悬浮线钉在锚点上，直观显示正在围绕哪个点缩放
-      setPinT(zoomAnchorT);
-      setPinUntil(now + 350);
-      const factor = Math.pow(1.15, -e.deltaY / 120);
-      let dur = (vr.end - vr.start) * factor;
-      dur = Math.min(store.maxWindow, Math.max(store.minWindow, dur));
-      const bounds = computeDataBounds(store.data, store.view);
-      const r = bounds
-        ? clampRange(
-            zoomAnchorT! - zoomAnchorFrac * dur,
-            zoomAnchorT! + (1 - zoomAnchorFrac) * dur,
-            bounds,
-            store.minWindow
-          )
-        : {
-            start: zoomAnchorT! - zoomAnchorFrac * dur,
-            end: zoomAnchorT! + (1 - zoomAnchorFrac) * dur,
-          };
-      setViewRange(r, false);
-    }
-
-    function onPointerDown(e: PointerEvent): void {
-      if (e.button !== 0 || !store.viewRange) return;
-      drag = { startX: e.clientX, startRange: { ...store.viewRange } };
-      setMouseX(-1); // 拖拽平移时隐藏悬浮线，避免误导
-      container.setPointerCapture(e.pointerId);
-    }
-
-    function onPointerMove(e: PointerEvent): void {
-      if (!drag || !store.viewRange) return;
-      const lay = layout();
-      if (!lay) return;
-      const rect = svg.getBoundingClientRect();
-      const innerW = rect.width - lay.plotLeft - M.right;
-      const dur = drag.startRange.end - drag.startRange.start;
-      const shift = ((drag.startX - e.clientX) / innerW) * dur;
-      const bounds = computeDataBounds(store.data, store.view);
-      const r = bounds
-        ? clampRange(
-            drag.startRange.start + shift,
-            drag.startRange.end + shift,
-            bounds,
-            store.minWindow
-          )
-        : { start: drag.startRange.start + shift, end: drag.startRange.end + shift };
-      setViewRange(r, false);
-    }
-
-    function onPointerEnd(): void {
-      drag = null;
-    }
-
-    function onMouseMove(e: MouseEvent): void {
-      if (drag) return;
-      const rect = svg.getBoundingClientRect();
-      setMouseX(e.clientX - rect.left);
-      // 用户主动移动鼠标 → 立即解除缩放锚点钉住，指示线跟随鼠标
-      setPinUntil(0);
-    }
-
-    function onMouseLeave(): void {
-      setMouseX(-1);
-    }
-
-    function onDblClick(): void {
-      resetView();
-    }
-
-    container.addEventListener('wheel', onWheel, { passive: false });
-    container.addEventListener('pointerdown', onPointerDown);
-    container.addEventListener('pointermove', onPointerMove);
-    container.addEventListener('pointerup', onPointerEnd);
-    container.addEventListener('pointercancel', onPointerEnd);
-    container.addEventListener('mousemove', onMouseMove);
-    container.addEventListener('mouseleave', onMouseLeave);
-    container.addEventListener('dblclick', onDblClick);
-    onCleanup(() => {
-      container.removeEventListener('wheel', onWheel);
-      container.removeEventListener('pointerdown', onPointerDown);
-      container.removeEventListener('pointermove', onPointerMove);
-      container.removeEventListener('pointerup', onPointerEnd);
-      container.removeEventListener('pointercancel', onPointerEnd);
-      container.removeEventListener('mousemove', onMouseMove);
-      container.removeEventListener('mouseleave', onMouseLeave);
-      container.removeEventListener('dblclick', onDblClick);
-    });
-  });
-
   return (
     <main id="chartWrap" ref={wrapRef}>
       <svg id="chart" width={size().w} height={size().h} ref={svgRef}>
@@ -521,91 +359,16 @@ export function Chart() {
               />
             </clipPath>
           </defs>
-          <g class="axis">
-            <For each={layout()!.yTicks}>
-              {(v) => {
-                const lay = layout()!;
-                const y = lay.yOf(v);
-                return <line class="grid" x1={lay.plotLeft} y1={y} x2={lay.plotRight} y2={y} />;
-              }}
-            </For>
-            <For each={layout()!.yLabels}>
-              {(lbl) => {
-                const lay = layout()!;
-                return (
-                  <text x={lay.plotLeft - 8} y={lbl.y} text-anchor="end" dominant-baseline="middle">
-                    {lbl.text}
-                  </text>
-                );
-              }}
-            </For>
-          </g>
-          <g class="axis">
-            <For each={layout()!.xTicks}>
-              {(t) => {
-                const lay = layout()!;
-                const x = lay.xOf(t);
-                return <line class="grid" x1={x} y1={M.top} x2={x} y2={lay.h - M.bottom} />;
-              }}
-            </For>
-            <For each={layout()!.xLabels}>
-              {(lbl) => {
-                const lay = layout()!;
-                return (
-                  <text
-                    x={lbl.x}
-                    y={lay.h - M.bottom + 16}
-                    text-anchor={lbl.anchor}
-                    dominant-baseline="hanging"
-                  >
-                    {lbl.text}
-                  </text>
-                );
-              }}
-            </For>
-          </g>
+          <ChartAxis lay={layout()!} view={store.view} />
           <g clip-path="url(#plotClip)">
-            <For each={connectorDraws()}>
-              {(c) => (
-                <path
-                  class={'connector' + (c.solid ? ' solid' : '')}
-                  d={c.d}
-                  style={c.color ? { stroke: c.color } : undefined}
-                />
-              )}
-            </For>
-            <For each={solidDraws()}>
-              {(s) => (
-                <>
-                  <path class="area" d={s.area} />
-                  <path class="line" d={s.d} />
-                </>
-              )}
-            </For>
-            <For each={chartData()!.geom.isolated}>
-              {(p) => {
-                const lay = layout()!;
-                return (
-                  <circle
-                    class="line isolated"
-                    cx={lay.xOf(p.t)}
-                    cy={lay.yOf(p.total)}
-                    r={3}
-                  />
-                );
-              }}
-            </For>
-          </g>
-          <Show when={hover()}>
-            <line
-              class="crosshair"
-              x1={hover()!.x}
-              y1={M.top}
-              x2={hover()!.x}
-              y2={size().h - M.bottom}
+            <ChartSeries
+              lay={layout()!}
+              isolated={chartData()!.geom.isolated}
+              solidDraws={solidDraws()}
+              connectorDraws={connectorDraws()}
             />
-            <circle class="hover-dot" cx={hover()!.x} cy={hover()!.y} r={4} />
-          </Show>
+          </g>
+          <ChartCrosshair hover={hover()} h={size().h} />
         </Show>
       </svg>
       <Tooltip />
