@@ -124,27 +124,45 @@
           ],
           "default": "straight",
           "description": "图表主线条的绘制方式：直线或平滑曲线。"
+        },
+        "deepseek-stats.dayBoundary": {
+          "type": "string",
+          "enum": [
+            "local",
+            "utc"
+          ],
+          "enumDescriptions": [
+            "本地时区（默认）：按本地自然日计算「今日花费」",
+            "UTC：与 DeepSeek 官方用量口径一致（UTC 日界）"
+          ],
+          "default": "local",
+          "description": "「今日花费」的日界时区。DeepSeek 官方按 UTC 计算每日用量，选择 UTC 可让今日花费与官方口径一致。"
         }
       }
     }
   },
   "scripts": {
-    "compile": "tsc -p ./ && node build.mjs",
+    "compile": "tsc -p ./ && tsc -p webview/tsconfig.json && node build.mjs",
     "watch": "tsc -watch -p ./",
     "watch:webview": "node build.mjs --watch",
     "build:webview": "node build.mjs",
+    "test": "vitest run",
+    "test:watch": "vitest",
     "typecheck:webview": "tsc -p webview/tsconfig.json",
     "vscode:prepublish": "npm run compile"
   },
   "devDependencies": {
+    "@types/d3-shape": "^3.1.8",
     "@types/node": "^20.11.0",
     "@types/vscode": "^1.85.0",
     "@vscode/codicons": "0.0.46-24",
     "esbuild": "^0.28.1",
     "esbuild-plugin-solid": "^0.6.0",
-    "typescript": "^5.3.0"
+    "typescript": "^5.3.0",
+    "vitest": "^4.1.10"
   },
   "dependencies": {
+    "d3-shape": "^3.2.0",
     "solid-js": "^1.9.14"
   }
 }

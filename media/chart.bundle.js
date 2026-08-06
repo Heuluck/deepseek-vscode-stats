@@ -350,13 +350,13 @@
           inTransition = void 0;
         }
       });
-      c.fn = (x) => {
+      c.fn = (x2) => {
         track();
         if (Transition && Transition.running) {
           if (!inTransition) inTransition = ExternalSourceConfig.factory(sourceFn, triggerInTransition);
-          return inTransition.track(x);
+          return inTransition.track(x2);
         }
-        return ordinary.track(x);
+        return ordinary.track(x2);
       };
     }
     return c;
@@ -958,10 +958,10 @@
     });
     if (sharedConfig.registry && !sharedConfig.done) sharedConfig.done = _$HY.done = true;
     if (e.composedPath) {
-      const path = e.composedPath();
-      retarget(path[0]);
-      for (let i = 0; i < path.length - 2; i++) {
-        node = path[i];
+      const path2 = e.composedPath();
+      retarget(path2[0]);
+      for (let i = 0; i < path2.length - 2; i++) {
+        node = path2[i];
         if (!handleNode()) break;
         if (node._$host) {
           node = node._$host;
@@ -1282,22 +1282,22 @@
       setProperty(current, "length", len);
     } else mergeStoreNode(current, next);
   }
-  function updatePath(current, path, traversed = []) {
+  function updatePath(current, path2, traversed = []) {
     let part, prev = current;
-    if (path.length > 1) {
-      part = path.shift();
+    if (path2.length > 1) {
+      part = path2.shift();
       const partType = typeof part, isArray = Array.isArray(current);
-      if (partType === "string" && (part === "__proto__" || path.length > 1 && isUnsafeKey$1(part))) {
+      if (partType === "string" && (part === "__proto__" || path2.length > 1 && isUnsafeKey$1(part))) {
         return;
       }
       if (Array.isArray(part)) {
         for (let i = 0; i < part.length; i++) {
-          updatePath(current, [part[i]].concat(path), traversed);
+          updatePath(current, [part[i]].concat(path2), traversed);
         }
         return;
       } else if (isArray && partType === "function") {
         for (let i = 0; i < current.length; i++) {
-          if (part(current[i], i)) updatePath(current, [i].concat(path), traversed);
+          if (part(current[i], i)) updatePath(current, [i].concat(path2), traversed);
         }
         return;
       } else if (isArray && partType === "object") {
@@ -1307,17 +1307,17 @@
           by = 1
         } = part;
         for (let i = from; i <= to; i += by) {
-          updatePath(current, [i].concat(path), traversed);
+          updatePath(current, [i].concat(path2), traversed);
         }
         return;
-      } else if (path.length > 1) {
-        updatePath(current[part], path, [part].concat(traversed));
+      } else if (path2.length > 1) {
+        updatePath(current[part], path2, [part].concat(traversed));
         return;
       }
       prev = current[part];
       traversed = [part].concat(traversed);
     }
-    let value = path[0];
+    let value = path2[0];
     if (typeof value === "function") {
       value = value(prev, traversed);
       if (value === prev) return;
@@ -1338,6 +1338,19 @@
       });
     }
     return [wrappedStore, setStore2];
+  }
+
+  // src/shared/dates.ts
+  function startOfDay(t) {
+    const d = new Date(t);
+    d.setHours(0, 0, 0, 0);
+    return d.getTime();
+  }
+  function startOfDayAt(t, boundary) {
+    if (boundary === "utc") {
+      return Math.floor(t / 864e5) * 864e5;
+    }
+    return startOfDay(t);
   }
 
   // webview/logic/format.ts
@@ -1371,11 +1384,6 @@
   function fmtMonth(t) {
     const d = new Date(t);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
-  }
-  function startOfDay(t) {
-    const d = new Date(t);
-    d.setHours(0, 0, 0, 0);
-    return d.getTime();
   }
 
   // webview/logic/viewport.ts
@@ -1420,34 +1428,34 @@
   };
   function currentRangeMs(view, rangeKey) {
     const cfg = VIEWS[view];
-    const r = cfg.ranges.find((x) => x.key === rangeKey) || cfg.ranges[0];
+    const r = cfg.ranges.find((x2) => x2.key === rangeKey) || cfg.ranges[0];
     return r ? r.ms : Infinity;
   }
   function viewPoints(data, view) {
     if (!data) return [];
     if (view === "hourly") {
-      return data.snapshots.slice().sort((a, b) => a.t - b.t);
+      return data.snapshots.slice();
     }
     if (view === "daily") {
-      return data.daily.slice().sort((a, b) => a.day - b.day).map((x) => ({
-        t: x.day,
-        total: x.total,
-        toppedUp: x.toppedUp,
-        granted: x.granted,
-        currency: x.currency
+      return data.daily.slice().map((x2) => ({
+        t: x2.day,
+        total: x2.total,
+        toppedUp: x2.toppedUp,
+        granted: x2.granted,
+        currency: x2.currency
       }));
     }
     const byMonth = /* @__PURE__ */ new Map();
-    for (const x of data.daily) {
-      const m = startOfDay(new Date(x.day).setDate(1));
-      byMonth.set(m, x);
+    for (const x2 of data.daily) {
+      const m = startOfDay(new Date(x2.day).setDate(1));
+      byMonth.set(m, x2);
     }
-    return Array.from(byMonth.entries()).sort((a, b) => a[0] - b[0]).map(([t, x]) => ({
+    return Array.from(byMonth.entries()).sort((a, b) => a[0] - b[0]).map(([t, x2]) => ({
       t,
-      total: x.total,
-      toppedUp: x.toppedUp,
-      granted: x.granted,
-      currency: x.currency
+      total: x2.total,
+      toppedUp: x2.toppedUp,
+      granted: x2.granted,
+      currency: x2.currency
     }));
   }
   function computeDataBounds(data, view) {
@@ -1473,10 +1481,6 @@
     } else {
       end = bounds.maxT;
       start = end - ms;
-      if (start < bounds.minT) {
-        start = bounds.minT;
-        end = start + ms;
-      }
     }
     return { viewRange: { start, end }, followLive: true, maxWindow, minWindow };
   }
@@ -1506,7 +1510,8 @@
       return resetViewRange(data, vs.view, vs.rangeKey);
     }
     if (vs.followLive && bounds.maxT > vs.viewRange.end) {
-      return { viewRange: { start: vs.viewRange.start, end: bounds.maxT } };
+      const width = vs.viewRange.end - vs.viewRange.start;
+      return { viewRange: { start: bounds.maxT - width, end: bounds.maxT } };
     }
     return {};
   }
@@ -1536,9 +1541,13 @@
   var EPS = 1e-6;
   function findBaseline(data, todayStart) {
     const yesterdayStart = todayStart - 864e5;
-    const yesterdayDaily = (data.daily || []).find((x) => x.day === yesterdayStart);
-    if (yesterdayDaily) {
-      return { baseline: yesterdayDaily.total, source: "\u6628\u65E5\u4F59\u989D" };
+    let prevTotal = null;
+    for (const s of data.snapshots) {
+      if (s.t >= todayStart) break;
+      if (s.t >= yesterdayStart) prevTotal = s.total;
+    }
+    if (prevTotal !== null) {
+      return { baseline: prevTotal, source: "\u6628\u65E5\u4F59\u989D" };
     }
     const firstToday = data.snapshots.find((s) => s.t >= todayStart);
     if (firstToday) {
@@ -1559,16 +1568,17 @@
     }
     return [recharge, prev, lastT];
   }
-  function buildTodaySpendCache(data, now = Date.now()) {
+  function buildTodaySpendCache(data, now = Date.now(), boundary = "local") {
     if (!data || !data.snapshots.length) return null;
     const snapshots = data.snapshots;
-    const todayStart = startOfDay(snapshots[snapshots.length - 1].t);
-    if (todayStart !== startOfDay(now)) return null;
+    const todayStart = startOfDayAt(snapshots[snapshots.length - 1].t, boundary);
+    if (todayStart !== startOfDayAt(now, boundary)) return null;
     const base = findBaseline(data, todayStart);
     if (!base) return null;
     const [recharge, prevTotal, lastT] = scanToday(snapshots, todayStart, base.baseline);
     return {
       day: todayStart,
+      boundary,
       baseline: base.baseline,
       source: base.source,
       recharge,
@@ -1576,12 +1586,12 @@
       prevTotal
     };
   }
-  function advanceTodaySpendCache(cache, data, now = Date.now()) {
+  function advanceTodaySpendCache(cache, data, now = Date.now(), boundary = "local") {
     if (!data || !data.snapshots.length) return cache;
     const snapshots = data.snapshots;
-    const day = startOfDay(snapshots[snapshots.length - 1].t);
-    if (!cache || cache.day !== day) {
-      return buildTodaySpendCache(data, now);
+    const day = startOfDayAt(snapshots[snapshots.length - 1].t, boundary);
+    if (!cache || cache.day !== day || cache.boundary !== boundary) {
+      return buildTodaySpendCache(data, now, boundary);
     }
     let i = snapshots.length - 1;
     while (i >= 0 && snapshots[i].t > cache.lastT) i--;
@@ -1636,7 +1646,8 @@
       showTodaySpend: !!cfg.showTodaySpend,
       connectorStyle: cfg.connectorStyle || "dashed",
       connectorColor: cfg.connectorColor || "",
-      lineStyle: cfg.lineStyle || "straight"
+      lineStyle: cfg.lineStyle || "straight",
+      dayBoundary: cfg.dayBoundary || "local"
     } : {
       statusBarShow: true,
       defaultColor: "",
@@ -1646,7 +1657,8 @@
       showTodaySpend: false,
       connectorStyle: "dashed",
       connectorColor: "",
-      lineStyle: "straight"
+      lineStyle: "straight",
+      dayBoundary: "local"
     };
   }
   var [spendPreview, setSpendPreview] = createSignal(null);
@@ -1682,32 +1694,54 @@
       maxWindow: r.maxWindow ?? 0,
       minWindow: r.minWindow ?? 6e4,
       yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
-      todayCache: buildTodaySpendCache(payload),
+      todayCache: buildTodaySpendCache(
+        payload,
+        Date.now(),
+        payload.config?.dayBoundary ?? "local"
+      ),
       lastError: ""
     });
   }
   function onSnapshot(s) {
     if (!store.data) return;
     const daily = upsertDailyLocal(store.data.daily, s);
+    const prev = store.data.snapshots;
+    const snapshots = prev.length === 0 || s.t >= prev[prev.length - 1].t ? [...prev, s] : [...prev, s].sort((a, b) => a.t - b.t);
     const data = {
       ...store.data,
-      snapshots: [...store.data.snapshots, s],
+      snapshots,
       daily,
       current: s
     };
     const patch = onNewData(data, viewState());
     setStore({
       data,
-      todayCache: advanceTodaySpendCache(store.todayCache, data),
+      todayCache: advanceTodaySpendCache(
+        store.todayCache,
+        data,
+        Date.now(),
+        store.config?.dayBoundary ?? "local"
+      ),
       ...patch,
       ...store.refreshing ? { refreshing: false, refreshResult: "ok" } : {}
     });
   }
   function onConfig(cfg) {
-    setStore({ config: cfg });
+    const prev = store.config?.dayBoundary ?? "local";
+    const next = cfg?.dayBoundary ?? "local";
+    setStore({
+      config: cfg,
+      // 日界时区切换：todayCache 需按新日界重建（下次 snapshot 也会重建，这里立即生效）
+      ...prev !== next ? { todayCache: buildTodaySpendCache(store.data, Date.now(), next) } : {}
+    });
   }
   function applySavedConfig(p) {
+    const prev = store.config?.dayBoundary ?? "local";
+    const next = p.dayBoundary ?? "local";
     setStore("config", (cfg) => cfg ? { ...cfg, ...p } : cfg);
+    if (prev !== next) {
+      setStore({ todayCache: buildTodaySpendCache(store.data, Date.now(), next) });
+    }
   }
   function setYMinSpanRatio(ratio) {
     setStore({ yMinSpanRatio: ratio });
@@ -1810,9 +1844,10 @@
         };
       }
       const currency = store.data && store.data.current && store.data.current.currency || "CNY";
+      const boundary = store.config?.dayBoundary ?? "local";
       return {
         value: `~${fmtMoney(info.spend, currency)}`,
-        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} \xA5${info.baseline} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF09`
+        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} \xA5${info.baseline} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF0C${boundary === "utc" ? "UTC \u65E5\u754C" : "\u672C\u5730\u65E5\u754C"}\uFF09`
       };
     });
     return (() => {
@@ -1917,17 +1952,17 @@
     const out = [];
     const bucket = Math.ceil(pts.length / max);
     for (let i = 0; i < pts.length; i += bucket) {
-      const slice = pts.slice(i, i + bucket);
-      let minP = slice[0];
-      let maxP = slice[0];
-      for (const p of slice) {
+      const slice2 = pts.slice(i, i + bucket);
+      let minP = slice2[0];
+      let maxP = slice2[0];
+      for (const p of slice2) {
         if (p.total < minP.total) minP = p;
         if (p.total > maxP.total) maxP = p;
       }
-      out.push(slice[0]);
-      if (minP !== slice[0] && minP !== slice[slice.length - 1]) out.push(minP);
-      if (maxP !== slice[0] && maxP !== slice[slice.length - 1] && maxP !== minP) out.push(maxP);
-      out.push(slice[slice.length - 1]);
+      out.push(slice2[0]);
+      if (minP !== slice2[0] && minP !== slice2[slice2.length - 1]) out.push(minP);
+      if (maxP !== slice2[0] && maxP !== slice2[slice2.length - 1] && maxP !== minP) out.push(maxP);
+      out.push(slice2[slice2.length - 1]);
     }
     return out;
   }
@@ -1990,6 +2025,305 @@
     return { solid, isolated, gaps };
   }
 
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/constant.js
+  function constant_default(x2) {
+    return function constant() {
+      return x2;
+    };
+  }
+
+  // node_modules/.pnpm/d3-path@3.1.0/node_modules/d3-path/src/path.js
+  var pi = Math.PI;
+  var tau = 2 * pi;
+  var epsilon = 1e-6;
+  var tauEpsilon = tau - epsilon;
+  function append(strings) {
+    this._ += strings[0];
+    for (let i = 1, n = strings.length; i < n; ++i) {
+      this._ += arguments[i] + strings[i];
+    }
+  }
+  function appendRound(digits) {
+    let d = Math.floor(digits);
+    if (!(d >= 0)) throw new Error(`invalid digits: ${digits}`);
+    if (d > 15) return append;
+    const k = 10 ** d;
+    return function(strings) {
+      this._ += strings[0];
+      for (let i = 1, n = strings.length; i < n; ++i) {
+        this._ += Math.round(arguments[i] * k) / k + strings[i];
+      }
+    };
+  }
+  var Path = class {
+    constructor(digits) {
+      this._x0 = this._y0 = // start of current subpath
+      this._x1 = this._y1 = null;
+      this._ = "";
+      this._append = digits == null ? append : appendRound(digits);
+    }
+    moveTo(x2, y2) {
+      this._append`M${this._x0 = this._x1 = +x2},${this._y0 = this._y1 = +y2}`;
+    }
+    closePath() {
+      if (this._x1 !== null) {
+        this._x1 = this._x0, this._y1 = this._y0;
+        this._append`Z`;
+      }
+    }
+    lineTo(x2, y2) {
+      this._append`L${this._x1 = +x2},${this._y1 = +y2}`;
+    }
+    quadraticCurveTo(x1, y1, x2, y2) {
+      this._append`Q${+x1},${+y1},${this._x1 = +x2},${this._y1 = +y2}`;
+    }
+    bezierCurveTo(x1, y1, x2, y2, x3, y3) {
+      this._append`C${+x1},${+y1},${+x2},${+y2},${this._x1 = +x3},${this._y1 = +y3}`;
+    }
+    arcTo(x1, y1, x2, y2, r) {
+      x1 = +x1, y1 = +y1, x2 = +x2, y2 = +y2, r = +r;
+      if (r < 0) throw new Error(`negative radius: ${r}`);
+      let x0 = this._x1, y0 = this._y1, x21 = x2 - x1, y21 = y2 - y1, x01 = x0 - x1, y01 = y0 - y1, l01_2 = x01 * x01 + y01 * y01;
+      if (this._x1 === null) {
+        this._append`M${this._x1 = x1},${this._y1 = y1}`;
+      } else if (!(l01_2 > epsilon)) ;
+      else if (!(Math.abs(y01 * x21 - y21 * x01) > epsilon) || !r) {
+        this._append`L${this._x1 = x1},${this._y1 = y1}`;
+      } else {
+        let x20 = x2 - x0, y20 = y2 - y0, l21_2 = x21 * x21 + y21 * y21, l20_2 = x20 * x20 + y20 * y20, l21 = Math.sqrt(l21_2), l01 = Math.sqrt(l01_2), l = r * Math.tan((pi - Math.acos((l21_2 + l01_2 - l20_2) / (2 * l21 * l01))) / 2), t01 = l / l01, t21 = l / l21;
+        if (Math.abs(t01 - 1) > epsilon) {
+          this._append`L${x1 + t01 * x01},${y1 + t01 * y01}`;
+        }
+        this._append`A${r},${r},0,0,${+(y01 * x20 > x01 * y20)},${this._x1 = x1 + t21 * x21},${this._y1 = y1 + t21 * y21}`;
+      }
+    }
+    arc(x2, y2, r, a0, a1, ccw) {
+      x2 = +x2, y2 = +y2, r = +r, ccw = !!ccw;
+      if (r < 0) throw new Error(`negative radius: ${r}`);
+      let dx = r * Math.cos(a0), dy = r * Math.sin(a0), x0 = x2 + dx, y0 = y2 + dy, cw = 1 ^ ccw, da = ccw ? a0 - a1 : a1 - a0;
+      if (this._x1 === null) {
+        this._append`M${x0},${y0}`;
+      } else if (Math.abs(this._x1 - x0) > epsilon || Math.abs(this._y1 - y0) > epsilon) {
+        this._append`L${x0},${y0}`;
+      }
+      if (!r) return;
+      if (da < 0) da = da % tau + tau;
+      if (da > tauEpsilon) {
+        this._append`A${r},${r},0,1,${cw},${x2 - dx},${y2 - dy}A${r},${r},0,1,${cw},${this._x1 = x0},${this._y1 = y0}`;
+      } else if (da > epsilon) {
+        this._append`A${r},${r},0,${+(da >= pi)},${cw},${this._x1 = x2 + r * Math.cos(a1)},${this._y1 = y2 + r * Math.sin(a1)}`;
+      }
+    }
+    rect(x2, y2, w, h) {
+      this._append`M${this._x0 = this._x1 = +x2},${this._y0 = this._y1 = +y2}h${w = +w}v${+h}h${-w}Z`;
+    }
+    toString() {
+      return this._;
+    }
+  };
+  function path() {
+    return new Path();
+  }
+  path.prototype = Path.prototype;
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/path.js
+  function withPath(shape) {
+    let digits = 3;
+    shape.digits = function(_) {
+      if (!arguments.length) return digits;
+      if (_ == null) {
+        digits = null;
+      } else {
+        const d = Math.floor(_);
+        if (!(d >= 0)) throw new RangeError(`invalid digits: ${_}`);
+        digits = d;
+      }
+      return shape;
+    };
+    return () => new Path(digits);
+  }
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/array.js
+  var slice = Array.prototype.slice;
+  function array_default(x2) {
+    return typeof x2 === "object" && "length" in x2 ? x2 : Array.from(x2);
+  }
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/linear.js
+  function Linear(context) {
+    this._context = context;
+  }
+  Linear.prototype = {
+    areaStart: function() {
+      this._line = 0;
+    },
+    areaEnd: function() {
+      this._line = NaN;
+    },
+    lineStart: function() {
+      this._point = 0;
+    },
+    lineEnd: function() {
+      if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
+      this._line = 1 - this._line;
+    },
+    point: function(x2, y2) {
+      x2 = +x2, y2 = +y2;
+      switch (this._point) {
+        case 0:
+          this._point = 1;
+          this._line ? this._context.lineTo(x2, y2) : this._context.moveTo(x2, y2);
+          break;
+        case 1:
+          this._point = 2;
+        // falls through
+        default:
+          this._context.lineTo(x2, y2);
+          break;
+      }
+    }
+  };
+  function linear_default(context) {
+    return new Linear(context);
+  }
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/point.js
+  function x(p) {
+    return p[0];
+  }
+  function y(p) {
+    return p[1];
+  }
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/line.js
+  function line_default(x2, y2) {
+    var defined = constant_default(true), context = null, curve = linear_default, output = null, path2 = withPath(line);
+    x2 = typeof x2 === "function" ? x2 : x2 === void 0 ? x : constant_default(x2);
+    y2 = typeof y2 === "function" ? y2 : y2 === void 0 ? y : constant_default(y2);
+    function line(data) {
+      var i, n = (data = array_default(data)).length, d, defined0 = false, buffer;
+      if (context == null) output = curve(buffer = path2());
+      for (i = 0; i <= n; ++i) {
+        if (!(i < n && defined(d = data[i], i, data)) === defined0) {
+          if (defined0 = !defined0) output.lineStart();
+          else output.lineEnd();
+        }
+        if (defined0) output.point(+x2(d, i, data), +y2(d, i, data));
+      }
+      if (buffer) return output = null, buffer + "" || null;
+    }
+    line.x = function(_) {
+      return arguments.length ? (x2 = typeof _ === "function" ? _ : constant_default(+_), line) : x2;
+    };
+    line.y = function(_) {
+      return arguments.length ? (y2 = typeof _ === "function" ? _ : constant_default(+_), line) : y2;
+    };
+    line.defined = function(_) {
+      return arguments.length ? (defined = typeof _ === "function" ? _ : constant_default(!!_), line) : defined;
+    };
+    line.curve = function(_) {
+      return arguments.length ? (curve = _, context != null && (output = curve(context)), line) : curve;
+    };
+    line.context = function(_) {
+      return arguments.length ? (_ == null ? context = output = null : output = curve(context = _), line) : context;
+    };
+    return line;
+  }
+
+  // node_modules/.pnpm/d3-shape@3.2.0/node_modules/d3-shape/src/curve/monotone.js
+  function sign(x2) {
+    return x2 < 0 ? -1 : 1;
+  }
+  function slope3(that, x2, y2) {
+    var h0 = that._x1 - that._x0, h1 = x2 - that._x1, s0 = (that._y1 - that._y0) / (h0 || h1 < 0 && -0), s1 = (y2 - that._y1) / (h1 || h0 < 0 && -0), p = (s0 * h1 + s1 * h0) / (h0 + h1);
+    return (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
+  }
+  function slope2(that, t) {
+    var h = that._x1 - that._x0;
+    return h ? (3 * (that._y1 - that._y0) / h - t) / 2 : t;
+  }
+  function point(that, t0, t1) {
+    var x0 = that._x0, y0 = that._y0, x1 = that._x1, y1 = that._y1, dx = (x1 - x0) / 3;
+    that._context.bezierCurveTo(x0 + dx, y0 + dx * t0, x1 - dx, y1 - dx * t1, x1, y1);
+  }
+  function MonotoneX(context) {
+    this._context = context;
+  }
+  MonotoneX.prototype = {
+    areaStart: function() {
+      this._line = 0;
+    },
+    areaEnd: function() {
+      this._line = NaN;
+    },
+    lineStart: function() {
+      this._x0 = this._x1 = this._y0 = this._y1 = this._t0 = NaN;
+      this._point = 0;
+    },
+    lineEnd: function() {
+      switch (this._point) {
+        case 2:
+          this._context.lineTo(this._x1, this._y1);
+          break;
+        case 3:
+          point(this, this._t0, slope2(this, this._t0));
+          break;
+      }
+      if (this._line || this._line !== 0 && this._point === 1) this._context.closePath();
+      this._line = 1 - this._line;
+    },
+    point: function(x2, y2) {
+      var t1 = NaN;
+      x2 = +x2, y2 = +y2;
+      if (x2 === this._x1 && y2 === this._y1) return;
+      switch (this._point) {
+        case 0:
+          this._point = 1;
+          this._line ? this._context.lineTo(x2, y2) : this._context.moveTo(x2, y2);
+          break;
+        case 1:
+          this._point = 2;
+          break;
+        case 2:
+          this._point = 3;
+          point(this, slope2(this, t1 = slope3(this, x2, y2)), t1);
+          break;
+        default:
+          point(this, this._t0, t1 = slope3(this, x2, y2));
+          break;
+      }
+      this._x0 = this._x1, this._x1 = x2;
+      this._y0 = this._y1, this._y1 = y2;
+      this._t0 = t1;
+    }
+  };
+  function MonotoneY(context) {
+    this._context = new ReflectContext(context);
+  }
+  (MonotoneY.prototype = Object.create(MonotoneX.prototype)).point = function(x2, y2) {
+    MonotoneX.prototype.point.call(this, y2, x2);
+  };
+  function ReflectContext(context) {
+    this._context = context;
+  }
+  ReflectContext.prototype = {
+    moveTo: function(x2, y2) {
+      this._context.moveTo(y2, x2);
+    },
+    closePath: function() {
+      this._context.closePath();
+    },
+    lineTo: function(x2, y2) {
+      this._context.lineTo(y2, x2);
+    },
+    bezierCurveTo: function(x1, y1, x2, y2, x3, y3) {
+      this._context.bezierCurveTo(y1, x1, y2, x2, y3, x3);
+    }
+  };
+  function monotoneX(context) {
+    return new MonotoneX(context);
+  }
+
   // webview/logic/paths.ts
   function straightPath(pts, xOf, yOf) {
     return pts.map((p, i) => `${i === 0 ? "M" : "L"}${xOf(p.t).toFixed(1)},${yOf(p.total).toFixed(1)}`).join(" ");
@@ -1997,44 +2331,8 @@
   function smoothPath(pts, xOf, yOf) {
     const n = pts.length;
     if (n < 2) return "";
-    const s = new Array(n - 1);
-    for (let i = 0; i < n - 1; i++) {
-      const h = pts[i + 1].t - pts[i].t;
-      s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
-    }
-    const m = new Array(n);
-    m[0] = s[0];
-    m[n - 1] = s[n - 2];
-    for (let i = 1; i < n - 1; i++) {
-      m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
-    }
-    for (let i = 0; i < n - 1; i++) {
-      if (s[i] === 0) {
-        m[i] = 0;
-        m[i + 1] = 0;
-        continue;
-      }
-      const alpha = m[i] / s[i];
-      const beta = m[i + 1] / s[i];
-      const a2b2 = alpha * alpha + beta * beta;
-      if (a2b2 > 9) {
-        const tau = 3 / Math.sqrt(a2b2);
-        m[i] = tau * alpha * s[i];
-        m[i + 1] = tau * beta * s[i];
-      }
-    }
-    let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
-    for (let i = 0; i < n - 1; i++) {
-      const h = pts[i + 1].t - pts[i].t;
-      const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-      const c1y = yOf(pts[i].total + m[i] * h / 3);
-      const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-      const c2y = yOf(pts[i + 1].total - m[i + 1] * h / 3);
-      d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
-        pts[i + 1].t
-      ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
-    }
-    return d;
+    const l = line_default().x((p) => Number(xOf(p.t).toFixed(1))).y((p) => Number(yOf(p.total).toFixed(1))).curve(monotoneX);
+    return l(pts) ?? "";
   }
   function flattenSmoothSegment(p0, p1, p2, p3, xOf, yOf) {
     const h = p2.t - p1.t;
@@ -2049,9 +2347,9 @@
     const beta = m2 / s;
     const a2b2 = alpha * alpha + beta * beta;
     if (a2b2 > 9) {
-      const tau = 3 / Math.sqrt(a2b2);
-      m1 = tau * alpha * s;
-      m2 = tau * beta * s;
+      const tau2 = 3 / Math.sqrt(a2b2);
+      m1 = tau2 * alpha * s;
+      m2 = tau2 * beta * s;
     }
     const bx0 = xOf(p1.t);
     const by0 = yOf(p1.total);
@@ -2267,27 +2565,211 @@
   }
   delegateEvents(["click"]);
 
-  // webview/components/Chart.tsx
-  var _tmpl$8 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
-  var _tmpl$27 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
-  var _tmpl$32 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
-  var _tmpl$42 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
-  var _tmpl$52 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
-  var _tmpl$62 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
-  var _tmpl$72 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
-  var _tmpl$82 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
-  var _tmpl$9 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
-  var _tmpl$0 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
-  var _tmpl$1 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
-  var _tmpl$10 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
-  var _tmpl$11 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
-  function Chart() {
-    let wrapRef;
-    let svgRef;
-    const [size, setSize] = createSignal({
-      w: 0,
-      h: 0
+  // webview/components/ChartAxis.tsx
+  var _tmpl$8 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
+  var _tmpl$27 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
+  var _tmpl$32 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$42 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
+  function ChartAxis(props) {
+    return [(() => {
+      var _el$ = _tmpl$8();
+      insert(_el$, createComponent(For, {
+        get each() {
+          return props.lay.yTicks;
+        },
+        children: (v) => {
+          const y2 = props.lay.yOf(v);
+          return (() => {
+            var _el$3 = _tmpl$27();
+            setAttribute(_el$3, "y1", y2);
+            setAttribute(_el$3, "y2", y2);
+            createRenderEffect((_p$) => {
+              var _v$ = props.lay.plotLeft, _v$2 = props.lay.plotRight;
+              _v$ !== _p$.e && setAttribute(_el$3, "x1", _p$.e = _v$);
+              _v$2 !== _p$.t && setAttribute(_el$3, "x2", _p$.t = _v$2);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0
+            });
+            return _el$3;
+          })();
+        }
+      }), null);
+      insert(_el$, createComponent(For, {
+        get each() {
+          return props.lay.yLabels;
+        },
+        children: (lbl) => (() => {
+          var _el$4 = _tmpl$32();
+          insert(_el$4, () => lbl.text);
+          createRenderEffect((_p$) => {
+            var _v$3 = props.lay.plotLeft - 8, _v$4 = lbl.y;
+            _v$3 !== _p$.e && setAttribute(_el$4, "x", _p$.e = _v$3);
+            _v$4 !== _p$.t && setAttribute(_el$4, "y", _p$.t = _v$4);
+            return _p$;
+          }, {
+            e: void 0,
+            t: void 0
+          });
+          return _el$4;
+        })()
+      }), null);
+      return _el$;
+    })(), (() => {
+      var _el$2 = _tmpl$8();
+      insert(_el$2, createComponent(For, {
+        get each() {
+          return props.lay.xTicks;
+        },
+        children: (t) => {
+          const x2 = props.lay.xOf(t);
+          return (() => {
+            var _el$5 = _tmpl$27();
+            setAttribute(_el$5, "x1", x2);
+            setAttribute(_el$5, "x2", x2);
+            createRenderEffect((_p$) => {
+              var _v$5 = M.top, _v$6 = props.lay.h - M.bottom;
+              _v$5 !== _p$.e && setAttribute(_el$5, "y1", _p$.e = _v$5);
+              _v$6 !== _p$.t && setAttribute(_el$5, "y2", _p$.t = _v$6);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0
+            });
+            return _el$5;
+          })();
+        }
+      }), null);
+      insert(_el$2, createComponent(For, {
+        get each() {
+          return props.lay.xLabels;
+        },
+        children: (lbl) => (() => {
+          var _el$6 = _tmpl$42();
+          insert(_el$6, () => lbl.text);
+          createRenderEffect((_p$) => {
+            var _v$7 = lbl.x, _v$8 = props.lay.h - M.bottom + 16, _v$9 = lbl.anchor;
+            _v$7 !== _p$.e && setAttribute(_el$6, "x", _p$.e = _v$7);
+            _v$8 !== _p$.t && setAttribute(_el$6, "y", _p$.t = _v$8);
+            _v$9 !== _p$.a && setAttribute(_el$6, "text-anchor", _p$.a = _v$9);
+            return _p$;
+          }, {
+            e: void 0,
+            t: void 0,
+            a: void 0
+          });
+          return _el$6;
+        })()
+      }), null);
+      return _el$2;
+    })()];
+  }
+
+  // webview/components/ChartSeries.tsx
+  var _tmpl$9 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
+  var _tmpl$28 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
+  var _tmpl$33 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
+  var _tmpl$43 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
+  function ChartSeries(props) {
+    return [createComponent(For, {
+      get each() {
+        return props.connectorDraws;
+      },
+      children: (c) => (() => {
+        var _el$ = _tmpl$9();
+        createRenderEffect((_p$) => {
+          var _v$ = "connector" + (c.solid ? " solid" : ""), _v$2 = c.d, _v$3 = c.color ? {
+            stroke: c.color
+          } : void 0;
+          _v$ !== _p$.e && setAttribute(_el$, "class", _p$.e = _v$);
+          _v$2 !== _p$.t && setAttribute(_el$, "d", _p$.t = _v$2);
+          _p$.a = style(_el$, _v$3, _p$.a);
+          return _p$;
+        }, {
+          e: void 0,
+          t: void 0,
+          a: void 0
+        });
+        return _el$;
+      })()
+    }), createComponent(For, {
+      get each() {
+        return props.solidDraws;
+      },
+      children: (s) => [(() => {
+        var _el$2 = _tmpl$28();
+        createRenderEffect(() => setAttribute(_el$2, "d", s.area));
+        return _el$2;
+      })(), (() => {
+        var _el$3 = _tmpl$33();
+        createRenderEffect(() => setAttribute(_el$3, "d", s.d));
+        return _el$3;
+      })()]
+    }), createComponent(For, {
+      get each() {
+        return props.isolated;
+      },
+      children: (p) => (() => {
+        var _el$4 = _tmpl$43();
+        createRenderEffect((_p$) => {
+          var _v$4 = props.lay.xOf(p.t), _v$5 = props.lay.yOf(p.total);
+          _v$4 !== _p$.e && setAttribute(_el$4, "cx", _p$.e = _v$4);
+          _v$5 !== _p$.t && setAttribute(_el$4, "cy", _p$.t = _v$5);
+          return _p$;
+        }, {
+          e: void 0,
+          t: void 0
+        });
+        return _el$4;
+      })()
+    })];
+  }
+
+  // webview/components/ChartCrosshair.tsx
+  var _tmpl$10 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
+  var _tmpl$29 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
+  function ChartCrosshair(props) {
+    return createComponent(Show, {
+      get when() {
+        return props.hover;
+      },
+      get children() {
+        return [(() => {
+          var _el$ = _tmpl$10();
+          createRenderEffect((_p$) => {
+            var _v$ = props.hover.x, _v$2 = M.top, _v$3 = props.hover.x, _v$4 = props.h - M.bottom;
+            _v$ !== _p$.e && setAttribute(_el$, "x1", _p$.e = _v$);
+            _v$2 !== _p$.t && setAttribute(_el$, "y1", _p$.t = _v$2);
+            _v$3 !== _p$.a && setAttribute(_el$, "x2", _p$.a = _v$3);
+            _v$4 !== _p$.o && setAttribute(_el$, "y2", _p$.o = _v$4);
+            return _p$;
+          }, {
+            e: void 0,
+            t: void 0,
+            a: void 0,
+            o: void 0
+          });
+          return _el$;
+        })(), (() => {
+          var _el$2 = _tmpl$29();
+          createRenderEffect((_p$) => {
+            var _v$5 = props.hover.x, _v$6 = props.hover.y;
+            _v$5 !== _p$.e && setAttribute(_el$2, "cx", _p$.e = _v$5);
+            _v$6 !== _p$.t && setAttribute(_el$2, "cy", _p$.t = _v$6);
+            return _p$;
+          }, {
+            e: void 0,
+            t: void 0
+          });
+          return _el$2;
+        })()];
+      }
     });
+  }
+
+  // webview/hooks/useChartGestures.ts
+  function useChartGestures(opts) {
     const [mouseX, setMouseX] = createSignal(-1);
     const [pinT, setPinT] = createSignal(null);
     const [pinUntil, setPinUntil] = createSignal(0);
@@ -2295,6 +2777,136 @@
     let zoomAnchorFrac = 0;
     let lastWheelTs = 0;
     let drag = null;
+    onMount(() => {
+      const container = opts.wrapRef();
+      const svg = opts.svgRef();
+      function onWheel(e) {
+        e.preventDefault();
+        if (!store.viewRange) return;
+        const lay = opts.getLayout();
+        if (!lay) return;
+        const now = Date.now();
+        const rect = svg.getBoundingClientRect();
+        const innerW = rect.width - lay.plotLeft - M.right;
+        if (innerW <= 0) return;
+        const mx = e.clientX - rect.left;
+        const vr = store.viewRange;
+        const tCursor = vr.start + (mx - lay.plotLeft) / innerW * (vr.end - vr.start);
+        if (now - lastWheelTs > 300) {
+          const cd = opts.getChartData();
+          let best = Infinity;
+          let bt = tCursor;
+          if (cd) {
+            for (const seg of cd.geom.solid) {
+              for (const p of seg) {
+                const dx = Math.abs(p.t - tCursor);
+                if (dx < best) {
+                  best = dx;
+                  bt = p.t;
+                }
+              }
+            }
+            for (const p of cd.geom.isolated) {
+              const dx = Math.abs(p.t - tCursor);
+              if (dx < best) {
+                best = dx;
+                bt = p.t;
+              }
+            }
+          }
+          const snapLimit = (vr.end - vr.start) * 0.15;
+          zoomAnchorT = best <= snapLimit ? bt : tCursor;
+          zoomAnchorFrac = (zoomAnchorT - vr.start) / (vr.end - vr.start);
+        }
+        lastWheelTs = now;
+        setPinT(zoomAnchorT);
+        setPinUntil(now + 350);
+        const factor = Math.pow(1.15, -e.deltaY / 120);
+        let dur = (vr.end - vr.start) * factor;
+        dur = Math.min(store.maxWindow, Math.max(store.minWindow, dur));
+        const bounds = computeDataBounds(store.data, store.view);
+        const r = bounds ? clampRange(
+          zoomAnchorT - zoomAnchorFrac * dur,
+          zoomAnchorT + (1 - zoomAnchorFrac) * dur,
+          bounds,
+          store.minWindow
+        ) : {
+          start: zoomAnchorT - zoomAnchorFrac * dur,
+          end: zoomAnchorT + (1 - zoomAnchorFrac) * dur
+        };
+        setViewRange(r, false);
+      }
+      function onPointerDown(e) {
+        if (e.button !== 0 || !store.viewRange) return;
+        drag = { startX: e.clientX, startRange: { ...store.viewRange } };
+        setMouseX(-1);
+        container.setPointerCapture(e.pointerId);
+      }
+      function onPointerMove(e) {
+        if (!drag || !store.viewRange) return;
+        const lay = opts.getLayout();
+        if (!lay) return;
+        const rect = svg.getBoundingClientRect();
+        const innerW = rect.width - lay.plotLeft - M.right;
+        const dur = drag.startRange.end - drag.startRange.start;
+        const shift = (drag.startX - e.clientX) / innerW * dur;
+        const bounds = computeDataBounds(store.data, store.view);
+        const r = bounds ? clampRange(
+          drag.startRange.start + shift,
+          drag.startRange.end + shift,
+          bounds,
+          store.minWindow
+        ) : { start: drag.startRange.start + shift, end: drag.startRange.end + shift };
+        setViewRange(r, false);
+      }
+      function onPointerEnd() {
+        drag = null;
+      }
+      function onMouseMove(e) {
+        if (drag) return;
+        const rect = svg.getBoundingClientRect();
+        setMouseX(e.clientX - rect.left);
+        setPinUntil(0);
+      }
+      function onMouseLeave() {
+        setMouseX(-1);
+      }
+      function onDblClick() {
+        resetView();
+      }
+      container.addEventListener("wheel", onWheel, { passive: false });
+      container.addEventListener("pointerdown", onPointerDown);
+      container.addEventListener("pointermove", onPointerMove);
+      container.addEventListener("pointerup", onPointerEnd);
+      container.addEventListener("pointercancel", onPointerEnd);
+      container.addEventListener("mousemove", onMouseMove);
+      container.addEventListener("mouseleave", onMouseLeave);
+      container.addEventListener("dblclick", onDblClick);
+      onCleanup(() => {
+        container.removeEventListener("wheel", onWheel);
+        container.removeEventListener("pointerdown", onPointerDown);
+        container.removeEventListener("pointermove", onPointerMove);
+        container.removeEventListener("pointerup", onPointerEnd);
+        container.removeEventListener("pointercancel", onPointerEnd);
+        container.removeEventListener("mousemove", onMouseMove);
+        container.removeEventListener("mouseleave", onMouseLeave);
+        container.removeEventListener("dblclick", onDblClick);
+      });
+    });
+    return { mouseX, setMouseX, pinT, setPinT, pinUntil, setPinUntil };
+  }
+
+  // webview/components/Chart.tsx
+  var _tmpl$11 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
+  var _tmpl$210 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
+  var _tmpl$34 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
+  function Chart() {
+    let wrapRef;
+    let svgRef;
+    const [size, setSize] = createSignal({
+      w: 0,
+      h: 0
+    });
     onMount(() => {
       const ro = new ResizeObserver(() => {
         if (wrapRef) setSize({
@@ -2308,6 +2920,16 @@
         h: wrapRef.clientHeight
       });
       onCleanup(() => ro.disconnect());
+    });
+    const {
+      mouseX,
+      pinT,
+      pinUntil
+    } = useChartGestures({
+      wrapRef: () => wrapRef,
+      svgRef: () => svgRef,
+      getLayout: () => layout(),
+      getChartData: () => chartData()
     });
     const chartData = createMemo(() => {
       const data = store.data;
@@ -2391,15 +3013,15 @@
         let lastY = Infinity;
         for (let i = 0; i < yTicks.length; i++) {
           const v = yTicks[i];
-          const y = yOf(v);
+          const y2 = yOf(v);
           const isEdge = i === 0 || i === yTicks.length - 1;
-          if (!isEdge && lastY - y < 16) continue;
+          if (!isEdge && lastY - y2 < 16) continue;
           yLabels.push({
             v,
-            y,
+            y: y2,
             text: fmtAxisMoney(v, currency)
           });
-          lastY = y;
+          lastY = y2;
         }
       }
       const dur = t1 - t0;
@@ -2409,11 +3031,11 @@
       const xLabels = [];
       {
         const all = xTicks.map((t) => {
-          const x = xOf(t);
+          const x2 = xOf(t);
           const text = fmtAxisTime(t, xStep, view);
           return {
             t,
-            x,
+            x: x2,
             text,
             w: estimateTextWidth(text)
           };
@@ -2588,124 +3210,8 @@
         }]
       });
     });
-    onMount(() => {
-      const svg = svgRef;
-      const container = wrapRef;
-      function onWheel(e) {
-        e.preventDefault();
-        if (!store.viewRange) return;
-        const lay = layout();
-        if (!lay) return;
-        const now = Date.now();
-        const rect = svg.getBoundingClientRect();
-        const innerW = rect.width - lay.plotLeft - M.right;
-        if (innerW <= 0) return;
-        const mx = e.clientX - rect.left;
-        const vr = store.viewRange;
-        const tCursor = vr.start + (mx - lay.plotLeft) / innerW * (vr.end - vr.start);
-        if (now - lastWheelTs > 300) {
-          const cd = chartData();
-          let best = Infinity;
-          let bt = tCursor;
-          if (cd) {
-            for (const seg of cd.geom.solid) {
-              for (const p of seg) {
-                const dx = Math.abs(p.t - tCursor);
-                if (dx < best) {
-                  best = dx;
-                  bt = p.t;
-                }
-              }
-            }
-            for (const p of cd.geom.isolated) {
-              const dx = Math.abs(p.t - tCursor);
-              if (dx < best) {
-                best = dx;
-                bt = p.t;
-              }
-            }
-          }
-          const snapLimit = (vr.end - vr.start) * 0.15;
-          zoomAnchorT = best <= snapLimit ? bt : tCursor;
-          zoomAnchorFrac = (zoomAnchorT - vr.start) / (vr.end - vr.start);
-        }
-        lastWheelTs = now;
-        setPinT(zoomAnchorT);
-        setPinUntil(now + 350);
-        const factor = Math.pow(1.15, -e.deltaY / 120);
-        let dur = (vr.end - vr.start) * factor;
-        dur = Math.min(store.maxWindow, Math.max(store.minWindow, dur));
-        const bounds = computeDataBounds(store.data, store.view);
-        const r = bounds ? clampRange(zoomAnchorT - zoomAnchorFrac * dur, zoomAnchorT + (1 - zoomAnchorFrac) * dur, bounds, store.minWindow) : {
-          start: zoomAnchorT - zoomAnchorFrac * dur,
-          end: zoomAnchorT + (1 - zoomAnchorFrac) * dur
-        };
-        setViewRange(r, false);
-      }
-      function onPointerDown(e) {
-        if (e.button !== 0 || !store.viewRange) return;
-        drag = {
-          startX: e.clientX,
-          startRange: {
-            ...store.viewRange
-          }
-        };
-        setMouseX(-1);
-        container.setPointerCapture(e.pointerId);
-      }
-      function onPointerMove(e) {
-        if (!drag || !store.viewRange) return;
-        const lay = layout();
-        if (!lay) return;
-        const rect = svg.getBoundingClientRect();
-        const innerW = rect.width - lay.plotLeft - M.right;
-        const dur = drag.startRange.end - drag.startRange.start;
-        const shift = (drag.startX - e.clientX) / innerW * dur;
-        const bounds = computeDataBounds(store.data, store.view);
-        const r = bounds ? clampRange(drag.startRange.start + shift, drag.startRange.end + shift, bounds, store.minWindow) : {
-          start: drag.startRange.start + shift,
-          end: drag.startRange.end + shift
-        };
-        setViewRange(r, false);
-      }
-      function onPointerEnd() {
-        drag = null;
-      }
-      function onMouseMove(e) {
-        if (drag) return;
-        const rect = svg.getBoundingClientRect();
-        setMouseX(e.clientX - rect.left);
-        setPinUntil(0);
-      }
-      function onMouseLeave() {
-        setMouseX(-1);
-      }
-      function onDblClick() {
-        resetView();
-      }
-      container.addEventListener("wheel", onWheel, {
-        passive: false
-      });
-      container.addEventListener("pointerdown", onPointerDown);
-      container.addEventListener("pointermove", onPointerMove);
-      container.addEventListener("pointerup", onPointerEnd);
-      container.addEventListener("pointercancel", onPointerEnd);
-      container.addEventListener("mousemove", onMouseMove);
-      container.addEventListener("mouseleave", onMouseLeave);
-      container.addEventListener("dblclick", onDblClick);
-      onCleanup(() => {
-        container.removeEventListener("wheel", onWheel);
-        container.removeEventListener("pointerdown", onPointerDown);
-        container.removeEventListener("pointermove", onPointerMove);
-        container.removeEventListener("pointerup", onPointerEnd);
-        container.removeEventListener("pointercancel", onPointerEnd);
-        container.removeEventListener("mousemove", onMouseMove);
-        container.removeEventListener("mouseleave", onMouseLeave);
-        container.removeEventListener("dblclick", onDblClick);
-      });
-    });
     return (() => {
-      var _el$ = _tmpl$62(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$34(), _el$2 = _el$.firstChild;
       var _ref$ = wrapRef;
       typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
       var _ref$2 = svgRef;
@@ -2716,7 +3222,7 @@
         },
         get children() {
           return [(() => {
-            var _el$3 = _tmpl$8(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
+            var _el$3 = _tmpl$11(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
             createRenderEffect((_p$) => {
               var _v$ = layout().plotLeft, _v$2 = M.top, _v$3 = layout().plotRight - layout().plotLeft, _v$4 = size().h - M.bottom - M.top;
               _v$ !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$);
@@ -2731,200 +3237,36 @@
               o: void 0
             });
             return _el$3;
-          })(), (() => {
-            var _el$6 = _tmpl$27();
-            insert(_el$6, createComponent(For, {
-              get each() {
-                return layout().yTicks;
+          })(), createComponent(ChartAxis, {
+            get lay() {
+              return layout();
+            },
+            get view() {
+              return store.view;
+            }
+          }), (() => {
+            var _el$6 = _tmpl$210();
+            insert(_el$6, createComponent(ChartSeries, {
+              get lay() {
+                return layout();
               },
-              children: (v) => {
-                const lay = layout();
-                const y = lay.yOf(v);
-                return (() => {
-                  var _el$1 = _tmpl$72();
-                  setAttribute(_el$1, "y1", y);
-                  setAttribute(_el$1, "y2", y);
-                  createRenderEffect((_p$) => {
-                    var _v$11 = lay.plotLeft, _v$12 = lay.plotRight;
-                    _v$11 !== _p$.e && setAttribute(_el$1, "x1", _p$.e = _v$11);
-                    _v$12 !== _p$.t && setAttribute(_el$1, "x2", _p$.t = _v$12);
-                    return _p$;
-                  }, {
-                    e: void 0,
-                    t: void 0
-                  });
-                  return _el$1;
-                })();
-              }
-            }), null);
-            insert(_el$6, createComponent(For, {
-              get each() {
-                return layout().yLabels;
-              },
-              children: (lbl) => {
-                const lay = layout();
-                return (() => {
-                  var _el$10 = _tmpl$82();
-                  insert(_el$10, () => lbl.text);
-                  createRenderEffect((_p$) => {
-                    var _v$13 = lay.plotLeft - 8, _v$14 = lbl.y;
-                    _v$13 !== _p$.e && setAttribute(_el$10, "x", _p$.e = _v$13);
-                    _v$14 !== _p$.t && setAttribute(_el$10, "y", _p$.t = _v$14);
-                    return _p$;
-                  }, {
-                    e: void 0,
-                    t: void 0
-                  });
-                  return _el$10;
-                })();
-              }
-            }), null);
-            return _el$6;
-          })(), (() => {
-            var _el$7 = _tmpl$27();
-            insert(_el$7, createComponent(For, {
-              get each() {
-                return layout().xTicks;
-              },
-              children: (t) => {
-                const lay = layout();
-                const x = lay.xOf(t);
-                return (() => {
-                  var _el$11 = _tmpl$72();
-                  setAttribute(_el$11, "x1", x);
-                  setAttribute(_el$11, "x2", x);
-                  createRenderEffect((_p$) => {
-                    var _v$15 = M.top, _v$16 = lay.h - M.bottom;
-                    _v$15 !== _p$.e && setAttribute(_el$11, "y1", _p$.e = _v$15);
-                    _v$16 !== _p$.t && setAttribute(_el$11, "y2", _p$.t = _v$16);
-                    return _p$;
-                  }, {
-                    e: void 0,
-                    t: void 0
-                  });
-                  return _el$11;
-                })();
-              }
-            }), null);
-            insert(_el$7, createComponent(For, {
-              get each() {
-                return layout().xLabels;
-              },
-              children: (lbl) => {
-                const lay = layout();
-                return (() => {
-                  var _el$12 = _tmpl$9();
-                  insert(_el$12, () => lbl.text);
-                  createRenderEffect((_p$) => {
-                    var _v$17 = lbl.x, _v$18 = lay.h - M.bottom + 16, _v$19 = lbl.anchor;
-                    _v$17 !== _p$.e && setAttribute(_el$12, "x", _p$.e = _v$17);
-                    _v$18 !== _p$.t && setAttribute(_el$12, "y", _p$.t = _v$18);
-                    _v$19 !== _p$.a && setAttribute(_el$12, "text-anchor", _p$.a = _v$19);
-                    return _p$;
-                  }, {
-                    e: void 0,
-                    t: void 0,
-                    a: void 0
-                  });
-                  return _el$12;
-                })();
-              }
-            }), null);
-            return _el$7;
-          })(), (() => {
-            var _el$8 = _tmpl$32();
-            insert(_el$8, createComponent(For, {
-              get each() {
-                return connectorDraws();
-              },
-              children: (c) => (() => {
-                var _el$13 = _tmpl$0();
-                createRenderEffect((_p$) => {
-                  var _v$20 = "connector" + (c.solid ? " solid" : ""), _v$21 = c.d, _v$22 = c.color ? {
-                    stroke: c.color
-                  } : void 0;
-                  _v$20 !== _p$.e && setAttribute(_el$13, "class", _p$.e = _v$20);
-                  _v$21 !== _p$.t && setAttribute(_el$13, "d", _p$.t = _v$21);
-                  _p$.a = style(_el$13, _v$22, _p$.a);
-                  return _p$;
-                }, {
-                  e: void 0,
-                  t: void 0,
-                  a: void 0
-                });
-                return _el$13;
-              })()
-            }), null);
-            insert(_el$8, createComponent(For, {
-              get each() {
-                return solidDraws();
-              },
-              children: (s) => [(() => {
-                var _el$14 = _tmpl$1();
-                createRenderEffect(() => setAttribute(_el$14, "d", s.area));
-                return _el$14;
-              })(), (() => {
-                var _el$15 = _tmpl$10();
-                createRenderEffect(() => setAttribute(_el$15, "d", s.d));
-                return _el$15;
-              })()]
-            }), null);
-            insert(_el$8, createComponent(For, {
-              get each() {
+              get isolated() {
                 return chartData().geom.isolated;
               },
-              children: (p) => {
-                const lay = layout();
-                return (() => {
-                  var _el$16 = _tmpl$11();
-                  createRenderEffect((_p$) => {
-                    var _v$23 = lay.xOf(p.t), _v$24 = lay.yOf(p.total);
-                    _v$23 !== _p$.e && setAttribute(_el$16, "cx", _p$.e = _v$23);
-                    _v$24 !== _p$.t && setAttribute(_el$16, "cy", _p$.t = _v$24);
-                    return _p$;
-                  }, {
-                    e: void 0,
-                    t: void 0
-                  });
-                  return _el$16;
-                })();
+              get solidDraws() {
+                return solidDraws();
+              },
+              get connectorDraws() {
+                return connectorDraws();
               }
-            }), null);
-            return _el$8;
-          })(), createComponent(Show, {
-            get when() {
+            }));
+            return _el$6;
+          })(), createComponent(ChartCrosshair, {
+            get hover() {
               return hover();
             },
-            get children() {
-              return [(() => {
-                var _el$9 = _tmpl$42();
-                createRenderEffect((_p$) => {
-                  var _v$5 = hover().x, _v$6 = M.top, _v$7 = hover().x, _v$8 = size().h - M.bottom;
-                  _v$5 !== _p$.e && setAttribute(_el$9, "x1", _p$.e = _v$5);
-                  _v$6 !== _p$.t && setAttribute(_el$9, "y1", _p$.t = _v$6);
-                  _v$7 !== _p$.a && setAttribute(_el$9, "x2", _p$.a = _v$7);
-                  _v$8 !== _p$.o && setAttribute(_el$9, "y2", _p$.o = _v$8);
-                  return _p$;
-                }, {
-                  e: void 0,
-                  t: void 0,
-                  a: void 0,
-                  o: void 0
-                });
-                return _el$9;
-              })(), (() => {
-                var _el$0 = _tmpl$52();
-                createRenderEffect((_p$) => {
-                  var _v$9 = hover().x, _v$0 = hover().y;
-                  _v$9 !== _p$.e && setAttribute(_el$0, "cx", _p$.e = _v$9);
-                  _v$0 !== _p$.t && setAttribute(_el$0, "cy", _p$.t = _v$0);
-                  return _p$;
-                }, {
-                  e: void 0,
-                  t: void 0
-                });
-                return _el$0;
-              })()];
+            get h() {
+              return size().h;
             }
           })];
         }
@@ -2932,9 +3274,9 @@
       insert(_el$, createComponent(Tooltip, {}), null);
       insert(_el$, createComponent(Empty, {}), null);
       createRenderEffect((_p$) => {
-        var _v$1 = size().w, _v$10 = size().h;
-        _v$1 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$1);
-        _v$10 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$10);
+        var _v$5 = size().w, _v$6 = size().h;
+        _v$5 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$5);
+        _v$6 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$6);
         return _p$;
       }, {
         e: void 0,
@@ -2955,23 +3297,52 @@
     })();
   }
 
+  // webview/components/SettingsGroup.tsx
+  var _tmpl$13 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
+  function SettingsGroup(props) {
+    return (() => {
+      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
+      addEventListener(_el$2, "click", props.onToggle, true);
+      insert(_el$3, () => props.title, null);
+      insert(_el$, createComponent(Collapse, {
+        get open() {
+          return props.open;
+        },
+        get children() {
+          return props.children;
+        }
+      }), null);
+      createRenderEffect((_p$) => {
+        var _v$ = "settings-group-head" + (props.open ? " open" : ""), _v$2 = `codicon codicon-${props.icon}`;
+        _v$ !== _p$.e && className(_el$2, _p$.e = _v$);
+        _v$2 !== _p$.t && className(_el$4, _p$.t = _v$2);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0
+      });
+      return _el$;
+    })();
+  }
+  delegateEvents(["click"]);
+
   // webview/components/SettingRow.tsx
-  var _tmpl$13 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
-  var _tmpl$28 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
-  var _tmpl$33 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
-  var _tmpl$43 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
+  var _tmpl$14 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
+  var _tmpl$211 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
+  var _tmpl$35 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
+  var _tmpl$44 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
   function SettingRow(props) {
     return (() => {
-      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
       insert(_el$2, (() => {
         var _c$ = memo(() => !!props.for);
         return () => _c$() ? (() => {
-          var _el$4 = _tmpl$28();
+          var _el$4 = _tmpl$211();
           insert(_el$4, () => props.label);
           createRenderEffect(() => setAttribute(_el$4, "for", props.for));
           return _el$4;
         })() : (() => {
-          var _el$5 = _tmpl$33();
+          var _el$5 = _tmpl$35();
           insert(_el$5, () => props.label);
           return _el$5;
         })();
@@ -2979,7 +3350,7 @@
       insert(_el$2, (() => {
         var _c$2 = memo(() => !!props.hint);
         return () => _c$2() ? (() => {
-          var _el$6 = _tmpl$43();
+          var _el$6 = _tmpl$44();
           insert(_el$6, () => props.hint);
           return _el$6;
         })() : null;
@@ -2989,31 +3360,318 @@
     })();
   }
 
-  // webview/components/Settings.tsx
-  var _tmpl$14 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
-  var _tmpl$29 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
-  var _tmpl$34 = /* @__PURE__ */ template(`<input type=color>`);
-  var _tmpl$44 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
-  var _tmpl$53 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
-  var _tmpl$63 = /* @__PURE__ */ template(`<div id=thresholdList>`);
-  var _tmpl$73 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
-  var _tmpl$83 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
-  var _tmpl$92 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5`);
-  var _tmpl$02 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
-  var _tmpl$15 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
-  var _tmpl$102 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
-  var _tmpl$112 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
-  var _tmpl$122 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
-  var _tmpl$132 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$142 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
-  var _tmpl$152 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
-  var _tmpl$16 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
-  var _tmpl$17 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
-  var _tmpl$18 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-account"></i>\u72B6\u6001\u680F</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-graph-line"></i>\u56FE\u8868</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-gear"></i>\u5E38\u89C4</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-key"></i>API Key</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-database"></i>\u6570\u636E</span><i class="codicon codicon-chevron-down"></i></button></div><div class=settings-group><button type=button><span class=settings-group-title><i class="codicon codicon-ellipsis"></i>\u5176\u4ED6</span><i class="codicon codicon-chevron-down"></i></button></div></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
-  var _tmpl$19 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
-  function Settings(props) {
+  // webview/components/ThresholdEditor.tsx
+  var _tmpl$15 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
+  var _tmpl$212 = /* @__PURE__ */ template(`<div id=thresholdList>`);
+  var _tmpl$36 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
+  var _tmpl$45 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
+  function ThresholdEditor(props) {
+    function add() {
+      props.onChange([...props.thresholds, {
+        below: 100,
+        color: "#ffb900"
+      }]);
+    }
+    function setBelow(i, v) {
+      props.onChange(props.thresholds.map((t, idx) => idx === i ? {
+        ...t,
+        below: v
+      } : t));
+    }
+    function setColor(i, c) {
+      props.onChange(props.thresholds.map((t, idx) => idx === i ? {
+        ...t,
+        color: c
+      } : t));
+    }
+    function remove(i) {
+      props.onChange(props.thresholds.filter((_, idx) => idx !== i));
+    }
+    return [(() => {
+      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      _el$3.$$click = add;
+      return _el$;
+    })(), (() => {
+      var _el$4 = _tmpl$212();
+      insert(_el$4, createComponent(For, {
+        get each() {
+          return props.thresholds;
+        },
+        children: (t, i) => (() => {
+          var _el$6 = _tmpl$45(), _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
+          _el$7.$$input = (e) => {
+            const v = parseFloat(e.currentTarget.value);
+            if (Number.isFinite(v)) setBelow(i(), v);
+          };
+          _el$9.addEventListener("change", (e) => setColor(i(), e.currentTarget.value));
+          _el$0.$$click = () => remove(i());
+          createRenderEffect(() => _el$7.value = t.below);
+          createRenderEffect(() => _el$9.value = t.color);
+          return _el$6;
+        })()
+      }));
+      return _el$4;
+    })(), _tmpl$36()];
+  }
+  delegateEvents(["click", "input"]);
+
+  // webview/components/settings/StatusBarGroup.tsx
+  var _tmpl$16 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
+  var _tmpl$213 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$37 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$46 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
+  function StatusBarGroup(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
+    return [createComponent(SettingRow, {
+      label: "\u663E\u793A\u4F59\u989D",
+      "for": "statusBarShowEl",
+      get children() {
+        var _el$ = _tmpl$16();
+        _el$.addEventListener("change", (e) => props.setStaged("statusBarShow", e.currentTarget.checked));
+        createRenderEffect(() => _el$.checked = props.staged?.statusBarShow);
+        return _el$;
+      }
+    }), (() => {
+      var _el$2 = _tmpl$213();
+      _el$2.$$click = () => setColorOpen((o) => !o);
+      createRenderEffect(() => className(_el$2, "settings-toggle" + (colorOpen() ? " open" : "")));
+      return _el$2;
+    })(), createComponent(Collapse, {
+      get open() {
+        return colorOpen();
+      },
+      get children() {
+        return [createComponent(SettingRow, {
+          label: "\u9ED8\u8BA4\u989C\u8272",
+          get children() {
+            return [(() => {
+              var _el$3 = _tmpl$37();
+              _el$3.addEventListener("change", (e) => props.setStaged("defaultColor", e.currentTarget.value));
+              createRenderEffect(() => _el$3.disabled = !props.staged?.defaultColor);
+              createRenderEffect(() => _el$3.value = props.staged?.defaultColor || "#000000");
+              return _el$3;
+            })(), (() => {
+              var _el$4 = _tmpl$46(), _el$5 = _el$4.firstChild;
+              _el$5.addEventListener("change", (e) => {
+                const theme = e.currentTarget.checked;
+                props.setStaged("defaultColor", theme ? "" : "#000000");
+              });
+              createRenderEffect(() => _el$5.checked = !props.staged?.defaultColor);
+              return _el$4;
+            })()];
+          }
+        }), createComponent(ThresholdEditor, {
+          get thresholds() {
+            return props.staged?.thresholds ?? [];
+          },
+          onChange: (next) => props.setStaged("thresholds", next)
+        })];
+      }
+    })];
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/settings/ChartGroup.tsx
+  var _tmpl$17 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
+  var _tmpl$214 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5`);
+  var _tmpl$38 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
+  var _tmpl$52 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
+  function ChartGroup(props) {
+    return [createComponent(SettingRow, {
+      label: "\u7EBF\u6761\u6837\u5F0F",
+      "for": "lineStyleEl",
+      get children() {
+        var _el$ = _tmpl$17();
+        _el$.addEventListener("change", (e) => props.setStaged("lineStyle", e.currentTarget.value));
+        createRenderEffect(() => _el$.value = props.staged?.lineStyle ?? "straight");
+        return _el$;
+      }
+    }), createComponent(SettingRow, {
+      label: "\u65AD\u70B9\u8FDE\u63A5\u7EBF",
+      "for": "connectorStyleEl",
+      hint: "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
+      get children() {
+        var _el$2 = _tmpl$214();
+        _el$2.addEventListener("change", (e) => props.setStaged("connectorStyle", e.currentTarget.value));
+        createRenderEffect(() => _el$2.value = props.staged?.connectorStyle ?? "dashed");
+        return _el$2;
+      }
+    }), createComponent(SettingRow, {
+      label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
+      get children() {
+        return [(() => {
+          var _el$3 = _tmpl$38();
+          _el$3.addEventListener("change", (e) => props.setStaged("connectorColor", e.currentTarget.value));
+          createRenderEffect(() => _el$3.disabled = !props.staged?.connectorColor);
+          createRenderEffect(() => _el$3.value = props.staged?.connectorColor || "#000000");
+          return _el$3;
+        })(), (() => {
+          var _el$4 = _tmpl$47(), _el$5 = _el$4.firstChild;
+          _el$5.addEventListener("change", (e) => {
+            const theme = e.currentTarget.checked;
+            props.setStaged("connectorColor", theme ? "" : "#000000");
+          });
+          createRenderEffect(() => _el$5.checked = !props.staged?.connectorColor);
+          return _el$4;
+        })()];
+      }
+    }), createComponent(SettingRow, {
+      label: "\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6",
+      "for": "yMinSpanRatioEl",
+      hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
+      get children() {
+        var _el$6 = _tmpl$52();
+        _el$6.addEventListener("change", (e) => {
+          const v = Number(e.currentTarget.value);
+          if (Number.isFinite(v)) props.setYRatio(Math.min(1, Math.max(0, v)));
+        });
+        createRenderEffect(() => _el$6.value = props.yRatio);
+        return _el$6;
+      }
+    })];
+  }
+
+  // webview/components/settings/GeneralGroup.tsx
+  var _tmpl$18 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
+  var _tmpl$215 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
+  var _tmpl$39 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
+  var _tmpl$48 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
+  var _tmpl$53 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
+  function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
+    return [createComponent(SettingRow, {
+      label: "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
+      "for": "pollMinutesEl",
+      get children() {
+        var _el$ = _tmpl$18();
+        _el$.addEventListener("change", (e) => {
+          const v = parseInt(e.currentTarget.value, 10);
+          if (Number.isFinite(v) && v >= 1) props.setStaged("pollMinutes", v);
+        });
+        createRenderEffect(() => _el$.value = props.staged?.pollMinutes);
+        return _el$;
+      }
+    }), createComponent(SettingRow, {
+      label: "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
+      "for": "rawRetentionEl",
+      get children() {
+        var _el$2 = _tmpl$215();
+        _el$2.addEventListener("change", (e) => {
+          const v = parseInt(e.currentTarget.value, 10);
+          if (Number.isFinite(v) && v >= 1) props.setStaged("rawRetentionDays", v);
+        });
+        createRenderEffect(() => _el$2.value = props.staged?.rawRetentionDays);
+        return _el$2;
+      }
+    }), createComponent(SettingRow, {
+      label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
+      "for": "showTodaySpendEl",
+      get children() {
+        var _el$3 = _tmpl$39();
+        _el$3.addEventListener("change", (e) => {
+          if (e.currentTarget.checked) {
+            setConsent(true);
+          } else {
+            props.setStaged("showTodaySpend", false);
+            setConsent(false);
+          }
+        });
+        createRenderEffect(() => _el$3.checked = props.staged?.showTodaySpend || consent());
+        return _el$3;
+      }
+    }), createComponent(Show, {
+      get when() {
+        return consent();
+      },
+      get children() {
+        var _el$4 = _tmpl$48(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
+        _el$7.$$click = () => {
+          props.setStaged("showTodaySpend", true);
+          setConsent(false);
+        };
+        _el$8.$$click = () => {
+          props.setStaged("showTodaySpend", false);
+          setConsent(false);
+        };
+        return _el$4;
+      }
+    }), createComponent(SettingRow, {
+      label: "\u4ECA\u65E5\u82B1\u8D39\u65E5\u754C",
+      "for": "dayBoundaryEl",
+      hint: "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
+      get children() {
+        var _el$9 = _tmpl$53();
+        _el$9.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
+        createRenderEffect(() => _el$9.value = props.staged?.dayBoundary ?? "local");
+        return _el$9;
+      }
+    })];
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/settings/ApiKeyGroup.tsx
+  var _tmpl$19 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
+  var _tmpl$216 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
+  function ApiKeyGroup() {
+    return createComponent(SettingRow, {
+      get label() {
+        return store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B89\u5168\u5B58\u50A8\uFF09" : "\u672A\u914D\u7F6E";
+      },
+      get children() {
+        return [(() => {
+          var _el$ = _tmpl$19();
+          _el$.$$click = () => postMessage({
+            type: "setApiKey"
+          });
+          return _el$;
+        })(), (() => {
+          var _el$2 = _tmpl$216();
+          _el$2.$$click = () => postMessage({
+            type: "clearApiKey"
+          });
+          return _el$2;
+        })()];
+      }
+    });
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/settings/DataGroup.tsx
+  var _tmpl$20 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
+  function DataGroup() {
+    return createComponent(SettingRow, {
+      label: "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
+      get children() {
+        var _el$ = _tmpl$20();
+        _el$.$$click = () => postMessage({
+          type: "clearHistory"
+        });
+        return _el$;
+      }
+    });
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/settings/MiscGroup.tsx
+  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
+  function MiscGroup() {
+    return createComponent(SettingRow, {
+      label: "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
+      get children() {
+        var _el$ = _tmpl$21();
+        _el$.$$click = () => postMessage({
+          type: "resetSettings"
+        });
+        return _el$;
+      }
+    });
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/Settings.tsx
+  var _tmpl$30 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
+  function Settings(props) {
     const [groupsOpen, setGroupsOpen] = createStore({
       statusBar: true,
       chart: true,
@@ -3038,7 +3696,7 @@
         statusBarShow: staged.statusBarShow,
         defaultColor: staged.defaultColor,
         // staged 来自 createStore，元素是 proxy；map 成 plain object 再发送
-        thresholds: staged.thresholds.map((t) => ({
+        thresholds: staged.thresholds.filter((t) => Number.isFinite(t.below)).map((t) => ({
           below: t.below,
           color: t.color
         })).sort((a, b) => a.below - b.below),
@@ -3047,7 +3705,8 @@
         showTodaySpend: staged.showTodaySpend,
         connectorStyle: staged.connectorStyle,
         connectorColor: staged.connectorColor,
-        lineStyle: staged.lineStyle
+        lineStyle: staged.lineStyle,
+        dayBoundary: staged.dayBoundary
       };
       applySavedConfig(payload);
       postMessage({
@@ -3064,315 +3723,104 @@
       });
       close();
     }
-    function addThreshold() {
-      setStaged("thresholds", (ts) => [...ts, {
-        below: 100,
-        color: "#ffb900"
-      }]);
-    }
     return (() => {
-      var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.firstChild, _el$17 = _el$7.nextSibling, _el$18 = _el$17.firstChild, _el$25 = _el$17.nextSibling, _el$26 = _el$25.firstChild, _el$35 = _el$25.nextSibling, _el$36 = _el$35.firstChild, _el$39 = _el$35.nextSibling, _el$40 = _el$39.firstChild, _el$42 = _el$39.nextSibling, _el$43 = _el$42.firstChild, _el$45 = _el$6.nextSibling, _el$46 = _el$45.firstChild, _el$47 = _el$46.nextSibling, _el$48 = _el$47.nextSibling;
+      var _el$ = _tmpl$30(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
       _el$5.$$click = close;
-      _el$8.$$click = () => setGroupsOpen("statusBar", (o) => !o);
-      insert(_el$7, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "\u72B6\u6001\u680F",
+        icon: "account",
         get open() {
           return groupsOpen.statusBar;
         },
+        onToggle: () => setGroupsOpen("statusBar", (o) => !o),
         get children() {
-          return [createComponent(SettingRow, {
-            label: "\u663E\u793A\u4F59\u989D",
-            "for": "statusBarShowEl",
-            get children() {
-              var _el$9 = _tmpl$14();
-              _el$9.addEventListener("change", (e) => setStaged("statusBarShow", e.currentTarget.checked));
-              createRenderEffect(() => _el$9.checked = staged?.statusBarShow);
-              return _el$9;
-            }
-          }), (() => {
-            var _el$0 = _tmpl$29();
-            _el$0.$$click = () => setColorOpen((o) => !o);
-            createRenderEffect(() => className(_el$0, "settings-toggle" + (colorOpen() ? " open" : "")));
-            return _el$0;
-          })(), createComponent(Collapse, {
-            get open() {
-              return colorOpen();
-            },
-            get children() {
-              return [createComponent(SettingRow, {
-                label: "\u9ED8\u8BA4\u989C\u8272",
-                get children() {
-                  return [(() => {
-                    var _el$1 = _tmpl$34();
-                    _el$1.addEventListener("change", (e) => {
-                      setStaged("defaultColor", e.currentTarget.value);
-                    });
-                    createRenderEffect(() => _el$1.disabled = !staged?.defaultColor);
-                    createRenderEffect(() => _el$1.value = staged?.defaultColor || "#000000");
-                    return _el$1;
-                  })(), (() => {
-                    var _el$10 = _tmpl$44(), _el$11 = _el$10.firstChild;
-                    _el$11.addEventListener("change", (e) => {
-                      const theme = e.currentTarget.checked;
-                      setStaged("defaultColor", theme ? "" : "#000000");
-                    });
-                    createRenderEffect(() => _el$11.checked = !staged?.defaultColor);
-                    return _el$10;
-                  })()];
-                }
-              }), (() => {
-                var _el$12 = _tmpl$53(), _el$13 = _el$12.firstChild, _el$14 = _el$13.nextSibling;
-                _el$14.$$click = addThreshold;
-                return _el$12;
-              })(), (() => {
-                var _el$15 = _tmpl$63();
-                insert(_el$15, createComponent(For, {
-                  get each() {
-                    return staged?.thresholds ?? [];
-                  },
-                  children: (t, i) => (() => {
-                    var _el$49 = _tmpl$19(), _el$50 = _el$49.firstChild, _el$51 = _el$50.nextSibling, _el$52 = _el$51.nextSibling, _el$53 = _el$52.nextSibling;
-                    _el$50.$$input = (e) => setStaged("thresholds", i(), "below", parseFloat(e.currentTarget.value));
-                    _el$52.addEventListener("change", (e) => setStaged("thresholds", i(), "color", e.currentTarget.value));
-                    _el$53.$$click = () => setStaged("thresholds", (ts) => ts.filter((_, idx) => idx !== i()));
-                    createRenderEffect(() => _el$50.value = t.below);
-                    createRenderEffect(() => _el$52.value = t.color);
-                    return _el$49;
-                  })()
-                }));
-                return _el$15;
-              })(), _tmpl$73()];
-            }
-          })];
+          return createComponent(StatusBarGroup, {
+            staged,
+            setStaged
+          });
         }
       }), null);
-      _el$18.$$click = () => setGroupsOpen("chart", (o) => !o);
-      insert(_el$17, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "\u56FE\u8868",
+        icon: "graph-line",
         get open() {
           return groupsOpen.chart;
         },
+        onToggle: () => setGroupsOpen("chart", (o) => !o),
         get children() {
-          return [createComponent(SettingRow, {
-            label: "\u7EBF\u6761\u6837\u5F0F",
-            "for": "lineStyleEl",
-            get children() {
-              var _el$19 = _tmpl$83();
-              _el$19.addEventListener("change", (e) => setStaged("lineStyle", e.currentTarget.value));
-              createRenderEffect(() => _el$19.value = staged?.lineStyle ?? "straight");
-              return _el$19;
-            }
-          }), createComponent(SettingRow, {
-            label: "\u65AD\u70B9\u8FDE\u63A5\u7EBF",
-            "for": "connectorStyleEl",
-            hint: "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
-            get children() {
-              var _el$20 = _tmpl$92();
-              _el$20.addEventListener("change", (e) => setStaged("connectorStyle", e.currentTarget.value));
-              createRenderEffect(() => _el$20.value = staged?.connectorStyle ?? "dashed");
-              return _el$20;
-            }
-          }), createComponent(SettingRow, {
-            label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
-            get children() {
-              return [(() => {
-                var _el$21 = _tmpl$34();
-                _el$21.addEventListener("change", (e) => setStaged("connectorColor", e.currentTarget.value));
-                createRenderEffect(() => _el$21.disabled = !staged?.connectorColor);
-                createRenderEffect(() => _el$21.value = staged?.connectorColor || "#000000");
-                return _el$21;
-              })(), (() => {
-                var _el$22 = _tmpl$02(), _el$23 = _el$22.firstChild;
-                _el$23.addEventListener("change", (e) => {
-                  const theme = e.currentTarget.checked;
-                  setStaged("connectorColor", theme ? "" : "#000000");
-                });
-                createRenderEffect(() => _el$23.checked = !staged?.connectorColor);
-                return _el$22;
-              })()];
-            }
-          }), createComponent(SettingRow, {
-            label: "\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6",
-            "for": "yMinSpanRatioEl",
-            hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
-            get children() {
-              var _el$24 = _tmpl$15();
-              _el$24.addEventListener("change", (e) => {
-                const v = Number(e.currentTarget.value);
-                if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
-              });
-              createRenderEffect(() => _el$24.value = yRatio());
-              return _el$24;
-            }
-          })];
+          return createComponent(ChartGroup, {
+            staged,
+            setStaged,
+            get yRatio() {
+              return yRatio();
+            },
+            setYRatio
+          });
         }
       }), null);
-      _el$26.$$click = () => setGroupsOpen("general", (o) => !o);
-      insert(_el$25, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "\u5E38\u89C4",
+        icon: "gear",
         get open() {
           return groupsOpen.general;
         },
+        onToggle: () => setGroupsOpen("general", (o) => !o),
         get children() {
-          return [createComponent(SettingRow, {
-            label: "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
-            "for": "pollMinutesEl",
-            get children() {
-              var _el$27 = _tmpl$102();
-              _el$27.addEventListener("change", (e) => {
-                const v = parseInt(e.currentTarget.value, 10);
-                if (Number.isFinite(v) && v >= 1) setStaged("pollMinutes", v);
-              });
-              createRenderEffect(() => _el$27.value = staged?.pollMinutes);
-              return _el$27;
-            }
-          }), createComponent(SettingRow, {
-            label: "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
-            "for": "rawRetentionEl",
-            get children() {
-              var _el$28 = _tmpl$112();
-              _el$28.addEventListener("change", (e) => {
-                const v = parseInt(e.currentTarget.value, 10);
-                if (Number.isFinite(v) && v >= 1) setStaged("rawRetentionDays", v);
-              });
-              createRenderEffect(() => _el$28.value = staged?.rawRetentionDays);
-              return _el$28;
-            }
-          }), createComponent(SettingRow, {
-            label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
-            "for": "showTodaySpendEl",
-            get children() {
-              var _el$29 = _tmpl$122();
-              _el$29.addEventListener("change", (e) => {
-                if (e.currentTarget.checked) {
-                  setConsent(true);
-                } else {
-                  setStaged("showTodaySpend", false);
-                  setConsent(false);
-                }
-              });
-              createRenderEffect(() => _el$29.checked = staged?.showTodaySpend || consent());
-              return _el$29;
-            }
-          }), createComponent(Show, {
-            get when() {
-              return consent();
-            },
-            get children() {
-              var _el$30 = _tmpl$132(), _el$31 = _el$30.firstChild, _el$32 = _el$31.nextSibling, _el$33 = _el$32.firstChild, _el$34 = _el$33.nextSibling;
-              _el$33.$$click = () => {
-                setStaged("showTodaySpend", true);
-                setConsent(false);
-              };
-              _el$34.$$click = () => {
-                setStaged("showTodaySpend", false);
-                setConsent(false);
-              };
-              return _el$30;
-            }
-          })];
+          return createComponent(GeneralGroup, {
+            staged,
+            setStaged
+          });
         }
       }), null);
-      _el$36.$$click = () => setGroupsOpen("apiKey", (o) => !o);
-      insert(_el$35, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "API Key",
+        icon: "key",
         get open() {
           return groupsOpen.apiKey;
         },
+        onToggle: () => setGroupsOpen("apiKey", (o) => !o),
         get children() {
-          return createComponent(SettingRow, {
-            get label() {
-              return store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B89\u5168\u5B58\u50A8\uFF09" : "\u672A\u914D\u7F6E";
-            },
-            get children() {
-              return [(() => {
-                var _el$37 = _tmpl$142();
-                _el$37.$$click = () => postMessage({
-                  type: "setApiKey"
-                });
-                return _el$37;
-              })(), (() => {
-                var _el$38 = _tmpl$152();
-                _el$38.$$click = () => postMessage({
-                  type: "clearApiKey"
-                });
-                return _el$38;
-              })()];
-            }
-          });
+          return createComponent(ApiKeyGroup, {});
         }
       }), null);
-      _el$40.$$click = () => setGroupsOpen("data", (o) => !o);
-      insert(_el$39, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "\u6570\u636E",
+        icon: "database",
         get open() {
           return groupsOpen.data;
         },
+        onToggle: () => setGroupsOpen("data", (o) => !o),
         get children() {
-          return createComponent(SettingRow, {
-            label: "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
-            get children() {
-              var _el$41 = _tmpl$16();
-              _el$41.$$click = () => postMessage({
-                type: "clearHistory"
-              });
-              return _el$41;
-            }
-          });
+          return createComponent(DataGroup, {});
         }
       }), null);
-      _el$43.$$click = () => setGroupsOpen("misc", (o) => !o);
-      insert(_el$42, createComponent(Collapse, {
+      insert(_el$6, createComponent(SettingsGroup, {
+        title: "\u5176\u4ED6",
+        icon: "ellipsis",
         get open() {
           return groupsOpen.misc;
         },
+        onToggle: () => setGroupsOpen("misc", (o) => !o),
         get children() {
-          return createComponent(SettingRow, {
-            label: "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
-            get children() {
-              var _el$44 = _tmpl$17();
-              _el$44.$$click = () => postMessage({
-                type: "resetSettings"
-              });
-              return _el$44;
-            }
-          });
+          return createComponent(MiscGroup, {});
         }
       }), null);
-      _el$46.$$click = () => postMessage({
+      _el$8.$$click = () => postMessage({
         type: "openNativeSettings"
       });
-      _el$47.$$click = close;
-      _el$48.$$click = save;
-      createRenderEffect((_p$) => {
-        var _v$ = "settings-group-head" + (groupsOpen.statusBar ? " open" : ""), _v$2 = "settings-group-head" + (groupsOpen.chart ? " open" : ""), _v$3 = "settings-group-head" + (groupsOpen.general ? " open" : ""), _v$4 = "settings-group-head" + (groupsOpen.apiKey ? " open" : ""), _v$5 = "settings-group-head" + (groupsOpen.data ? " open" : ""), _v$6 = "settings-group-head" + (groupsOpen.misc ? " open" : "");
-        _v$ !== _p$.e && className(_el$8, _p$.e = _v$);
-        _v$2 !== _p$.t && className(_el$18, _p$.t = _v$2);
-        _v$3 !== _p$.a && className(_el$26, _p$.a = _v$3);
-        _v$4 !== _p$.o && className(_el$36, _p$.o = _v$4);
-        _v$5 !== _p$.i && className(_el$40, _p$.i = _v$5);
-        _v$6 !== _p$.n && className(_el$43, _p$.n = _v$6);
-        return _p$;
-      }, {
-        e: void 0,
-        t: void 0,
-        a: void 0,
-        o: void 0,
-        i: void 0,
-        n: void 0
-      });
+      _el$9.$$click = close;
+      _el$0.$$click = save;
       return _el$;
     })();
   }
-  delegateEvents(["pointerdown", "click", "input"]);
+  delegateEvents(["pointerdown", "click"]);
 
-  // webview/components/App.tsx
-  var _tmpl$20 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button><i></i></button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
-  function App() {
-    createEffect(() => {
-      const r = store.refreshResult;
-      if (!r) return;
-      const t = setTimeout(() => clearRefreshFeedback(), 1800);
-      onCleanup(() => clearTimeout(t));
-    });
+  // webview/components/RefreshButton.tsx
+  var _tmpl$31 = /* @__PURE__ */ template(`<button><i>`);
+  function RefreshButton() {
     const refreshIcon = createMemo(() => {
       if (store.refreshing) return "codicon-refresh spinning";
       if (store.refreshResult === "ok") return "codicon-check";
@@ -3386,15 +3834,45 @@
       return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
     });
     return (() => {
-      var _el$ = _tmpl$20(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$5.firstChild, _el$7 = _el$5.nextSibling, _el$8 = _el$2.nextSibling;
+      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild;
+      addEventListener(_el$, "click", checkNow, true);
+      createRenderEffect((_p$) => {
+        var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
+        _v$ !== _p$.e && className(_el$, _p$.e = _v$);
+        _v$2 !== _p$.t && setAttribute(_el$, "title", _p$.t = _v$2);
+        _v$3 !== _p$.a && (_el$.disabled = _p$.a = _v$3);
+        _v$4 !== _p$.o && className(_el$2, _p$.o = _v$4);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0,
+        a: void 0,
+        o: void 0
+      });
+      return _el$;
+    })();
+  }
+  delegateEvents(["click"]);
+
+  // webview/components/App.tsx
+  var _tmpl$40 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
+  function App() {
+    createEffect(() => {
+      const r = store.refreshResult;
+      if (!r) return;
+      const t = setTimeout(() => clearRefreshFeedback(), 1800);
+      onCleanup(() => clearTimeout(t));
+    });
+    return (() => {
+      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$2.nextSibling;
       insert(_el$2, createComponent(Header, {}), _el$3);
       insert(_el$3, createComponent(Ranges, {}), _el$4);
       insert(_el$3, createComponent(Tabs, {}), _el$4);
       addEventListener(_el$4, "click", resetView, true);
-      addEventListener(_el$5, "click", checkNow, true);
-      addEventListener(_el$7, "click", openUsage, true);
-      insert(_el$, createComponent(Chart, {}), _el$8);
-      insert(_el$8, createComponent(Footer, {}));
+      insert(_el$3, createComponent(RefreshButton, {}), _el$5);
+      addEventListener(_el$5, "click", openUsage, true);
+      insert(_el$, createComponent(Chart, {}), _el$6);
+      insert(_el$6, createComponent(Footer, {}));
       insert(_el$, createComponent(Show, {
         get when() {
           return store.settingsOpen;
@@ -3405,19 +3883,6 @@
           });
         }
       }), null);
-      createRenderEffect((_p$) => {
-        var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
-        _v$ !== _p$.e && className(_el$5, _p$.e = _v$);
-        _v$2 !== _p$.t && setAttribute(_el$5, "title", _p$.t = _v$2);
-        _v$3 !== _p$.a && (_el$5.disabled = _p$.a = _v$3);
-        _v$4 !== _p$.o && className(_el$6, _p$.o = _v$4);
-        return _p$;
-      }, {
-        e: void 0,
-        t: void 0,
-        a: void 0,
-        o: void 0
-      });
       return _el$;
     })();
   }
