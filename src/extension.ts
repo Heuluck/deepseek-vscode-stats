@@ -176,7 +176,6 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
   }
 
-  /** 恢复 DeepSeek Stats 全部配置为默认值。 */
   async function resetSettings(): Promise<void> {
     const pick = await vscode.window.showWarningMessage(
       '确定恢复 DeepSeek Stats 全部设置为默认值？',

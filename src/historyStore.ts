@@ -104,7 +104,7 @@ export class HistoryStore {
   }
 
   private async persist(): Promise<void> {
-    // 串行化写入：并发 append 的持久化排队执行，最后一次写入最新数组，避免旧数据覆盖新数据
+    // 串行化持久化，避免并发覆盖
     this.persistChain = this.persistChain.then(async () => {
       try {
         await this.memento.update('snapshots', this.snapshots);

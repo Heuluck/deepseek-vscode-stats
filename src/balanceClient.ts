@@ -31,7 +31,6 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse> {
     }
     return (await res.json()) as BalanceResponse;
   } catch (err) {
-    // fetch 网络层错误（Node 内置 fetch 报英文如 "fetch failed"），统一翻译成中文
     throw translateFetchError(err);
   } finally {
     clearTimeout(timeout);
@@ -40,7 +39,6 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse> {
 
 /** 把 fetch 的网络层错误翻译为用户可读的中文（HTTP/业务错误原样保留）。 */
 function translateFetchError(err: unknown): Error {
-  // 主动超时 abort
   if (err instanceof Error && err.name === 'AbortError') {
     return new Error('请求超时（15 秒未响应），请检查网络后重试');
   }
