@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { getRawRetentionDays } from './config';
+import { startOfDay } from './shared/dates';
 
 export interface Snapshot {
   /** epoch ms */
@@ -29,6 +30,8 @@ export interface DayAgg {
 export class HistoryStore {
   private snapshots: Snapshot[] = [];
   private daily: DayAgg[] = [];
+  /** 持久化写入串行链，避免并发 append 时旧数据覆盖新数据。 */
+  private persistChain: Promise<void> = Promise.resolve();
 
   constructor(private memento: vscode.Memento) {
     this.snapshots = (memento.get<Snapshot[]>('snapshots', []) || [])
@@ -66,7 +69,7 @@ export class HistoryStore {
   }
 
   private upsertDaily(s: Snapshot): void {
-    const day = startOfLocalDay(s.t);
+    const day = startOfDay(s.t);
     const existing = this.daily.find((d) => d.day === day);
     if (existing) {
       existing.total = s.total;
@@ -101,17 +104,15 @@ export class HistoryStore {
   }
 
   private async persist(): Promise<void> {
-    try {
-      await this.memento.update('snapshots', this.snapshots);
-      await this.memento.update('daily', this.daily);
-    } catch (e) {
-      console.error('[deepseek-stats] 保存历史失败', e);
-    }
+    // 串行化写入：并发 append 的持久化排队执行，最后一次写入最新数组，避免旧数据覆盖新数据
+    this.persistChain = this.persistChain.then(async () => {
+      try {
+        await this.memento.update('snapshots', this.snapshots);
+        await this.memento.update('daily', this.daily);
+      } catch (e) {
+        console.error('[deepseek-stats] 保存历史失败', e);
+      }
+    });
+    return this.persistChain;
   }
-}
-
-export function startOfLocalDay(t: number): number {
-  const d = new Date(t);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
 }
