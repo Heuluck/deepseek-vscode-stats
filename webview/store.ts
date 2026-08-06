@@ -3,6 +3,7 @@ import { createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import type {
   ConnectorStyle,
+  DayBoundary,
   InitPayload,
   LineStyle,
   PanelConfig,
@@ -80,6 +81,7 @@ export interface StagedConfig {
   connectorStyle: ConnectorStyle;
   connectorColor: string;
   lineStyle: LineStyle;
+  dayBoundary: DayBoundary;
 }
 
 export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
@@ -94,6 +96,7 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         connectorStyle: cfg.connectorStyle || 'dashed',
         connectorColor: cfg.connectorColor || '',
         lineStyle: cfg.lineStyle || 'straight',
+        dayBoundary: cfg.dayBoundary || 'local',
       }
     : {
         statusBarShow: true,
@@ -105,6 +108,7 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         connectorStyle: 'dashed',
         connectorColor: '',
         lineStyle: 'straight',
+        dayBoundary: 'local',
       };
 }
 
@@ -150,7 +154,11 @@ export function init(payload: InitPayload): void {
     maxWindow: r.maxWindow ?? 0,
     minWindow: r.minWindow ?? 60e3,
     yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
-    todayCache: buildTodaySpendCache(payload),
+    todayCache: buildTodaySpendCache(
+      payload,
+      Date.now(),
+      payload.config?.dayBoundary ?? 'local'
+    ),
     lastError: '',
   });
 }
@@ -158,9 +166,16 @@ export function init(payload: InitPayload): void {
 export function onSnapshot(s: Snapshot): void {
   if (!store.data) return;
   const daily = upsertDailyLocal(store.data.daily, s);
+  const prev = store.data.snapshots;
+  // 乱序防御：扩展侧正常单调追加；若出现乱序（时钟回拨等），整体重排一次，
+  // 保证 viewPoints / todaySpend 依赖的数组有序性不被破坏（viewPoints 已不做每帧排序）
+  const snapshots =
+    prev.length === 0 || s.t >= prev[prev.length - 1].t
+      ? [...prev, s]
+      : [...prev, s].sort((a, b) => a.t - b.t);
   const data: InitPayload = {
     ...store.data,
-    snapshots: [...store.data.snapshots, s],
+    snapshots,
     daily,
     current: s,
   };
@@ -168,19 +183,38 @@ export function onSnapshot(s: Snapshot): void {
   // 手动刷新成功后：停转并给出成功反馈（自动轮询来的 snapshot 不影响刷新状态）
   setStore({
     data,
-    todayCache: advanceTodaySpendCache(store.todayCache, data),
+    todayCache: advanceTodaySpendCache(
+      store.todayCache,
+      data,
+      Date.now(),
+      store.config?.dayBoundary ?? 'local'
+    ),
     ...patch,
     ...(store.refreshing ? { refreshing: false, refreshResult: 'ok' as const } : {}),
   });
 }
 
 export function onConfig(cfg: PanelConfig): void {
-  setStore({ config: cfg });
+  const prev = store.config?.dayBoundary ?? 'local';
+  const next = cfg?.dayBoundary ?? 'local';
+  setStore({
+    config: cfg,
+    // 日界时区切换：todayCache 需按新日界重建（下次 snapshot 也会重建，这里立即生效）
+    ...(prev !== next
+      ? { todayCache: buildTodaySpendCache(store.data, Date.now(), next) }
+      : {}),
+  });
 }
 
 /** 保存设置后的乐观更新：立即生效，避免 config 回传（异步）前 UI 闪回旧值。 */
 export function applySavedConfig(p: SaveSettingsPayload): void {
+  const prev = store.config?.dayBoundary ?? 'local';
+  const next = p.dayBoundary ?? 'local';
   setStore('config', (cfg) => (cfg ? { ...cfg, ...p } : cfg));
+  // 日界时区切换：乐观更新后立即按新日界重建今日花费缓存
+  if (prev !== next) {
+    setStore({ todayCache: buildTodaySpendCache(store.data, Date.now(), next) });
+  }
 }
 
 /** 图表 Y 轴最小跨度比例（webview 本地设置；乐观更新立即生效）。 */

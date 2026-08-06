@@ -39,9 +39,12 @@ export function Header() {
     }
     const currency =
       (store.data && store.data.current && store.data.current.currency) || 'CNY';
+    const boundary = store.config?.dayBoundary ?? 'local';
     return {
       value: `~${fmtMoney(info.spend, currency)}`,
-      title: `估算：基于${info.source} ¥${info.baseline} 推算（已按今日充值校正）`,
+      title: `估算：基于${info.source} ¥${info.baseline} 推算（已按今日充值校正，${
+        boundary === 'utc' ? 'UTC 日界' : '本地日界'
+      }）`,
     };
   });
 

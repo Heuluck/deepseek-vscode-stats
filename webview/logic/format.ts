@@ -39,8 +39,6 @@ export function fmtMonth(t: number): string {
   return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
 }
 
-export function startOfDay(t: number): number {
-  const d = new Date(t);
-  d.setHours(0, 0, 0, 0);
-  return d.getTime();
-}
+// 与扩展侧共用同一实现（src/shared/dates.ts），避免本地时区逻辑两处漂移
+// （此前 webview 与 historyStore 各有一份 startOfDay/startOfLocalDay）
+export { startOfDay, startOfDayAt } from '../../src/shared/dates';

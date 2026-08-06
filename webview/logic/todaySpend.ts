@@ -1,6 +1,7 @@
-/** 今日花费估算（增量缓存版，从 media/chart.js 迁移，纯函数）。 */
-import type { InitPayload, Snapshot } from '../types';
-import { startOfDay } from './format';
+/** 今日花费估算（增量缓存版，从 media/chart.js 迁移，纯函数）。
+ *  支持按日界时区（本地自然日 / UTC）计算「今日」。 */
+import type { InitPayload, Snapshot, DayBoundary } from '../types';
+import { startOfDayAt } from './format';
 
 /**
  * 金额浮点容差：余额最小单位 0.01，此值远小于它，既能挡浮点噪声（1e-15 量级）
@@ -9,9 +10,9 @@ import { startOfDay } from './format';
 const EPS = 1e-6;
 
 export interface TodaySpendInfo {
-  spend: number | null;
-  source: string | null;
-  baseline: number | null;
+  spend: number;
+  source: string;
+  baseline: number;
 }
 
 /**
@@ -22,8 +23,10 @@ export interface TodaySpendInfo {
  * （含断档跨段）都认定是一次充值/赠送。数据不足时 build 返回 null，UI 显示 “-”。
  */
 export interface TodaySpendCache {
-  /** 缓存所属的本地日 0 点（epoch ms），跨天时重建 */
+  /** 缓存所属的日界起点（epoch ms，按 boundary 时区），跨天时重建 */
   day: number;
+  /** 日界时区：'local' | 'utc'；切换时重建 */
+  boundary: DayBoundary;
   /** 基准余额（昨日收盘，否则今日首条快照） */
   baseline: number;
   /** 基准来源描述（用于 UI title） */
@@ -36,15 +39,24 @@ export interface TodaySpendCache {
   prevTotal: number;
 }
 
-/** 找到基准：昨日收盘余额，否则今日首条快照。 */
+/**
+ * 找到基准：昨日（日界当天）收盘余额，否则今日首条快照。
+ * 直接从 snapshots 按日界取（snapshots 有精确时间戳，可任意日界切），
+ * 不依赖 daily 的本地日键——否则 UTC 日界时昨日基准会错位。
+ * 与原「daily[昨日].total」语义等价：昨日有快照则取其最后一条 total。
+ */
 function findBaseline(
   data: InitPayload,
   todayStart: number
 ): { baseline: number; source: string } | null {
   const yesterdayStart = todayStart - 86400e3;
-  const yesterdayDaily = (data.daily || []).find((x) => x.day === yesterdayStart);
-  if (yesterdayDaily) {
-    return { baseline: yesterdayDaily.total, source: '昨日余额' };
+  let prevTotal: number | null = null;
+  for (const s of data.snapshots) {
+    if (s.t >= todayStart) break; // 快照有序
+    if (s.t >= yesterdayStart) prevTotal = s.total;
+  }
+  if (prevTotal !== null) {
+    return { baseline: prevTotal, source: '昨日余额' };
   }
   const firstToday = data.snapshots.find((s) => s.t >= todayStart);
   if (firstToday) {
@@ -77,23 +89,26 @@ function scanToday(
 
 /**
  * 全量重建缓存（面板初始化 / 跨天时调用）。只扫描最多一天的快照。
- * now 可注入用于测试（默认 Date.now()）；仅当最后快照属于 now 所在日才构建——
- * 今天还没有快照（如刚开机未轮询）时返回 null，避免把昨天的消费标成“今日花费”。
+ * now 可注入用于测试（默认 Date.now()）；boundary 为日界时区。
+ * 仅当最后快照属于 now 所在日才构建——今天还没有快照（如刚开机未轮询）时
+ * 返回 null，避免把昨天的消费标成“今日花费”。
  */
 export function buildTodaySpendCache(
   data: InitPayload | null,
-  now: number = Date.now()
+  now: number = Date.now(),
+  boundary: DayBoundary = 'local'
 ): TodaySpendCache | null {
   if (!data || !data.snapshots.length) return null;
   const snapshots = data.snapshots;
-  // 以最后一条快照的本地日为准，保证与 advance 的跨天判定一致
-  const todayStart = startOfDay(snapshots[snapshots.length - 1].t);
-  if (todayStart !== startOfDay(now)) return null;
+  // 以最后一条快照的日界（按 boundary 时区）为准，保证与 advance 的跨天判定一致
+  const todayStart = startOfDayAt(snapshots[snapshots.length - 1].t, boundary);
+  if (todayStart !== startOfDayAt(now, boundary)) return null;
   const base = findBaseline(data, todayStart);
   if (!base) return null;
   const [recharge, prevTotal, lastT] = scanToday(snapshots, todayStart, base.baseline);
   return {
     day: todayStart,
+    boundary,
     baseline: base.baseline,
     source: base.source,
     recharge,
@@ -103,20 +118,22 @@ export function buildTodaySpendCache(
 }
 
 /**
- * 增量推进缓存（新快照到达时调用）。跨天或缓存缺失时自动重建；
+ * 增量推进缓存（新快照到达时调用）。跨天、日界时区切换或缓存缺失时自动重建；
  * 否则只扫描 lastT 之后的新快照，把新增正跳增累加进 recharge。
- * now 透传给 build 用于跨天重建（默认 Date.now()，测试可注入）。
+ * now 透传给 build 用于跨天重建（默认 Date.now()）；boundary 为日界时区。
  */
 export function advanceTodaySpendCache(
   cache: TodaySpendCache | null,
   data: InitPayload | null,
-  now: number = Date.now()
+  now: number = Date.now(),
+  boundary: DayBoundary = 'local'
 ): TodaySpendCache | null {
   if (!data || !data.snapshots.length) return cache;
   const snapshots = data.snapshots;
-  const day = startOfDay(snapshots[snapshots.length - 1].t);
-  if (!cache || cache.day !== day) {
-    return buildTodaySpendCache(data, now);
+  const day = startOfDayAt(snapshots[snapshots.length - 1].t, boundary);
+  // 跨天或日界时区切换时重建
+  if (!cache || cache.day !== day || cache.boundary !== boundary) {
+    return buildTodaySpendCache(data, now, boundary);
   }
   // 快照有序：从尾部回扫定位新增段起点，只处理 lastT 之后的新快照，不遍历旧数据
   let i = snapshots.length - 1;

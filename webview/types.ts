@@ -29,6 +29,9 @@ export type ConnectorStyle = 'dashed' | 'solid' | 'none';
 
 export type LineStyle = 'straight' | 'smooth';
 
+/** 「今日花费」日界时区：本地自然日 或 UTC（与 DeepSeek 官方口径一致）。 */
+export type DayBoundary = 'local' | 'utc';
+
 export interface PanelConfig {
   pollMinutes: number;
   statusBarShow: boolean;
@@ -39,6 +42,7 @@ export interface PanelConfig {
   connectorStyle: ConnectorStyle;
   connectorColor: string;
   lineStyle: LineStyle;
+  dayBoundary: DayBoundary;
 }
 
 /** webview init 消息 payload。 */
@@ -72,4 +76,37 @@ export interface TooltipInfo {
   pointY: number;
   title: string;
   rows: TooltipRow[];
+}
+
+// ---------- 图表布局（由 Chart.tsx 的 layout memo 派生，拆分子组件共享） ----------
+
+export interface XLabel {
+  t: number;
+  x: number;
+  text: string;
+  w: number;
+  anchor: 'start' | 'middle' | 'end';
+}
+
+export interface YLabel {
+  v: number;
+  y: number;
+  text: string;
+}
+
+export interface Layout {
+  xOf: (t: number) => number;
+  yOf: (v: number) => number;
+  yMin: number;
+  yMax: number;
+  currency: string;
+  w: number;
+  h: number;
+  xStep: number;
+  xTicks: number[];
+  xLabels: XLabel[];
+  yTicks: number[];
+  yLabels: YLabel[];
+  plotLeft: number;
+  plotRight: number;
 }

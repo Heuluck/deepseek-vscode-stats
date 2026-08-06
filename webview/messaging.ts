@@ -1,6 +1,7 @@
 /** 与扩展侧 src/extension.ts 对齐的消息契约。 */
 import type {
   ConnectorStyle,
+  DayBoundary,
   InitPayload,
   LineStyle,
   PanelConfig,
@@ -27,6 +28,7 @@ export interface SaveSettingsPayload {
   connectorStyle: ConnectorStyle;
   connectorColor: string;
   lineStyle: LineStyle;
+  dayBoundary: DayBoundary;
 }
 
 /** webview → 扩展。 */

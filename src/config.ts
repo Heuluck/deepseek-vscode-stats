@@ -56,6 +56,14 @@ export function getLineStyle(): LineStyle {
   return v === 'smooth' ? v : 'straight';
 }
 
+/** 「今日花费」日界时区：本地自然日 或 UTC（与 DeepSeek 官方口径一致）。 */
+export type DayBoundary = 'local' | 'utc';
+
+export function getDayBoundary(): DayBoundary {
+  const v = getConfig().get<string>('dayBoundary', 'local');
+  return v === 'utc' ? 'utc' : 'local';
+}
+
 /** 下发给设置面板的完整配置快照。 */
 export interface PanelConfig {
   pollMinutes: number;
@@ -67,6 +75,7 @@ export interface PanelConfig {
   connectorStyle: ConnectorStyle;
   connectorColor: string;
   lineStyle: LineStyle;
+  dayBoundary: DayBoundary;
 }
 
 export function getPanelConfig(): PanelConfig {
@@ -80,5 +89,6 @@ export function getPanelConfig(): PanelConfig {
     connectorStyle: getConnectorStyle(),
     connectorColor: getConnectorColor(),
     lineStyle: getLineStyle(),
+    dayBoundary: getDayBoundary(),
   };
 }
