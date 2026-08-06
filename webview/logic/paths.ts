@@ -1,4 +1,5 @@
 /** 图表路径生成（纯逻辑）：直线 / 保单调平滑曲线 + Liang–Barsky 裁剪。 */
+import { curveMonotoneX, line as d3Line } from 'd3-shape';
 import type { ChartPoint } from '../types';
 
 /** 直线折线路径。 */
@@ -13,9 +14,10 @@ export function straightPath(
 }
 
 /**
- * 平滑曲线路径：保单调三次插值（Fritsch–Carlson）。
+ * 平滑曲线路径：d3-shape 的 curveMonotoneX（Fritsch–Carlson 保单调三次插值）。
  * 曲线在任意相邻两点之间严格单调，不会越过两端点的值，
  * 急转弯（如余额骤降）处不会出现先反向抬升的过冲假象。
+ * accessor 内保留 1 位小数，与旧手写实现的 SVG 输出格式一致。
  */
 export function smoothPath(
   pts: ChartPoint[],
@@ -24,53 +26,19 @@ export function smoothPath(
 ): string {
   const n = pts.length;
   if (n < 2) return '';
-  // 各段斜率（数据空间，单位：值/ms）
-  const s: number[] = new Array(n - 1);
-  for (let i = 0; i < n - 1; i++) {
-    const h = pts[i + 1].t - pts[i].t;
-    s[i] = h > 0 ? (pts[i + 1].total - pts[i].total) / h : 0;
-  }
-  // 各点切线：内部点取相邻斜率均值，符号翻转处归零
-  const m: number[] = new Array(n);
-  m[0] = s[0];
-  m[n - 1] = s[n - 2];
-  for (let i = 1; i < n - 1; i++) {
-    m[i] = s[i - 1] * s[i] <= 0 ? 0 : (s[i - 1] + s[i]) / 2;
-  }
-  // Fritsch–Carlson 过冲限制
-  for (let i = 0; i < n - 1; i++) {
-    if (s[i] === 0) {
-      m[i] = 0;
-      m[i + 1] = 0;
-      continue;
-    }
-    const alpha = m[i] / s[i];
-    const beta = m[i + 1] / s[i];
-    const a2b2 = alpha * alpha + beta * beta;
-    if (a2b2 > 9) {
-      const tau = 3 / Math.sqrt(a2b2);
-      m[i] = tau * alpha * s[i];
-      m[i + 1] = tau * beta * s[i];
-    }
-  }
-  let d = `M${xOf(pts[0].t).toFixed(1)},${yOf(pts[0].total).toFixed(1)}`;
-  for (let i = 0; i < n - 1; i++) {
-    const h = pts[i + 1].t - pts[i].t;
-    const c1x = xOf(pts[i].t) + (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-    const c1y = yOf(pts[i].total + (m[i] * h) / 3);
-    const c2x = xOf(pts[i + 1].t) - (xOf(pts[i + 1].t) - xOf(pts[i].t)) / 3;
-    const c2y = yOf(pts[i + 1].total - (m[i + 1] * h) / 3);
-    d += ` C${c1x.toFixed(1)},${c1y.toFixed(1)} ${c2x.toFixed(1)},${c2y.toFixed(1)} ${xOf(
-      pts[i + 1].t
-    ).toFixed(1)},${yOf(pts[i + 1].total).toFixed(1)}`;
-  }
-  return d;
+  const l = d3Line<ChartPoint>()
+    .x((p) => Number(xOf(p.t).toFixed(1)))
+    .y((p) => Number(yOf(p.total).toFixed(1)))
+    .curve(curveMonotoneX);
+  return l(pts) ?? '';
 }
 
 /**
  * 保单调单段曲线（p1→p2）的像素坐标折线近似（64 段）。
+ * 注意：此函数保留手写实现而非改用 d3——d3 的 curve 接口不暴露采样点，
+ * 而连接线需要折线化后逐段 Liang–Barsky 裁剪（虚线相位在屏幕边缘重同步），
+ * 换成 d3 会破坏连接线的裁剪/虚线逻辑。
  * 切线取两侧相邻斜率，方向不一致的归零并做 Fritsch–Carlson 限制，曲线不越过两端值。
- * 折线化后供连接线裁剪用（避免虚线相位在出屏端点上错乱）。
  */
 export function flattenSmoothSegment(
   p0: ChartPoint,
