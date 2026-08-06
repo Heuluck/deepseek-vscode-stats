@@ -1,5 +1,6 @@
-/** 设置面板：编辑先进 staged 暂存，保存才提交配置；取消/关闭丢弃。 */
-import { createEffect, createSignal, For, on, onCleanup, Show } from 'solid-js';
+/** 设置面板：编辑先进 staged 暂存，保存才提交配置；取消/关闭丢弃。
+ *  各设置分组已拆为 settings/ 下的独立组件，本文件只负责状态编排与组装。 */
+import { createEffect, createSignal, on, onCleanup } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import {
   applySavedConfig,
@@ -10,16 +11,19 @@ import {
   type StagedConfig,
 } from '../store';
 import { postMessage } from '../messaging';
-import { Collapse } from './Collapse';
-import { SettingRow } from './SettingRow';
+import { SettingsGroup } from './SettingsGroup';
+import { StatusBarGroup } from './settings/StatusBarGroup';
+import { ChartGroup } from './settings/ChartGroup';
+import { GeneralGroup } from './settings/GeneralGroup';
+import { ApiKeyGroup } from './settings/ApiKeyGroup';
+import { DataGroup } from './settings/DataGroup';
+import { MiscGroup } from './settings/MiscGroup';
 
 interface SettingsProps {
   onClose: () => void;
 }
 
 export function Settings(props: SettingsProps) {
-  const [colorOpen, setColorOpen] = createSignal(false);
-  const [consent, setConsent] = createSignal(false);
   // 分组折叠：设置类默认展开，操作类默认收起
   const [groupsOpen, setGroupsOpen] = createStore<Record<string, boolean>>({
     statusBar: true,
@@ -59,6 +63,7 @@ export function Settings(props: SettingsProps) {
       defaultColor: staged.defaultColor,
       // staged 来自 createStore，元素是 proxy；map 成 plain object 再发送
       thresholds: staged.thresholds
+        .filter((t) => Number.isFinite(t.below))
         .map((t) => ({ below: t.below, color: t.color }))
         .sort((a, b) => a.below - b.below),
       pollMinutes: staged.pollMinutes,
@@ -67,6 +72,7 @@ export function Settings(props: SettingsProps) {
       connectorStyle: staged.connectorStyle,
       connectorColor: staged.connectorColor,
       lineStyle: staged.lineStyle,
+      dayBoundary: staged.dayBoundary,
     };
     // 乐观更新本地 config：config 回传是异步的，先让 Header/Footer 立即用新值，避免闪回旧值
     applySavedConfig(payload);
@@ -76,10 +82,6 @@ export function Settings(props: SettingsProps) {
     setYMinSpanRatio(ratio);
     postMessage({ type: 'setYMinSpanRatio', payload: { ratio } });
     close();
-  }
-
-  function addThreshold(): void {
-    setStaged('thresholds', (ts) => [...ts, { below: 100, color: '#ffb900' }]);
   }
 
   return (
@@ -97,332 +99,64 @@ export function Settings(props: SettingsProps) {
           </button>
         </div>
         <div class="settings-body">
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.statusBar ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('statusBar', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-account"></i>状态栏
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.statusBar}>
-            <SettingRow label="显示余额" for="statusBarShowEl">
-              <input
-                id="statusBarShowEl"
-                type="checkbox"
-                checked={staged?.statusBarShow}
-                onChange={(e) => setStaged('statusBarShow', e.currentTarget.checked)}
-              />
-            </SettingRow>
-            <button
-              class={'settings-toggle' + (colorOpen() ? ' open' : '')}
-              type="button"
-              onClick={() => setColorOpen((o) => !o)}
-            >
-              <span>阈值颜色</span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={colorOpen()}>
-              <SettingRow label="默认颜色">
-                <input
-                  type="color"
-                  value={staged?.defaultColor || '#000000'}
-                  disabled={!staged?.defaultColor}
-                  onChange={(e) => {
-                    setStaged('defaultColor', e.currentTarget.value);
-                  }}
-                />
-                <label class="settings-inline">
-                  <input
-                    type="checkbox"
-                    checked={!staged?.defaultColor}
-                    onChange={(e) => {
-                      const theme = e.currentTarget.checked;
-                      setStaged('defaultColor', theme ? '' : '#000000');
-                    }}
-                  />
-                  跟随主题
-                </label>
-              </SettingRow>
-              <div class="threshold-head">
-                <span>余额阈值（低于 → 颜色）</span>
-                <button class="btn small" onClick={addThreshold}>
-                  <i class="codicon codicon-add"></i>添加
-                </button>
-              </div>
-              <div id="thresholdList">
-                <For each={staged?.thresholds ?? []}>
-                  {(t, i) => (
-                    <div class="threshold-row">
-                      <input
-                        type="number"
-                        class="threshold-below"
-                        min="0"
-                        step="0.01"
-                        value={t.below}
-                        onInput={(e) =>
-                          setStaged('thresholds', i(), 'below', parseFloat(e.currentTarget.value))
-                        }
-                      />
-                      <span class="sep">以下</span>
-                      <input
-                        type="color"
-                        class="threshold-color"
-                        value={t.color}
-                        onChange={(e) => setStaged('thresholds', i(), 'color', e.currentTarget.value)}
-                      />
-                      <button
-                        class="icon threshold-del"
-                        title="删除该阈值"
-                        onClick={() =>
-                          setStaged('thresholds', (ts) => ts.filter((_, idx) => idx !== i()))
-                        }
-                      >
-                        <i class="codicon codicon-trash"></i>
-                      </button>
-                    </div>
-                  )}
-                </For>
-              </div>
-              <p class="settings-hint">余额低于阈值（不含）时显示对应颜色。</p>
-            </Collapse>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="状态栏"
+            icon="account"
+            open={groupsOpen.statusBar}
+            onToggle={() => setGroupsOpen('statusBar', (o) => !o)}
+          >
+            <StatusBarGroup staged={staged} setStaged={setStaged} />
+          </SettingsGroup>
 
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.chart ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('chart', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-graph-line"></i>图表
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.chart}>
-            <SettingRow label="线条样式" for="lineStyleEl">
-              <select
-                id="lineStyleEl"
-                class="settings-select"
-                value={staged?.lineStyle ?? 'straight'}
-                onChange={(e) =>
-                  setStaged('lineStyle', e.currentTarget.value as StagedConfig['lineStyle'])
-                }
-              >
-                <option value="straight">直线</option>
-                <option value="smooth">曲线</option>
-              </select>
-            </SettingRow>
-            <SettingRow
-              label="断点连接线"
-              for="connectorStyleEl"
-              hint="轮询断档时用连接线补齐缺口"
-            >
-              <select
-                id="connectorStyleEl"
-                class="settings-select"
-                value={staged?.connectorStyle ?? 'dashed'}
-                onChange={(e) =>
-                  setStaged('connectorStyle', e.currentTarget.value as StagedConfig['connectorStyle'])
-                }
-              >
-                <option value="dashed">虚线</option>
-                <option value="solid">实线</option>
-                <option value="none">不连接</option>
-              </select>
-            </SettingRow>
-            <SettingRow label="连接线颜色">
-              <input
-                type="color"
-                value={staged?.connectorColor || '#000000'}
-                disabled={!staged?.connectorColor}
-                onChange={(e) => setStaged('connectorColor', e.currentTarget.value)}
-              />
-              <label class="settings-inline">
-                <input
-                  type="checkbox"
-                  checked={!staged?.connectorColor}
-                  onChange={(e) => {
-                    const theme = e.currentTarget.checked;
-                    setStaged('connectorColor', theme ? '' : '#000000');
-                  }}
-                />
-                跟随主色
-              </label>
-            </SettingRow>
-            <SettingRow
-              label="纵向最小跨度"
-              for="yMinSpanRatioEl"
-              hint="限制曲线纵向放大；0 为完全自适应"
-            >
-              <input
-                type="number"
-                id="yMinSpanRatioEl"
-                min="0"
-                max="1"
-                step="0.05"
-                class="settings-number"
-                value={yRatio()}
-                onChange={(e) => {
-                  const v = Number(e.currentTarget.value);
-                  if (Number.isFinite(v)) setYRatio(Math.min(1, Math.max(0, v)));
-                }}
-              />
-            </SettingRow>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="图表"
+            icon="graph-line"
+            open={groupsOpen.chart}
+            onToggle={() => setGroupsOpen('chart', (o) => !o)}
+          >
+            <ChartGroup
+              staged={staged}
+              setStaged={setStaged}
+              yRatio={yRatio()}
+              setYRatio={setYRatio}
+            />
+          </SettingsGroup>
 
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.general ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('general', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-gear"></i>常规
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.general}>
-            <SettingRow label="查询间隔（分钟）" for="pollMinutesEl">
-              <input
-                type="number"
-                id="pollMinutesEl"
-                min="1"
-                step="1"
-                class="settings-number"
-                value={staged?.pollMinutes}
-                onChange={(e) => {
-                  const v = parseInt(e.currentTarget.value, 10);
-                  if (Number.isFinite(v) && v >= 1) setStaged('pollMinutes', v);
-                }}
-              />
-            </SettingRow>
-            <SettingRow label="分钟级快照保留（天）" for="rawRetentionEl">
-              <input
-                type="number"
-                id="rawRetentionEl"
-                min="1"
-                step="1"
-                class="settings-number"
-                value={staged?.rawRetentionDays}
-                onChange={(e) => {
-                  const v = parseInt(e.currentTarget.value, 10);
-                  if (Number.isFinite(v) && v >= 1) setStaged('rawRetentionDays', v);
-                }}
-              />
-            </SettingRow>
-            <SettingRow label="显示今日花费（估算）" for="showTodaySpendEl">
-              <input
-                id="showTodaySpendEl"
-                type="checkbox"
-                checked={staged?.showTodaySpend || consent()}
-                onChange={(e) => {
-                  if (e.currentTarget.checked) {
-                    setConsent(true);
-                  } else {
-                    setStaged('showTodaySpend', false);
-                    setConsent(false);
-                  }
-                }}
-              />
-            </SettingRow>
-            <Show when={consent()}>
-              <div class="settings-consent">
-                <p class="settings-hint">
-                  今日花费为根据余额快照推算的估算值，可能因充值或数据断档而不准确。
-                </p>
-                <div class="row">
-                  <button
-                    class="btn primary"
-                    onClick={() => {
-                      setStaged('showTodaySpend', true);
-                      setConsent(false);
-                    }}
-                  >
-                    同意启用
-                  </button>
-                  <button
-                    class="btn"
-                    onClick={() => {
-                      setStaged('showTodaySpend', false);
-                      setConsent(false);
-                    }}
-                  >
-                    取消
-                  </button>
-                </div>
-              </div>
-            </Show>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="常规"
+            icon="gear"
+            open={groupsOpen.general}
+            onToggle={() => setGroupsOpen('general', (o) => !o)}
+          >
+            <GeneralGroup staged={staged} setStaged={setStaged} />
+          </SettingsGroup>
 
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.apiKey ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('apiKey', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-key"></i>API Key
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.apiKey}>
-            <SettingRow label={store.data && store.data.hasKey ? '已配置（安全存储）' : '未配置'}>
-              <button class="btn" onClick={() => postMessage({ type: 'setApiKey' })}>
-                设置 / 更换
-              </button>
-              <button class="btn danger" onClick={() => postMessage({ type: 'clearApiKey' })}>
-                清除
-              </button>
-            </SettingRow>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="API Key"
+            icon="key"
+            open={groupsOpen.apiKey}
+            onToggle={() => setGroupsOpen('apiKey', (o) => !o)}
+          >
+            <ApiKeyGroup />
+          </SettingsGroup>
 
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.data ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('data', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-database"></i>数据
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.data}>
-            <SettingRow label="历史快照（仅 VS Code 打开期间记录）">
-              <button class="btn danger" onClick={() => postMessage({ type: 'clearHistory' })}>
-                清除历史
-              </button>
-            </SettingRow>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="数据"
+            icon="database"
+            open={groupsOpen.data}
+            onToggle={() => setGroupsOpen('data', (o) => !o)}
+          >
+            <DataGroup />
+          </SettingsGroup>
 
-          <div class="settings-group">
-            <button
-              class={'settings-group-head' + (groupsOpen.misc ? ' open' : '')}
-              type="button"
-              onClick={() => setGroupsOpen('misc', (o) => !o)}
-            >
-              <span class="settings-group-title">
-                <i class="codicon codicon-ellipsis"></i>其他
-              </span>
-              <i class="codicon codicon-chevron-down"></i>
-            </button>
-            <Collapse open={groupsOpen.misc}>
-            <SettingRow label="恢复默认设置">
-              <button class="btn danger" onClick={() => postMessage({ type: 'resetSettings' })}>
-                恢复默认
-              </button>
-            </SettingRow>
-            </Collapse>
-          </div>
+          <SettingsGroup
+            title="其他"
+            icon="ellipsis"
+            open={groupsOpen.misc}
+            onToggle={() => setGroupsOpen('misc', (o) => !o)}
+          >
+            <MiscGroup />
+          </SettingsGroup>
         </div>
         <div class="settings-foot">
           <button class="btn" onClick={() => postMessage({ type: 'openNativeSettings' })}>

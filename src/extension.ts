@@ -19,6 +19,65 @@ function clampRatio(v: unknown): number {
   return Math.min(1, Math.max(0, n));
 }
 
+/** 合法 6 位十六进制颜色（如 #ffb900）；空串表示“跟随主题/主色”。 */
+const COLOR_RE = /^#[0-9a-fA-F]{6}$/;
+
+interface SaveSettingsPayload {
+  statusBarShow: boolean;
+  defaultColor: string;
+  thresholds: { below: number; color: string }[];
+  pollMinutes: number;
+  rawRetentionDays: number;
+  showTodaySpend: boolean;
+  connectorStyle: 'dashed' | 'solid' | 'none';
+  connectorColor: string;
+  lineStyle: 'straight' | 'smooth';
+  dayBoundary: 'local' | 'utc';
+}
+
+/**
+ * 校验并净化来自 webview 的 saveSettings payload（纵深防御）。
+ * 非法结构返回 null；字段级非法值回退默认，杜绝 NaN/畸形颜色写入配置。
+ */
+function sanitizeSavePayload(p: unknown): SaveSettingsPayload | null {
+  if (!p || typeof p !== 'object') return null;
+  const o = p as Record<string, unknown>;
+  const validColor = (c: unknown): string =>
+    typeof c === 'string' && COLOR_RE.test(c) ? c : '';
+  const num = (v: unknown, def: number, min: number): number => {
+    const n = Number(v);
+    return Number.isFinite(n) && n >= min ? n : def;
+  };
+  const thresholds = Array.isArray(o.thresholds)
+    ? o.thresholds
+        .filter(
+          (t): t is { below: unknown; color: unknown } =>
+            !!t &&
+            typeof t === 'object' &&
+            Number.isFinite(Number((t as { below: unknown }).below)) &&
+            typeof (t as { color: unknown }).color === 'string' &&
+            COLOR_RE.test((t as { color: unknown }).color as string)
+        )
+        .map((t) => ({ below: Number(t.below), color: t.color as string }))
+        .sort((a, b) => a.below - b.below)
+    : [];
+  const connectorStyle =
+    o.connectorStyle === 'solid' || o.connectorStyle === 'none' ? o.connectorStyle : 'dashed';
+  const lineStyle = o.lineStyle === 'smooth' ? 'smooth' : 'straight';
+  return {
+    statusBarShow: !!o.statusBarShow,
+    defaultColor: validColor(o.defaultColor),
+    thresholds,
+    pollMinutes: num(o.pollMinutes, 1, 1),
+    rawRetentionDays: num(o.rawRetentionDays, 7, 1),
+    showTodaySpend: !!o.showTodaySpend,
+    connectorStyle,
+    connectorColor: validColor(o.connectorColor),
+    lineStyle,
+    dayBoundary: o.dayBoundary === 'utc' ? 'utc' : 'local',
+  };
+}
+
 let timer: NodeJS.Timeout | undefined;
 
 export async function activate(context: vscode.ExtensionContext): Promise<void> {
@@ -42,7 +101,12 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     } else if (msg.type === 'openUsage') {
       void vscode.env.openExternal(vscode.Uri.parse('https://platform.deepseek.com/usage'));
     } else if (msg.type === 'saveSettings') {
-      void saveSettings(msg.payload);
+      const sanitized = sanitizeSavePayload(msg.payload);
+      if (sanitized) {
+        void saveSettings(sanitized);
+      } else {
+        console.warn('[deepseek-stats] 收到非法 saveSettings 消息，已忽略');
+      }
     } else if (msg.type === 'setYMinSpanRatio') {
       void context.globalState.update(Y_MIN_SPAN_RATIO_KEY, clampRatio(msg.payload?.ratio));
     } else if (msg.type === 'openNativeSettings') {
@@ -77,47 +141,38 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
   }
 
   /** 由设置面板「保存」时统一写入全部 deepseek-stats 配置项。 */
-  async function saveSettings(p: {
-    statusBarShow: boolean;
-    defaultColor: string;
-    thresholds: { below: number; color: string }[];
-    pollMinutes: number;
-    rawRetentionDays: number;
-    showTodaySpend: boolean;
-    connectorStyle: 'dashed' | 'solid' | 'none';
-    connectorColor: string;
-    lineStyle: 'straight' | 'smooth';
-  }): Promise<void> {
+  async function saveSettings(p: SaveSettingsPayload): Promise<void> {
     if (!p) return;
-    try {
-      const cfg = vscode.workspace.getConfiguration('deepseek-stats');
-      await cfg.update('statusBar.show', p.statusBarShow, vscode.ConfigurationTarget.Global);
-      await cfg.update('statusBar.defaultColor', p.defaultColor, vscode.ConfigurationTarget.Global);
-      await cfg.update('statusBar.thresholds', p.thresholds, vscode.ConfigurationTarget.Global);
-      await cfg.update(
-        'pollIntervalMinutes',
-        p.pollMinutes,
-        vscode.ConfigurationTarget.Global
-      );
-      await cfg.update(
+    // 并行提交全部配置项；单项失败不中断其余项（避免"保存了一半"）
+    const cfg = vscode.workspace.getConfiguration('deepseek-stats');
+    const results = await Promise.allSettled([
+      cfg.update('statusBar.show', p.statusBarShow, vscode.ConfigurationTarget.Global),
+      cfg.update('statusBar.defaultColor', p.defaultColor, vscode.ConfigurationTarget.Global),
+      cfg.update('statusBar.thresholds', p.thresholds, vscode.ConfigurationTarget.Global),
+      cfg.update('pollIntervalMinutes', p.pollMinutes, vscode.ConfigurationTarget.Global),
+      cfg.update(
         'history.rawRetentionDays',
         p.rawRetentionDays,
         vscode.ConfigurationTarget.Global
-      );
-      await cfg.update('showTodaySpend', p.showTodaySpend, vscode.ConfigurationTarget.Global);
-      await cfg.update(
+      ),
+      cfg.update('showTodaySpend', p.showTodaySpend, vscode.ConfigurationTarget.Global),
+      cfg.update(
         'chart.connectorStyle',
         p.connectorStyle,
         vscode.ConfigurationTarget.Global
-      );
-      await cfg.update(
+      ),
+      cfg.update(
         'chart.connectorColor',
         p.connectorColor,
         vscode.ConfigurationTarget.Global
-      );
-      await cfg.update('chart.lineStyle', p.lineStyle, vscode.ConfigurationTarget.Global);
-    } catch (e) {
-      console.error('[deepseek-stats] 保存设置失败', e);
+      ),
+      cfg.update('chart.lineStyle', p.lineStyle, vscode.ConfigurationTarget.Global),
+      cfg.update('dayBoundary', p.dayBoundary, vscode.ConfigurationTarget.Global),
+    ]);
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.error('[deepseek-stats] 保存设置失败', failed.length, '项');
+      void vscode.window.showWarningMessage('部分设置保存失败，请检查配置值后重试');
     }
   }
 
@@ -140,11 +195,17 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       'chart.connectorStyle',
       'chart.connectorColor',
       'chart.lineStyle',
+      'dayBoundary',
     ];
-    for (const k of keys) {
-      await cfg.update(k, undefined, vscode.ConfigurationTarget.Global);
-    }
+    // 并行恢复，单项失败不中断其余项
+    const results = await Promise.allSettled(
+      keys.map((k) => cfg.update(k, undefined, vscode.ConfigurationTarget.Global))
+    );
     await context.globalState.update(Y_MIN_SPAN_RATIO_KEY, undefined);
+    const failed = results.filter((r) => r.status === 'rejected');
+    if (failed.length > 0) {
+      console.error('[deepseek-stats] 恢复默认设置失败', failed.length, '项');
+    }
     pushDataToPanel();
     if (chart && chart.alive) chart.postSettingsReset();
     vscode.window.showInformationMessage('DeepSeek Stats 设置已恢复默认');
