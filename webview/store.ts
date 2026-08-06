@@ -190,6 +190,8 @@ export function onSnapshot(s: Snapshot): void {
       store.config?.dayBoundary ?? 'local'
     ),
     ...patch,
+    // 刷新成功（手动或自动轮询）即清除之前的错误提示，避免 ⚠ 一直挂着
+    lastError: '',
     ...(store.refreshing ? { refreshing: false, refreshResult: 'ok' as const } : {}),
   });
 }
