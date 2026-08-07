@@ -224,6 +224,10 @@ header {
   stroke-dasharray: none;
 }
 
+#chart .connector.dotted {
+  stroke-dasharray: 1 4;
+}
+
 #chart .area {
   fill: var(--line);
   opacity: 0.08;

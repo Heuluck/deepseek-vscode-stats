@@ -29,7 +29,7 @@ interface SaveSettingsPayload {
   pollMinutes: number;
   rawRetentionDays: number;
   showTodaySpend: boolean;
-  connectorStyle: 'dashed' | 'solid' | 'none';
+  connectorStyle: 'dashed' | 'dotted' | 'solid' | 'ignore' | 'none';
   connectorColor: string;
   lineStyle: 'straight' | 'smooth';
   dayBoundary: 'local' | 'utc';
@@ -62,7 +62,12 @@ function sanitizeSavePayload(p: unknown): SaveSettingsPayload | null {
         .sort((a, b) => a.below - b.below)
     : [];
   const connectorStyle =
-    o.connectorStyle === 'solid' || o.connectorStyle === 'none' ? o.connectorStyle : 'dashed';
+    o.connectorStyle === 'dotted' ||
+    o.connectorStyle === 'solid' ||
+    o.connectorStyle === 'ignore' ||
+    o.connectorStyle === 'none'
+      ? o.connectorStyle
+      : 'dashed';
   const lineStyle = o.lineStyle === 'smooth' ? 'smooth' : 'straight';
   return {
     statusBarShow: !!o.statusBarShow,

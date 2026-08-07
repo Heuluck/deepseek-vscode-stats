@@ -43,7 +43,9 @@ export function ChartGroup(props: Props) {
           }
         >
           <option value="dashed">虚线</option>
+          <option value="dotted">点虚线</option>
           <option value="solid">实线</option>
+          <option value="ignore">假装连续</option>
           <option value="none">不连接</option>
         </select>
       </SettingRow>

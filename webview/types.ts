@@ -25,7 +25,7 @@ export interface Threshold {
   color: string;
 }
 
-export type ConnectorStyle = 'dashed' | 'solid' | 'none';
+export type ConnectorStyle = 'dashed' | 'dotted' | 'solid' | 'ignore' | 'none';
 
 export type LineStyle = 'straight' | 'smooth';
 

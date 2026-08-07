@@ -7,7 +7,7 @@ import { createEffect, createMemo, onCleanup, onMount, Show } from 'solid-js';
 import { createSignal } from 'solid-js';
 import { setTooltipInfo, store } from '../store';
 import { viewPoints } from '../logic/viewport';
-import type { ChartPoint, Layout, XLabel, YLabel } from '../types';
+import type { ChartPoint, ConnectorStyle, Layout, XLabel, YLabel } from '../types';
 import {
   computeChartGeometry,
   decimate,
@@ -235,7 +235,8 @@ export function Chart() {
   const connectorDraws = createMemo(() => {
     const cd = chartData();
     const lay = layout();
-    if (!cd || !lay) return [] as { d: string; solid: boolean; color: string }[];
+    if (!cd || !lay)
+      return [] as { d: string; area?: string; kind: ConnectorStyle; color: string }[];
     const style = store.config?.connectorStyle ?? 'dashed';
     if (style === 'none') return [];
     const color = store.config?.connectorColor ?? '';
@@ -247,7 +248,8 @@ export function Chart() {
     const plotY = M.top;
     const plotRight = lay.plotRight;
     const plotBottom = lay.h - M.bottom;
-    const out: { d: string; solid: boolean; color: string }[] = [];
+    const baseY = lay.yOf(lay.yMin);
+    const out: { d: string; area?: string; kind: ConnectorStyle; color: string }[] = [];
     for (const g of cd.geom.gaps) {
       let d: string;
       if (smooth) {
@@ -272,9 +274,34 @@ export function Chart() {
         if (!seg) continue;
         d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
       }
-      if (d) out.push({ d, solid: style === 'solid', color });
+      if (!d) continue;
+      const item: { d: string; area?: string; kind: ConnectorStyle; color: string } = {
+        d,
+        kind: style,
+        color,
+      };
+      // ignore：假装是正常数据段——实线 + 下方面积填充（整组已套 plotClip，底部自动裁齐）
+      if (style === 'ignore') {
+        item.area = `${d} L${xOf(g.to.t).toFixed(1)},${baseY.toFixed(1)} L${xOf(g.from.t).toFixed(1)},${baseY.toFixed(1)} Z`;
+      }
+      out.push(item);
     }
     return out;
+  });
+
+  // ---------- 孤立点 ----------
+  // ignore 样式下：断档被实线连接线补齐后，中间的单点已"连着线"，不再画独立圆点；
+  // 仅过滤渲染（悬停仍可命中该点查看数值）。纯单点数据集（无任何缺口）保持圆点。
+  const isolatedDraws = createMemo(() => {
+    const cd = chartData();
+    if (!cd) return [] as ChartPoint[];
+    if ((store.config?.connectorStyle ?? 'dashed') !== 'ignore') return cd.geom.isolated;
+    const connected = new Set<ChartPoint>();
+    for (const g of cd.geom.gaps) {
+      connected.add(g.from);
+      connected.add(g.to);
+    }
+    return cd.geom.isolated.filter((p) => !connected.has(p));
   });
 
   // ---------- 悬停 ----------
@@ -363,7 +390,7 @@ export function Chart() {
           <g clip-path="url(#plotClip)">
             <ChartSeries
               lay={layout()!}
-              isolated={chartData()!.geom.isolated}
+              isolated={isolatedDraws()}
               solidDraws={solidDraws()}
               connectorDraws={connectorDraws()}
             />

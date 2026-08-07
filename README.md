@@ -35,7 +35,7 @@
 | `deepseek-stats.statusBar.defaultColor` | `""` | 状态栏默认颜色（留空跟随主题） |
 | `deepseek-stats.statusBar.thresholds` | 见下 | 余额阈值 → 颜色映射 |
 | `deepseek-stats.history.rawRetentionDays` | `7` | 分钟级快照保留天数（分时视图数据来源） |
-| `deepseek-stats.chart.connectorStyle` | `dashed` | 图表断点连接线样式：`dashed` 虚线 / `solid` 实线 / `none` 不连接 |
+| `deepseek-stats.chart.connectorStyle` | `dashed` | 图表断点连接线样式：`dashed` 虚线 / `dotted` 点虚线 / `solid` 实线 / `ignore` 假装连续（当作正常数据段，含面积填充） / `none` 不连接 |
 | `deepseek-stats.chart.connectorColor` | `""` | 断点连接线颜色（留空跟随主线条） |
 | `deepseek-stats.chart.lineStyle` | `straight` | 图表主线条绘制方式：`straight` 直线 / `smooth` 平滑曲线 |
 
@@ -45,7 +45,7 @@
 
 - 余额数据来自官方接口 `GET https://api.deepseek.com/user/balance`。
 - 该接口只有**当前余额快照**，没有历史用量 API。因此趋势完全由扩展自己记录：**只有 VS Code 打开期间才有数据点**。
-- 未打开 VS Code 的时间段在图上表现为**断档**：默认用虚线把缺口两端连起来（可在设置中改为实线或不连接）；放大到断档区间时仍可继续缩放/平移，图上以虚线连接线示意"此处无采样"。重新打开后的第一个点即为当时余额快照，时间戳记在打开时刻。
+- 未打开 VS Code 的时间段在图上表现为**断档**：默认用虚线把缺口两端连起来（可在设置中改为点虚线、实线、假装连续或不连接）；放大到断档区间时仍可继续缩放/平移，图上以虚线连接线示意"此处无采样"。重新打开后的第一个点即为当时余额快照，时间戳记在打开时刻。
 
 ## 操作入口
 

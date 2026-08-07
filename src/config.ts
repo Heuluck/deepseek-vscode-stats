@@ -38,11 +38,11 @@ export function getShowTodaySpend(): boolean {
   return getConfig().get<boolean>('showTodaySpend', false);
 }
 
-export type ConnectorStyle = 'dashed' | 'solid' | 'none';
+export type ConnectorStyle = 'dashed' | 'dotted' | 'solid' | 'ignore' | 'none';
 
 export function getConnectorStyle(): ConnectorStyle {
   const v = getConfig().get<string>('chart.connectorStyle', 'dashed');
-  return v === 'solid' || v === 'none' ? v : 'dashed';
+  return v === 'dotted' || v === 'solid' || v === 'ignore' || v === 'none' ? v : 'dashed';
 }
 
 export function getConnectorColor(): string {

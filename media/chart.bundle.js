@@ -2678,10 +2678,24 @@
       get each() {
         return props.connectorDraws;
       },
-      children: (c) => (() => {
+      children: (c) => [memo(() => memo(() => !!c.area)() ? (() => {
+        var _el$2 = _tmpl$28();
+        createRenderEffect((_p$) => {
+          var _v$4 = c.area, _v$5 = c.color ? {
+            fill: c.color
+          } : void 0;
+          _v$4 !== _p$.e && setAttribute(_el$2, "d", _p$.e = _v$4);
+          _p$.t = style(_el$2, _v$5, _p$.t);
+          return _p$;
+        }, {
+          e: void 0,
+          t: void 0
+        });
+        return _el$2;
+      })() : null), (() => {
         var _el$ = _tmpl$9();
         createRenderEffect((_p$) => {
-          var _v$ = "connector" + (c.solid ? " solid" : ""), _v$2 = c.d, _v$3 = c.color ? {
+          var _v$ = "connector" + (c.kind === "solid" || c.kind === "ignore" ? " solid" : c.kind === "dotted" ? " dotted" : ""), _v$2 = c.d, _v$3 = c.color ? {
             stroke: c.color
           } : void 0;
           _v$ !== _p$.e && setAttribute(_el$, "class", _p$.e = _v$);
@@ -2694,36 +2708,36 @@
           a: void 0
         });
         return _el$;
-      })()
+      })()]
     }), createComponent(For, {
       get each() {
         return props.solidDraws;
       },
       children: (s) => [(() => {
-        var _el$2 = _tmpl$28();
-        createRenderEffect(() => setAttribute(_el$2, "d", s.area));
-        return _el$2;
-      })(), (() => {
-        var _el$3 = _tmpl$33();
-        createRenderEffect(() => setAttribute(_el$3, "d", s.d));
+        var _el$3 = _tmpl$28();
+        createRenderEffect(() => setAttribute(_el$3, "d", s.area));
         return _el$3;
+      })(), (() => {
+        var _el$4 = _tmpl$33();
+        createRenderEffect(() => setAttribute(_el$4, "d", s.d));
+        return _el$4;
       })()]
     }), createComponent(For, {
       get each() {
         return props.isolated;
       },
       children: (p) => (() => {
-        var _el$4 = _tmpl$43();
+        var _el$5 = _tmpl$43();
         createRenderEffect((_p$) => {
-          var _v$4 = props.lay.xOf(p.t), _v$5 = props.lay.yOf(p.total);
-          _v$4 !== _p$.e && setAttribute(_el$4, "cx", _p$.e = _v$4);
-          _v$5 !== _p$.t && setAttribute(_el$4, "cy", _p$.t = _v$5);
+          var _v$6 = props.lay.xOf(p.t), _v$7 = props.lay.yOf(p.total);
+          _v$6 !== _p$.e && setAttribute(_el$5, "cx", _p$.e = _v$6);
+          _v$7 !== _p$.t && setAttribute(_el$5, "cy", _p$.t = _v$7);
           return _p$;
         }, {
           e: void 0,
           t: void 0
         });
-        return _el$4;
+        return _el$5;
       })()
     })];
   }
@@ -3126,6 +3140,7 @@
       const plotY = M.top;
       const plotRight = lay.plotRight;
       const plotBottom = lay.h - M.bottom;
+      const baseY = lay.yOf(lay.yMin);
       const out = [];
       for (const g of cd.geom.gaps) {
         let d;
@@ -3136,13 +3151,29 @@
           if (!seg) continue;
           d = `M${seg[0].toFixed(1)},${seg[1].toFixed(1)} L${seg[2].toFixed(1)},${seg[3].toFixed(1)}`;
         }
-        if (d) out.push({
+        if (!d) continue;
+        const item = {
           d,
-          solid: style2 === "solid",
+          kind: style2,
           color
-        });
+        };
+        if (style2 === "ignore") {
+          item.area = `${d} L${xOf(g.to.t).toFixed(1)},${baseY.toFixed(1)} L${xOf(g.from.t).toFixed(1)},${baseY.toFixed(1)} Z`;
+        }
+        out.push(item);
       }
       return out;
+    });
+    const isolatedDraws = createMemo(() => {
+      const cd = chartData();
+      if (!cd) return [];
+      if ((store.config?.connectorStyle ?? "dashed") !== "ignore") return cd.geom.isolated;
+      const connected = /* @__PURE__ */ new Set();
+      for (const g of cd.geom.gaps) {
+        connected.add(g.from);
+        connected.add(g.to);
+      }
+      return cd.geom.isolated.filter((p) => !connected.has(p));
     });
     const hover = createMemo(() => {
       const cd = chartData();
@@ -3253,7 +3284,7 @@
                 return layout();
               },
               get isolated() {
-                return chartData().geom.isolated;
+                return isolatedDraws();
               },
               get solidDraws() {
                 return solidDraws();
@@ -3475,7 +3506,7 @@
 
   // webview/components/settings/ChartGroup.tsx
   var _tmpl$17 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
-  var _tmpl$214 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=none>\u4E0D\u8FDE\u63A5`);
+  var _tmpl$214 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=dotted>\u70B9\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=ignore>\u5047\u88C5\u8FDE\u7EED</option><option value=none>\u4E0D\u8FDE\u63A5`);
   var _tmpl$38 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
   var _tmpl$52 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);

@@ -5,6 +5,16 @@
       "label": "compile",
       "type": "shell",
       "command": "pnpm run compile",
+      "options": {
+        "shell": {
+          "executable": "/bin/zsh",
+          "args": [
+            "-l",
+            "-i",
+            "-c"
+          ]
+        }
+      },
       "group": "build",
       "problemMatcher": "$tsc",
       "detail": "tsc -p ./"

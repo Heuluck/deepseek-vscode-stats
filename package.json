@@ -95,12 +95,16 @@
           "type": "string",
           "enum": [
             "dashed",
+            "dotted",
             "solid",
+            "ignore",
             "none"
           ],
           "enumDescriptions": [
             "虚线连接断点（默认）",
+            "点虚线连接断点",
             "实线连接断点",
+            "假装连续：把断档当作正常连续数据绘制",
             "不连接断点"
           ],
           "default": "dashed",
