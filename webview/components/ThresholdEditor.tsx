@@ -4,6 +4,7 @@
  */
 import { For } from 'solid-js';
 import type { Threshold } from '../types';
+import { t } from '../i18n';
 
 interface ThresholdEditorProps {
   thresholds: Threshold[];
@@ -31,37 +32,37 @@ export function ThresholdEditor(props: ThresholdEditorProps) {
   return (
     <>
       <div class="threshold-head">
-        <span>余额阈值（低于 → 颜色）</span>
+        <span>{t('threshold.title')}</span>
         <button class="btn small" onClick={add}>
-          <i class="codicon codicon-add"></i>添加
+          <i class="codicon codicon-add"></i>{t('threshold.add')}
         </button>
       </div>
       <div id="thresholdList">
         <For each={props.thresholds}>
-          {(t, i) => (
+          {(t2, i) => (
             <div class="threshold-row">
               <input
                 type="number"
                 class="threshold-below"
                 min="0"
                 step="0.01"
-                value={t.below}
+                value={t2.below}
                 onInput={(e) => {
                   const v = parseFloat(e.currentTarget.value);
                   // 空输入/非法值不写入，避免 NaN 污染配置
                   if (Number.isFinite(v)) setBelow(i(), v);
                 }}
               />
-              <span class="sep">以下</span>
+              <span class="sep">{t('threshold.below')}</span>
               <input
                 type="color"
                 class="threshold-color"
-                value={t.color}
+                value={t2.color}
                 onChange={(e) => setColor(i(), e.currentTarget.value)}
               />
               <button
                 class="icon threshold-del"
-                title="删除该阈值"
+                title={t('threshold.delete')}
                 onClick={() => remove(i())}
               >
                 <i class="codicon codicon-trash"></i>
@@ -70,7 +71,7 @@ export function ThresholdEditor(props: ThresholdEditorProps) {
           )}
         </For>
       </div>
-      <p class="settings-hint">余额低于阈值（不含）时显示对应颜色。</p>
+      <p class="settings-hint">{t('threshold.hint')}</p>
     </>
   );
 }

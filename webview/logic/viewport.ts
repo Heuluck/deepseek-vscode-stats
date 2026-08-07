@@ -1,6 +1,8 @@
 /** 视图 / 数据逻辑（从 media/chart.js 迁移，状态访问参数化，无全局状态）。 */
 import type { ChartPoint, DayAgg, InitPayload, Snapshot } from '../types';
 import { startOfDay } from './format';
+// type-only：仅供 t() 的 key 类型检查；运行时不引入 i18n（保持纯逻辑可 node 单测）
+import type { MessageKey } from '../i18n';
 
 export type ViewKey = 'hourly' | 'daily' | 'monthly';
 
@@ -11,42 +13,43 @@ export interface ViewRange {
 
 export interface RangePreset {
   key: string;
-  label: string;
+  /** 翻译 key（纯逻辑层只存 key，由组件 t() 翻译）。 */
+  labelKey: MessageKey;
   ms: number;
 }
 
 export const VIEWS: Record<
   ViewKey,
-  { label: string; ranges: RangePreset[]; defaultRange: string; tickLabel: string }
+  { labelKey: MessageKey; ranges: RangePreset[]; defaultRange: string; tickLabel: string }
 > = {
   hourly: {
-    label: '分时',
+    labelKey: 'view.hourly',
     ranges: [
-      { key: '1h', label: '1 小时', ms: 3600e3 },
-      { key: '6h', label: '6 小时', ms: 6 * 3600e3 },
-      { key: '24h', label: '24 小时', ms: 24 * 3600e3 },
-      { key: '7d', label: '7 天', ms: 7 * 86400e3 },
+      { key: '1h', labelKey: 'range.1h', ms: 3600e3 },
+      { key: '6h', labelKey: 'range.6h', ms: 6 * 3600e3 },
+      { key: '24h', labelKey: 'range.24h', ms: 24 * 3600e3 },
+      { key: '7d', labelKey: 'range.7d', ms: 7 * 86400e3 },
     ],
     defaultRange: '6h',
     tickLabel: 'time',
   },
   daily: {
-    label: '分天',
+    labelKey: 'view.daily',
     ranges: [
-      { key: '7d', label: '7 天', ms: 7 * 86400e3 },
-      { key: '30d', label: '30 天', ms: 30 * 86400e3 },
-      { key: '90d', label: '90 天', ms: 90 * 86400e3 },
-      { key: 'all', label: '全部', ms: Infinity },
+      { key: '7d', labelKey: 'range.7d', ms: 7 * 86400e3 },
+      { key: '30d', labelKey: 'range.30d', ms: 30 * 86400e3 },
+      { key: '90d', labelKey: 'range.90d', ms: 90 * 86400e3 },
+      { key: 'all', labelKey: 'range.all', ms: Infinity },
     ],
     defaultRange: '30d',
     tickLabel: 'day',
   },
   monthly: {
-    label: '分月',
+    labelKey: 'view.monthly',
     ranges: [
-      { key: '6m', label: '6 个月', ms: 6 * 30 * 86400e3 },
-      { key: '12m', label: '12 个月', ms: 12 * 30 * 86400e3 },
-      { key: 'all', label: '全部', ms: Infinity },
+      { key: '6m', labelKey: 'range.6m', ms: 6 * 30 * 86400e3 },
+      { key: '12m', labelKey: 'range.12m', ms: 12 * 30 * 86400e3 },
+      { key: 'all', labelKey: 'range.all', ms: Infinity },
     ],
     defaultRange: '12m',
     tickLabel: 'month',

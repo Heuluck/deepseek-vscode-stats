@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import type { HistoryStore, Snapshot } from './historyStore';
 import type { PanelConfig } from './config';
+import { getLocale, t } from './i18n';
 
 /** 余额趋势图 Webview 面板（单例，重复打开复用）。 */
 export class ChartPanel {
@@ -54,8 +55,16 @@ export class ChartPanel {
         hasKey,
         yMinSpanRatio,
         chartMode,
+        locale: getLocale(),
       },
     });
+  }
+
+  /** 语言设置变化时热更新 webview（locale 变化驱动其重渲染）+ 同步面板标签标题。 */
+  postLocale(locale: string): void {
+    if (!this.panel) return;
+    this.panel.webview.postMessage({ type: 'i18n', payload: { locale } });
+    this.panel.title = t('panel.title');
   }
 
   postConfig(config: PanelConfig): void {
@@ -77,7 +86,7 @@ export class ChartPanel {
   private create(): void {
     const panel = vscode.window.createWebviewPanel(
       'deepseekStats.chart',
-      'DeepSeek 余额',
+      t('panel.title'),
       vscode.ViewColumn.One,
       {
         enableScripts: true,
@@ -100,6 +109,8 @@ export class ChartPanel {
 
   private getHtml(wv: vscode.Webview): string {
     const nonce = getNonce();
+    const locale = getLocale();
+    const htmlLang = locale === 'zh-cn' ? 'zh-CN' : 'en';
     const cssUri = wv.asWebviewUri(vscode.Uri.joinPath(this.extUri, 'media', 'chart.css'));
     const codiconCssUri = wv.asWebviewUri(
       vscode.Uri.joinPath(this.extUri, 'media', 'codicons', 'codicon.css')
@@ -116,6 +127,9 @@ export class ChartPanel {
     ].join('; ');
     return html
       .replace(/\{\{CSP\}\}/g, csp)
+      .replace(/\{\{LANG\}\}/g, htmlLang)
+      .replace(/\{\{TITLE\}\}/g, t('panel.title'))
+      .replace(/\{\{LOCALE\}\}/g, locale)
       .replace(/\{\{CODICON_CSS_URI\}\}/g, codiconCssUri.toString())
       .replace(/\{\{CSS_URI\}\}/g, cssUri.toString())
       .replace(/\{\{JS_URI\}\}/g, jsUri.toString())

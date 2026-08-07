@@ -24,6 +24,7 @@ import {
   VIEWS,
 } from './logic/viewport';
 import { postMessage, type SaveSettingsPayload } from './messaging';
+import { setLocale, t } from './i18n';
 import {
   advanceTodaySpendCache,
   buildTodaySpendCache,
@@ -151,6 +152,8 @@ function applyResetPatch(
 
 // ---------- 消息 actions ----------
 export function init(payload: InitPayload): void {
+  // 与扩展侧解析结果同步（HTML 注入的初始 locale 已保证首帧正确，此处防御性再对齐一次）
+  if (payload.locale) setLocale(payload.locale);
   setTooltipInfo(null);
   const view: ViewKey = 'hourly';
   const rangeKey = VIEWS[view].defaultRange;
@@ -343,20 +346,20 @@ export interface EmptyInfo {
 
 export function emptyInfo(): EmptyInfo | null {
   const data = store.data;
-  if (!data) return { msg: '加载中…', showAction: false };
+  if (!data) return { msg: t('empty.loading'), showAction: false };
   if (!viewPoints(data, store.view).length) {
     const total = (data.snapshots || []).length + (data.daily || []).length;
     if (total === 0) {
       return data.hasKey
-        ? { msg: '等待首次查询结果…', showAction: false }
-        : { msg: '未配置 API Key', showAction: true };
+        ? { msg: t('empty.waitingFirst'), showAction: false }
+        : { msg: t('empty.noKey'), showAction: true };
     }
     // 该视图下没有聚合数据（如分时视图尚无快照）——中性提示，非缩放阻断
-    return { msg: '该视图暂无数据', showAction: false };
+    return { msg: t('empty.noViewData'), showAction: false };
   }
   // 有快照但所有币种余额一直为 0（含 7 天前花光、>0 快照已清除的情况）→ 无可绘制币种
   if (!activeCurrencies(data).length) {
-    return { msg: '账户暂无余额', showAction: false };
+    return { msg: t('empty.noBalance'), showAction: false };
   }
   return null;
 }

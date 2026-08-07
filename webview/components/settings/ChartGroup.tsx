@@ -4,6 +4,7 @@
  */
 import type { SetStoreFunction } from 'solid-js/store';
 import type { StagedConfig } from '../../store';
+import { t } from '../../i18n';
 import { SettingRow } from '../SettingRow';
 
 interface Props {
@@ -16,7 +17,7 @@ interface Props {
 export function ChartGroup(props: Props) {
   return (
     <>
-      <SettingRow label="线条样式" for="lineStyleEl">
+      <SettingRow label={t('chartGroup.lineStyle')} for="lineStyleEl">
         <select
           id="lineStyleEl"
           class="settings-select"
@@ -25,14 +26,14 @@ export function ChartGroup(props: Props) {
             props.setStaged('lineStyle', e.currentTarget.value as StagedConfig['lineStyle'])
           }
         >
-          <option value="straight">直线</option>
-          <option value="smooth">曲线</option>
+          <option value="straight">{t('chartGroup.straight')}</option>
+          <option value="smooth">{t('chartGroup.smooth')}</option>
         </select>
       </SettingRow>
       <SettingRow
-        label="断点连接线"
+        label={t('chartGroup.connectorStyle')}
         for="connectorStyleEl"
-        hint="轮询断档时用连接线补齐缺口"
+        hint={t('chartGroup.connectorStyleHint')}
       >
         <select
           id="connectorStyleEl"
@@ -42,14 +43,14 @@ export function ChartGroup(props: Props) {
             props.setStaged('connectorStyle', e.currentTarget.value as StagedConfig['connectorStyle'])
           }
         >
-          <option value="dashed">虚线</option>
-          <option value="dotted">点虚线</option>
-          <option value="solid">实线</option>
-          <option value="ignore">假装连续</option>
-          <option value="none">不连接</option>
+          <option value="dashed">{t('chartGroup.dashed')}</option>
+          <option value="dotted">{t('chartGroup.dotted')}</option>
+          <option value="solid">{t('chartGroup.solid')}</option>
+          <option value="ignore">{t('chartGroup.ignore')}</option>
+          <option value="none">{t('chartGroup.none')}</option>
         </select>
       </SettingRow>
-      <SettingRow label="连接线颜色">
+      <SettingRow label={t('chartGroup.connectorColor')}>
         <input
           type="color"
           value={props.staged?.connectorColor || '#000000'}
@@ -65,13 +66,13 @@ export function ChartGroup(props: Props) {
               props.setStaged('connectorColor', theme ? '' : '#000000');
             }}
           />
-          跟随主色
+          {t('chartGroup.followMain')}
         </label>
       </SettingRow>
       <SettingRow
-        label="纵向最小跨度"
+        label={t('chartGroup.minSpan')}
         for="yMinSpanRatioEl"
-        hint="限制曲线纵向放大；0 为完全自适应"
+        hint={t('chartGroup.minSpanHint')}
       >
         <input
           type="number"

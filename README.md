@@ -10,6 +10,7 @@
 - 三个视图：分时（分钟级原始数据）/ 分天（按天聚合）/ 分月（按月聚合）
 - 交互图表：悬停显示充值/赠送明细、滚轮缩放、拖拽平移、一键重置
 - 数据断档处理：VS Code 未打开的时间段**断线不连线**，绝不伪造中间数据
+- 国际化：界面语言可在设置中切换（跟随 VS Code 或强制中/英文），扩展命令/设置描述、状态栏、图表面板全量翻译
 - 存储：API Key 走 VS Code 加密存储（`SecretStorage`），历史快照存 VS Code 全局状态，**都不落在项目目录**
 
 ## 安装与使用
@@ -30,6 +31,7 @@
 
 | 设置 | 默认 | 说明 |
 |---|---|---|
+| `deepseek-stats.language` | `auto` | 界面语言：`auto` 跟随 VS Code 显示语言 / `en` 英文 / `zh-cn` 简体中文（设置名「语言 / Languages」） |
 | `deepseek-stats.pollIntervalMinutes` | `1` | 轮询间隔（分钟） |
 | `deepseek-stats.statusBar.show` | `true` | 是否在状态栏显示余额 |
 | `deepseek-stats.statusBar.defaultColor` | `""` | 状态栏默认颜色（留空跟随主题） |

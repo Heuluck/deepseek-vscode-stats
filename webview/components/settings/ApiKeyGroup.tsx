@@ -1,16 +1,17 @@
 /** API Key 设置组：显示配置状态 + 设置/更换/清除。 */
 import { store } from '../../store';
 import { postMessage } from '../../messaging';
+import { t } from '../../i18n';
 import { SettingRow } from '../SettingRow';
 
 export function ApiKeyGroup() {
   return (
-    <SettingRow label={store.data && store.data.hasKey ? '已配置（安全存储）' : '未配置'}>
+    <SettingRow label={store.data && store.data.hasKey ? t('apiKey.configured') : t('apiKey.notConfigured')}>
       <button class="btn" onClick={() => postMessage({ type: 'setApiKey' })}>
-        设置 / 更换
+        {t('apiKey.setChange')}
       </button>
       <button class="btn danger" onClick={() => postMessage({ type: 'clearApiKey' })}>
-        清除
+        {t('apiKey.clear')}
       </button>
     </SettingRow>
   );

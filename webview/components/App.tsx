@@ -15,6 +15,7 @@ import { Chart } from './Chart';
 import { ChartBars } from './ChartBars';
 import { Settings } from './Settings';
 import { RefreshButton } from './RefreshButton';
+import { t } from '../i18n';
 
 export function App() {
   // 刷新反馈：结果（ok/fail）短暂显示后自动复原为普通刷新图标
@@ -33,13 +34,13 @@ export function App() {
           {/* 消耗模式无缩放/平移，范围预设与重置只属于余额曲线 */}
           <Show when={store.chartMode === 'balance'}>
             <Ranges />
-            <button class="btn" title="重置视图范围" onClick={resetView}>
-              重置
+            <button class="btn" title={t('app.resetTitle')} onClick={resetView}>
+              {t('app.reset')}
             </button>
           </Show>
           <Tabs />
           <RefreshButton />
-          <button class="icon" title="在浏览器打开 DeepSeek 用量页" onClick={openUsage}>
+          <button class="icon" title={t('app.openUsageTitle')} onClick={openUsage}>
             <i class="codicon codicon-link-external"></i>
           </button>
         </div>

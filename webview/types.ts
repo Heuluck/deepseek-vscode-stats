@@ -59,6 +59,8 @@ export interface InitPayload {
   yMinSpanRatio: number;
   /** 图表模式（webview 本地设置，存扩展 globalState）：默认消耗柱状图。 */
   chartMode: ChartMode;
+  /** 扩展侧解析后的界面语言（配合 HTML 注入的初始 locale，用于 webview 首帧/同步）。 */
+  locale: string;
 }
 
 /** 图表数据点（viewPoints 归一化后的统一形态）。 */

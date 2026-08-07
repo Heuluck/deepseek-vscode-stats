@@ -2,6 +2,7 @@
  * 多币种账户时余额并列展示（主币种在前）。 */
 import { createMemo, Show } from 'solid-js';
 import { spendPreview, store } from '../store';
+import { t, type MessageKey } from '../i18n';
 import { fmtMoney } from '../logic/format';
 import { activeCurrencies, mainCurrency } from '../logic/viewport';
 import { todaySpendFromCache } from '../logic/todaySpend';
@@ -30,12 +31,12 @@ export function Header() {
     const main = mainCurrency(data);
     const cur = snaps.find((s) => s.currency === main) || snaps[snaps.length - 1];
     if (cur) {
-      return `充值 ${fmtMoney(cur.toppedUp, cur.currency)} · 赠送 ${fmtMoney(
-        cur.granted,
-        cur.currency
-      )}`;
+      return t('header.rechargeGrant', {
+        top: fmtMoney(cur.toppedUp, cur.currency),
+        grant: fmtMoney(cur.granted, cur.currency),
+      });
     }
-    return data && data.hasKey ? '等待数据…' : '未配置 API Key';
+    return data && data.hasKey ? t('header.waiting') : t('header.noKey');
   });
 
   // 今日花费（可选）：设置面板打开时预览暂存值，否则用已保存配置
@@ -54,15 +55,17 @@ export function Header() {
       (data?.snapshots || []).find((s) => s.currency === main) || data?.current || null;
     const info = todaySpendFromCache(store.todayCache, curSnap);
     if (!info) {
-      return { value: '-', title: '数据不足或含充值，无法可靠估算今日花费' };
+      return { value: '-', title: t('header.spendUnreliable') };
     }
     const currency = main || 'CNY';
     const boundary = store.config?.dayBoundary ?? 'local';
     return {
       value: `~${fmtMoney(info.spend, currency)}`,
-      title: `估算：基于${info.source} ${fmtMoney(info.baseline, currency)} 推算（已按今日充值校正，${
-        boundary === 'utc' ? 'UTC 日界' : '本地日界'
-      }）`,
+      title: t('header.spendEstimate', {
+        source: t(info.source as MessageKey),
+        baseline: fmtMoney(info.baseline, currency),
+        boundary: boundary === 'utc' ? t('header.boundaryUtc') : t('header.boundaryLocal'),
+      }),
     };
   });
 
@@ -70,12 +73,12 @@ export function Header() {
     <div class="head-left">
       <div class="stats">
         <div class="stat">
-          <span class="stat-label">当前余额</span>
+          <span class="stat-label">{t('header.balance')}</span>
           <span class="stat-value">{balance()}</span>
         </div>
         <Show when={spend()}>
           <div class="stat" title={spend()!.title}>
-            <span class="stat-label">今日花费</span>
+            <span class="stat-label">{t('header.todaySpend')}</span>
             <span class="stat-value">{spend()!.value}</span>
           </div>
         </Show>

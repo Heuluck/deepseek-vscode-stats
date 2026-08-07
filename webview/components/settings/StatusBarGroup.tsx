@@ -5,6 +5,7 @@
 import { createSignal } from 'solid-js';
 import type { SetStoreFunction } from 'solid-js/store';
 import type { StagedConfig } from '../../store';
+import { t } from '../../i18n';
 import { Collapse } from '../Collapse';
 import { SettingRow } from '../SettingRow';
 import { ThresholdEditor } from '../ThresholdEditor';
@@ -19,7 +20,7 @@ export function StatusBarGroup(props: Props) {
 
   return (
     <>
-      <SettingRow label="显示余额" for="statusBarShowEl">
+      <SettingRow label={t('statusBarGroup.show')} for="statusBarShowEl">
         <input
           id="statusBarShowEl"
           type="checkbox"
@@ -32,11 +33,11 @@ export function StatusBarGroup(props: Props) {
         type="button"
         onClick={() => setColorOpen((o) => !o)}
       >
-        <span>阈值颜色</span>
+        <span>{t('statusBarGroup.thresholds')}</span>
         <i class="codicon codicon-chevron-down"></i>
       </button>
       <Collapse open={colorOpen()}>
-        <SettingRow label="默认颜色">
+        <SettingRow label={t('statusBarGroup.defaultColor')}>
           <input
             type="color"
             value={props.staged?.defaultColor || '#000000'}
@@ -52,7 +53,7 @@ export function StatusBarGroup(props: Props) {
                 props.setStaged('defaultColor', theme ? '' : '#000000');
               }}
             />
-            跟随主题
+            {t('statusBarGroup.followTheme')}
           </label>
         </SettingRow>
         <ThresholdEditor

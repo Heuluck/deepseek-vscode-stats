@@ -5,6 +5,7 @@
 import { createSignal, Show } from 'solid-js';
 import type { SetStoreFunction } from 'solid-js/store';
 import type { StagedConfig } from '../../store';
+import { t } from '../../i18n';
 import { SettingRow } from '../SettingRow';
 
 interface Props {
@@ -17,7 +18,7 @@ export function GeneralGroup(props: Props) {
 
   return (
     <>
-      <SettingRow label="查询间隔（分钟）" for="pollMinutesEl">
+      <SettingRow label={t('general.pollInterval')} for="pollMinutesEl">
         <input
           type="number"
           id="pollMinutesEl"
@@ -31,7 +32,7 @@ export function GeneralGroup(props: Props) {
           }}
         />
       </SettingRow>
-      <SettingRow label="分钟级快照保留（天）" for="rawRetentionEl">
+      <SettingRow label={t('general.rawRetention')} for="rawRetentionEl">
         <input
           type="number"
           id="rawRetentionEl"
@@ -45,7 +46,7 @@ export function GeneralGroup(props: Props) {
           }}
         />
       </SettingRow>
-      <SettingRow label="显示今日花费（估算）" for="showTodaySpendEl">
+      <SettingRow label={t('general.showTodaySpend')} for="showTodaySpendEl">
         <input
           id="showTodaySpendEl"
           type="checkbox"
@@ -63,7 +64,7 @@ export function GeneralGroup(props: Props) {
       <Show when={consent()}>
         <div class="settings-consent">
           <p class="settings-hint">
-            今日花费为根据余额快照推算的估算值，可能因充值或数据断档而不准确。
+            {t('general.consent')}
           </p>
           <div class="row">
             <button
@@ -73,7 +74,7 @@ export function GeneralGroup(props: Props) {
                 setConsent(false);
               }}
             >
-              同意启用
+              {t('general.consentOk')}
             </button>
             <button
               class="btn"
@@ -82,15 +83,15 @@ export function GeneralGroup(props: Props) {
                 setConsent(false);
               }}
             >
-              取消
+              {t('general.consentCancel')}
             </button>
           </div>
         </div>
       </Show>
       <SettingRow
-        label="今日花费日界"
+        label={t('general.dayBoundary')}
         for="dayBoundaryEl"
-        hint="DeepSeek 官方按 UTC 计算每日用量"
+        hint={t('general.dayBoundaryHint')}
       >
         <select
           id="dayBoundaryEl"
@@ -100,8 +101,8 @@ export function GeneralGroup(props: Props) {
             props.setStaged('dayBoundary', e.currentTarget.value as StagedConfig['dayBoundary'])
           }
         >
-          <option value="local">本地时区</option>
-          <option value="utc">UTC（与官方一致）</option>
+          <option value="local">{t('general.dayBoundaryLocal')}</option>
+          <option value="utc">{t('general.dayBoundaryUtc')}</option>
         </select>
       </SettingRow>
     </>

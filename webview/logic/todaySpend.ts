@@ -56,11 +56,11 @@ function findBaseline(
     if (s.t >= yesterdayStart) prevTotal = s.total;
   }
   if (prevTotal !== null) {
-    return { baseline: prevTotal, source: '昨日余额' };
+    return { baseline: prevTotal, source: 'todaySpend.yesterday' };
   }
   const firstToday = data.snapshots.find((s) => s.t >= todayStart);
   if (firstToday) {
-    return { baseline: firstToday.total, source: '今日首条快照' };
+    return { baseline: firstToday.total, source: 'todaySpend.firstToday' };
   }
   return null;
 }

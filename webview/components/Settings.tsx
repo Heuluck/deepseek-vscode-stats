@@ -11,6 +11,7 @@ import {
   type StagedConfig,
 } from '../store';
 import { postMessage } from '../messaging';
+import { t } from '../i18n';
 import { SettingsGroup } from './SettingsGroup';
 import { StatusBarGroup } from './settings/StatusBarGroup';
 import { ChartGroup } from './settings/ChartGroup';
@@ -93,14 +94,14 @@ export function Settings(props: SettingsProps) {
     >
       <div class="settings-panel">
         <div class="settings-head">
-          <span class="settings-title">DeepSeek Stats 设置</span>
-          <button class="icon" title="关闭" onClick={close}>
+          <span class="settings-title">{t('settings.title')}</span>
+          <button class="icon" title={t('settings.close')} onClick={close}>
             <i class="codicon codicon-close"></i>
           </button>
         </div>
         <div class="settings-body">
           <SettingsGroup
-            title="状态栏"
+            title={t('settings.group.statusBar')}
             icon="account"
             open={groupsOpen.statusBar}
             onToggle={() => setGroupsOpen('statusBar', (o) => !o)}
@@ -109,7 +110,7 @@ export function Settings(props: SettingsProps) {
           </SettingsGroup>
 
           <SettingsGroup
-            title="图表"
+            title={t('settings.group.chart')}
             icon="graph-line"
             open={groupsOpen.chart}
             onToggle={() => setGroupsOpen('chart', (o) => !o)}
@@ -123,7 +124,7 @@ export function Settings(props: SettingsProps) {
           </SettingsGroup>
 
           <SettingsGroup
-            title="常规"
+            title={t('settings.group.general')}
             icon="gear"
             open={groupsOpen.general}
             onToggle={() => setGroupsOpen('general', (o) => !o)}
@@ -132,7 +133,7 @@ export function Settings(props: SettingsProps) {
           </SettingsGroup>
 
           <SettingsGroup
-            title="API Key"
+            title={t('settings.group.apiKey')}
             icon="key"
             open={groupsOpen.apiKey}
             onToggle={() => setGroupsOpen('apiKey', (o) => !o)}
@@ -141,7 +142,7 @@ export function Settings(props: SettingsProps) {
           </SettingsGroup>
 
           <SettingsGroup
-            title="数据"
+            title={t('settings.group.data')}
             icon="database"
             open={groupsOpen.data}
             onToggle={() => setGroupsOpen('data', (o) => !o)}
@@ -150,7 +151,7 @@ export function Settings(props: SettingsProps) {
           </SettingsGroup>
 
           <SettingsGroup
-            title="其他"
+            title={t('settings.group.misc')}
             icon="ellipsis"
             open={groupsOpen.misc}
             onToggle={() => setGroupsOpen('misc', (o) => !o)}
@@ -160,13 +161,13 @@ export function Settings(props: SettingsProps) {
         </div>
         <div class="settings-foot">
           <button class="btn" onClick={() => postMessage({ type: 'openNativeSettings' })}>
-            <i class="codicon codicon-settings-gear"></i>打开 VS Code 设置
+            <i class="codicon codicon-settings-gear"></i>{t('settings.openNative')}
           </button>
           <button class="btn" onClick={close}>
-            取消
+            {t('settings.cancel')}
           </button>
           <button class="btn primary" onClick={save}>
-            <i class="codicon codicon-check"></i>保存
+            <i class="codicon codicon-check"></i>{t('settings.save')}
           </button>
         </div>
       </div>

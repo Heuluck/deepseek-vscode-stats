@@ -6,6 +6,7 @@
 import { createEffect, createMemo, onCleanup, onMount, Show } from 'solid-js';
 import { createSignal } from 'solid-js';
 import { setTooltipInfo, store } from '../store';
+import { t } from '../i18n';
 import { activeCurrencies, mainCurrency, viewPoints } from '../logic/viewport';
 import type { ChartPoint, ConnectorStyle, Layout, XLabel, YLabel } from '../types';
 import {
@@ -513,9 +514,9 @@ export function Chart() {
         ? fmtDay(h.p.t)
         : fmtDayShort(h.p.t) + ' ' + fmtClock(h.p.t);
     const mainRows = [
-      { label: '总余额', value: fmtMoney(h.p.total, h.p.currency) },
-      { label: '充值', value: fmtMoney(h.p.toppedUp, h.p.currency) },
-      { label: '赠送', value: fmtMoney(h.p.granted, h.p.currency) },
+      { label: t('chart.tooltip.total'), value: fmtMoney(h.p.total, h.p.currency) },
+      { label: t('chart.tooltip.toppedUp'), value: fmtMoney(h.p.toppedUp, h.p.currency) },
+      { label: t('chart.tooltip.granted'), value: fmtMoney(h.p.granted, h.p.currency) },
     ];
     // 双币种：每币种一列（各含总余额/充值/赠送），标题标币种避免“总和”误解
     setTooltipInfo(
@@ -531,9 +532,9 @@ export function Chart() {
                 title: h.p2.p.currency,
                 secondary: true,
                 rows: [
-                  { label: '总余额', value: fmtMoney(h.p2.p.total, h.p2.p.currency) },
-                  { label: '充值', value: fmtMoney(h.p2.p.toppedUp, h.p2.p.currency) },
-                  { label: '赠送', value: fmtMoney(h.p2.p.granted, h.p2.p.currency) },
+                  { label: t('chart.tooltip.total'), value: fmtMoney(h.p2.p.total, h.p2.p.currency) },
+                  { label: t('chart.tooltip.toppedUp'), value: fmtMoney(h.p2.p.toppedUp, h.p2.p.currency) },
+                  { label: t('chart.tooltip.granted'), value: fmtMoney(h.p2.p.granted, h.p2.p.currency) },
                 ],
               },
             ],

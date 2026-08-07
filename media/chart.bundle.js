@@ -164,9 +164,9 @@
     return Promise.resolve().then(() => {
       Listener = l;
       Owner = o;
-      let t;
+      let t2;
       if (Scheduler || SuspenseContext) {
-        t = Transition || (Transition = {
+        t2 = Transition || (Transition = {
           sources: /* @__PURE__ */ new Set(),
           effects: [],
           promises: /* @__PURE__ */ new Set(),
@@ -174,12 +174,12 @@
           queue: /* @__PURE__ */ new Set(),
           running: true
         });
-        t.done || (t.done = new Promise((res) => t.resolve = res));
-        t.running = true;
+        t2.done || (t2.done = new Promise((res) => t2.resolve = res));
+        t2.running = true;
       }
       runUpdates(fn, false);
       Listener = Owner = null;
-      return t ? t.done : void 0;
+      return t2 ? t2.done : void 0;
     });
   }
   var [transPending, setTransPending] = /* @__PURE__ */ createSignal(false);
@@ -822,9 +822,9 @@
         const index = map.get(a[aStart]);
         if (index != null) {
           if (bStart < index && index < bEnd) {
-            let i = aStart, sequence = 1, t;
+            let i = aStart, sequence = 1, t2;
             while (++i < aEnd && i < bEnd) {
-              if ((t = map.get(a[i])) == null || t !== index + sequence) break;
+              if ((t2 = map.get(a[i])) == null || t2 !== index + sequence) break;
               sequence++;
             }
             if (sequence > index - bStart) {
@@ -851,9 +851,9 @@
   function template(html, isImportNode, isSVG, isMathML) {
     let node;
     const create = () => {
-      const t = isMathML ? document.createElementNS("http://www.w3.org/1998/Math/MathML", "template") : document.createElement("template");
-      t.innerHTML = html;
-      return isSVG ? t.content.firstChild.firstChild : isMathML ? t.firstChild : t.content.firstChild;
+      const t2 = isMathML ? document.createElementNS("http://www.w3.org/1998/Math/MathML", "template") : document.createElement("template");
+      t2.innerHTML = html;
+      return isSVG ? t2.content.firstChild.firstChild : isMathML ? t2.firstChild : t2.content.firstChild;
     };
     const fn = isImportNode ? () => untrack(() => document.importNode(node || (node = create()), true)) : () => (node || (node = create())).cloneNode(true);
     fn.cloneNode = fn;
@@ -989,11 +989,11 @@
     }
     while (typeof current === "function") current = current();
     if (value === current) return current;
-    const t = typeof value, multi = marker !== void 0;
+    const t2 = typeof value, multi = marker !== void 0;
     parent = multi && current[0] && current[0].parentNode || parent;
-    if (t === "string" || t === "number") {
+    if (t2 === "string" || t2 === "number") {
       if (hydrating) return current;
-      if (t === "number") {
+      if (t2 === "number") {
         value = value.toString();
         if (value === current) return current;
       }
@@ -1008,10 +1008,10 @@
           current = parent.firstChild.data = value;
         } else current = parent.textContent = value;
       }
-    } else if (value == null || t === "boolean") {
+    } else if (value == null || t2 === "boolean") {
       if (hydrating) return current;
       current = cleanChildren(parent, current, marker);
-    } else if (t === "function") {
+    } else if (t2 === "function") {
       createRenderEffect(() => {
         let v = value();
         while (typeof v === "function") v = v();
@@ -1061,13 +1061,13 @@
   function normalizeIncomingArray(normalized, array, current, unwrap2) {
     let dynamic = false;
     for (let i = 0, len = array.length; i < len; i++) {
-      let item = array[i], prev = current && current[normalized.length], t;
+      let item = array[i], prev = current && current[normalized.length], t2;
       if (item == null || item === true || item === false) ;
-      else if ((t = typeof item) === "object" && item.nodeType) {
+      else if ((t2 = typeof item) === "object" && item.nodeType) {
         normalized.push(item);
       } else if (Array.isArray(item)) {
         dynamic = normalizeIncomingArray(normalized, item, prev) || dynamic;
-      } else if (t === "function") {
+      } else if (t2 === "function") {
         if (unwrap2) {
           while (typeof item === "function") item = item();
           dynamic = normalizeIncomingArray(normalized, Array.isArray(item) ? item : [item], Array.isArray(prev) ? prev : [prev]) || dynamic;
@@ -1110,6 +1110,314 @@
   }
   function postMessage(msg) {
     api?.postMessage(JSON.parse(JSON.stringify(msg)));
+  }
+
+  // locales/en.json
+  var en_default = {
+    "panel.title": "DeepSeek Balance",
+    "statusBar.loading": "DeepSeek fetching\u2026",
+    "statusBar.loadingTooltip": "Fetching DeepSeek balance",
+    "statusBar.noKey": "DeepSeek: Not configured",
+    "statusBar.noKeyTooltip": "DeepSeek Stats: no API Key configured, click to set",
+    "statusBar.error": "DeepSeek query failed",
+    "statusBar.errorTooltip": "DeepSeek Stats query failed: {msg}",
+    "statusBar.balanceTooltip": "DeepSeek balance ({date} {time})",
+    "statusBar.totalTooltip": "Total balance ({currency}): {value}",
+    "statusBar.toppedUpTooltip": "Topped up ({currency}): {value}",
+    "statusBar.grantedTooltip": "Granted ({currency}): {value}",
+    "statusBar.available": "Account available",
+    "statusBar.unavailable": "Insufficient account balance",
+    "statusBar.openChartTooltip": "Click to open the trend chart",
+    "extension.noApiKey": "No API Key configured. Run the command \u201CDeepSeek Stats: Set API Key\u201D",
+    "extension.noBalanceData": "No balance data returned by the API",
+    "extension.saveSettingsFailed": "Some settings failed to save. Please check the values and try again",
+    "extension.resetConfirm": "Reset all DeepSeek Stats settings to default values?",
+    "extension.resetConfirmAction": "Reset",
+    "extension.resetDone": "DeepSeek Stats settings restored to defaults",
+    "extension.apiKeyPrompt": "Enter DeepSeek API Key (sk-...)",
+    "extension.apiKeySaved": "DeepSeek API Key saved",
+    "extension.apiKeyCleared": "DeepSeek API Key cleared",
+    "extension.clearHistoryConfirm": "Clear all historical balance records? This action cannot be undone.",
+    "extension.clearHistoryAction": "Clear",
+    "balance.timeout": "Request timed out (no response in 15 seconds). Please check your network and retry",
+    "balance.dns": "Cannot reach the DeepSeek server (DNS resolution failed). Please check your network",
+    "balance.connectTimeout": "Connection to the DeepSeek server timed out. Please check your network",
+    "balance.refused": "Connection to the DeepSeek server was refused. Please check your network or try again later",
+    "balance.reset": "Connection to the DeepSeek server was reset. Please check your network",
+    "balance.network": "Network request failed. Please check your network connection",
+    "app.reset": "Reset",
+    "app.resetTitle": "Reset view range",
+    "app.openUsageTitle": "Open DeepSeek usage page in browser",
+    "header.balance": "Current balance",
+    "header.todaySpend": "Today's spend",
+    "header.rechargeGrant": "Topped up {top} \xB7 Granted {grant}",
+    "header.waiting": "Waiting for data\u2026",
+    "header.noKey": "No API Key configured",
+    "header.spendUnreliable": "Not enough data or a recharge was detected; today's spend cannot be reliably estimated",
+    "header.spendEstimate": "Estimated from {source} {baseline} (adjusted for today's top-ups, {boundary})",
+    "header.boundaryUtc": "UTC day boundary",
+    "header.boundaryLocal": "local day boundary",
+    "footer.info": "Only records data while VS Code is open \xB7 Poll interval {minutes} min \xB7 {count} snapshots \xB7 {last}",
+    "footer.lastSync": "Last sync {time}",
+    "footer.balance": "Balance",
+    "footer.spend": "Spend",
+    "footer.chartModeTitle": "Chart mode: balance curve / spend bars",
+    "footer.statusPageTitle": "Open DeepSeek status page",
+    "footer.status": "Status",
+    "footer.settings": "Settings",
+    "settings.title": "DeepSeek Stats Settings",
+    "settings.close": "Close",
+    "settings.group.statusBar": "Status Bar",
+    "settings.group.chart": "Chart",
+    "settings.group.general": "General",
+    "settings.group.apiKey": "API Key",
+    "settings.group.data": "Data",
+    "settings.group.misc": "Other",
+    "settings.openNative": "Open VS Code Settings",
+    "settings.cancel": "Cancel",
+    "settings.save": "Save",
+    "general.pollInterval": "Poll interval (minutes)",
+    "general.rawRetention": "Minute-level snapshot retention (days)",
+    "general.showTodaySpend": "Show today's spend (estimate)",
+    "general.consent": "Today's spend is an estimate derived from balance snapshots and may be inaccurate due to top-ups or data gaps.",
+    "general.consentOk": "Enable",
+    "general.consentCancel": "Cancel",
+    "general.dayBoundary": "Today's spend day boundary",
+    "general.dayBoundaryHint": "DeepSeek calculates daily usage in UTC",
+    "general.dayBoundaryLocal": "Local timezone",
+    "general.dayBoundaryUtc": "UTC (matches official)",
+    "statusBarGroup.show": "Show balance",
+    "statusBarGroup.thresholds": "Threshold colors",
+    "statusBarGroup.defaultColor": "Default color",
+    "statusBarGroup.followTheme": "Follow theme",
+    "chartGroup.lineStyle": "Line style",
+    "chartGroup.straight": "Straight",
+    "chartGroup.smooth": "Smooth",
+    "chartGroup.connectorStyle": "Gap connector",
+    "chartGroup.connectorStyleHint": "Draw connector lines to bridge polling gaps",
+    "chartGroup.dashed": "Dashed",
+    "chartGroup.dotted": "Dotted",
+    "chartGroup.solid": "Solid",
+    "chartGroup.ignore": "Pretend continuous",
+    "chartGroup.none": "None",
+    "chartGroup.connectorColor": "Connector color",
+    "chartGroup.followMain": "Follow line color",
+    "chartGroup.minSpan": "Min vertical span",
+    "chartGroup.minSpanHint": "Limits vertical zoom; 0 for fully auto",
+    "apiKey.configured": "Configured (stored securely)",
+    "apiKey.notConfigured": "Not configured",
+    "apiKey.setChange": "Set / Change",
+    "apiKey.clear": "Clear",
+    "data.historyLabel": "History snapshots (recorded only while VS Code is open)",
+    "data.clearHistory": "Clear history",
+    "misc.resetLabel": "Reset all settings",
+    "misc.reset": "Reset defaults",
+    "threshold.title": "Balance thresholds (below \u2192 color)",
+    "threshold.add": "Add",
+    "threshold.below": "below",
+    "threshold.delete": "Delete this threshold",
+    "threshold.hint": "When balance is below a threshold (exclusive), the corresponding color is used.",
+    "tabs.hour": "Hour",
+    "tabs.week": "Week",
+    "tabs.month": "Month",
+    "view.hourly": "Hourly",
+    "view.daily": "Daily",
+    "view.monthly": "Monthly",
+    "range.1h": "1 hour",
+    "range.6h": "6 hours",
+    "range.24h": "24 hours",
+    "range.7d": "7 days",
+    "range.30d": "30 days",
+    "range.90d": "90 days",
+    "range.all": "All",
+    "range.6m": "6 months",
+    "range.12m": "12 months",
+    "refresh.loading": "Fetching\u2026",
+    "refresh.ok": "Refresh succeeded",
+    "refresh.fail": "Refresh failed: {error}",
+    "refresh.failFallback": "See the error message at the bottom",
+    "refresh.idle": "Query balance now",
+    "empty.setApiKey": "Set API Key",
+    "empty.loading": "Loading\u2026",
+    "empty.waitingFirst": "Waiting for the first query\u2026",
+    "empty.noKey": "No API Key configured",
+    "empty.noViewData": "No data for this view",
+    "empty.noBalance": "No account balance",
+    "chartBars.noConsumption": "No spending in this period",
+    "chart.tooltip.total": "Total",
+    "chart.tooltip.toppedUp": "Topped up",
+    "chart.tooltip.granted": "Granted",
+    "chartBars.tooltip.spend": "Spend",
+    "todaySpend.yesterday": "yesterday's closing balance",
+    "todaySpend.firstToday": "the first snapshot today"
+  };
+
+  // locales/zh-cn.json
+  var zh_cn_default = {
+    "panel.title": "DeepSeek \u4F59\u989D",
+    "statusBar.loading": "DeepSeek \u67E5\u8BE2\u4E2D\u2026",
+    "statusBar.loadingTooltip": "\u6B63\u5728\u67E5\u8BE2 DeepSeek \u4F59\u989D",
+    "statusBar.noKey": "DeepSeek: \u672A\u914D\u7F6E",
+    "statusBar.noKeyTooltip": "DeepSeek Stats\uFF1A\u5C1A\u672A\u914D\u7F6E API Key\uFF0C\u70B9\u51FB\u8BBE\u7F6E",
+    "statusBar.error": "DeepSeek \u67E5\u8BE2\u5931\u8D25",
+    "statusBar.errorTooltip": "DeepSeek Stats \u67E5\u8BE2\u5931\u8D25\uFF1A{msg}",
+    "statusBar.balanceTooltip": "DeepSeek \u4F59\u989D\uFF08{date} {time}\uFF09",
+    "statusBar.totalTooltip": "\u603B\u4F59\u989D\uFF08{currency}\uFF09\uFF1A{value}",
+    "statusBar.toppedUpTooltip": "\u5145\u503C\uFF08{currency}\uFF09\uFF1A{value}",
+    "statusBar.grantedTooltip": "\u8D60\u9001\uFF08{currency}\uFF09\uFF1A{value}",
+    "statusBar.available": "\u8D26\u6237\u53EF\u7528",
+    "statusBar.unavailable": "\u8D26\u6237\u4F59\u989D\u4E0D\u8DB3",
+    "statusBar.openChartTooltip": "\u70B9\u51FB\u6253\u5F00\u8D8B\u52BF\u56FE",
+    "extension.noApiKey": "\u672A\u914D\u7F6E API Key\uFF0C\u8BF7\u8FD0\u884C\u547D\u4EE4 \u201CDeepSeek Stats: \u8BBE\u7F6E API Key\u201D",
+    "extension.noBalanceData": "\u63A5\u53E3\u8FD4\u56DE\u4E2D\u6CA1\u6709\u4F59\u989D\u6570\u636E",
+    "extension.saveSettingsFailed": "\u90E8\u5206\u8BBE\u7F6E\u4FDD\u5B58\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u914D\u7F6E\u503C\u540E\u91CD\u8BD5",
+    "extension.resetConfirm": "\u786E\u5B9A\u6062\u590D DeepSeek Stats \u5168\u90E8\u8BBE\u7F6E\u4E3A\u9ED8\u8BA4\u503C\uFF1F",
+    "extension.resetConfirmAction": "\u6062\u590D",
+    "extension.resetDone": "DeepSeek Stats \u8BBE\u7F6E\u5DF2\u6062\u590D\u9ED8\u8BA4",
+    "extension.apiKeyPrompt": "\u8F93\u5165 DeepSeek API Key\uFF08sk-...\uFF09",
+    "extension.apiKeySaved": "DeepSeek API Key \u5DF2\u4FDD\u5B58",
+    "extension.apiKeyCleared": "DeepSeek API Key \u5DF2\u6E05\u9664",
+    "extension.clearHistoryConfirm": "\u786E\u5B9A\u6E05\u9664\u6240\u6709\u5386\u53F2\u4F59\u989D\u8BB0\u5F55\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002",
+    "extension.clearHistoryAction": "\u6E05\u9664",
+    "balance.timeout": "\u8BF7\u6C42\u8D85\u65F6\uFF0815 \u79D2\u672A\u54CD\u5E94\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5",
+    "balance.dns": "\u65E0\u6CD5\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\uFF08\u57DF\u540D\u89E3\u6790\u5931\u8D25\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
+    "balance.connectTimeout": "\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
+    "balance.refused": "\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\u88AB\u62D2\u7EDD\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u6216\u7A0D\u540E\u91CD\u8BD5",
+    "balance.reset": "\u4E0E DeepSeek \u670D\u52A1\u5668\u7684\u8FDE\u63A5\u88AB\u91CD\u7F6E\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
+    "balance.network": "\u7F51\u7EDC\u8BF7\u6C42\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5",
+    "app.reset": "\u91CD\u7F6E",
+    "app.resetTitle": "\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4",
+    "app.openUsageTitle": "\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875",
+    "header.balance": "\u5F53\u524D\u4F59\u989D",
+    "header.todaySpend": "\u4ECA\u65E5\u82B1\u8D39",
+    "header.rechargeGrant": "\u5145\u503C {top} \xB7 \u8D60\u9001 {grant}",
+    "header.waiting": "\u7B49\u5F85\u6570\u636E\u2026",
+    "header.noKey": "\u672A\u914D\u7F6E API Key",
+    "header.spendUnreliable": "\u6570\u636E\u4E0D\u8DB3\u6216\u542B\u5145\u503C\uFF0C\u65E0\u6CD5\u53EF\u9760\u4F30\u7B97\u4ECA\u65E5\u82B1\u8D39",
+    "header.spendEstimate": "\u4F30\u7B97\uFF1A\u57FA\u4E8E{source} {baseline} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF0C{boundary}\uFF09",
+    "header.boundaryUtc": "UTC \u65E5\u754C",
+    "header.boundaryLocal": "\u672C\u5730\u65E5\u754C",
+    "footer.info": "\u4EC5\u8BB0\u5F55 VS Code \u6253\u5F00\u671F\u95F4\u7684\u6570\u636E \xB7 \u8F6E\u8BE2\u95F4\u9694 {minutes} \u5206\u949F \xB7 \u5FEB\u7167 {count} \u6761 \xB7 {last}",
+    "footer.lastSync": "\u4E0A\u6B21\u540C\u6B65 {time}",
+    "footer.balance": "\u4F59\u989D",
+    "footer.spend": "\u6D88\u8017",
+    "footer.chartModeTitle": "\u56FE\u8868\u6A21\u5F0F\uFF1A\u4F59\u989D\u66F2\u7EBF / \u6D88\u8017\u67F1\u72B6\u56FE",
+    "footer.statusPageTitle": "\u6253\u5F00 DeepSeek \u72B6\u6001\u9875",
+    "footer.status": "\u72B6\u6001",
+    "footer.settings": "\u8BBE\u7F6E",
+    "settings.title": "DeepSeek Stats \u8BBE\u7F6E",
+    "settings.close": "\u5173\u95ED",
+    "settings.group.statusBar": "\u72B6\u6001\u680F",
+    "settings.group.chart": "\u56FE\u8868",
+    "settings.group.general": "\u5E38\u89C4",
+    "settings.group.apiKey": "API Key",
+    "settings.group.data": "\u6570\u636E",
+    "settings.group.misc": "\u5176\u4ED6",
+    "settings.openNative": "\u6253\u5F00 VS Code \u8BBE\u7F6E",
+    "settings.cancel": "\u53D6\u6D88",
+    "settings.save": "\u4FDD\u5B58",
+    "general.pollInterval": "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
+    "general.rawRetention": "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
+    "general.showTodaySpend": "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
+    "general.consent": "\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002",
+    "general.consentOk": "\u540C\u610F\u542F\u7528",
+    "general.consentCancel": "\u53D6\u6D88",
+    "general.dayBoundary": "\u4ECA\u65E5\u82B1\u8D39\u65E5\u754C",
+    "general.dayBoundaryHint": "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
+    "general.dayBoundaryLocal": "\u672C\u5730\u65F6\u533A",
+    "general.dayBoundaryUtc": "UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09",
+    "statusBarGroup.show": "\u663E\u793A\u4F59\u989D",
+    "statusBarGroup.thresholds": "\u9608\u503C\u989C\u8272",
+    "statusBarGroup.defaultColor": "\u9ED8\u8BA4\u989C\u8272",
+    "statusBarGroup.followTheme": "\u8DDF\u968F\u4E3B\u9898",
+    "chartGroup.lineStyle": "\u7EBF\u6761\u6837\u5F0F",
+    "chartGroup.straight": "\u76F4\u7EBF",
+    "chartGroup.smooth": "\u66F2\u7EBF",
+    "chartGroup.connectorStyle": "\u65AD\u70B9\u8FDE\u63A5\u7EBF",
+    "chartGroup.connectorStyleHint": "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
+    "chartGroup.dashed": "\u865A\u7EBF",
+    "chartGroup.dotted": "\u70B9\u865A\u7EBF",
+    "chartGroup.solid": "\u5B9E\u7EBF",
+    "chartGroup.ignore": "\u5047\u88C5\u8FDE\u7EED",
+    "chartGroup.none": "\u4E0D\u8FDE\u63A5",
+    "chartGroup.connectorColor": "\u8FDE\u63A5\u7EBF\u989C\u8272",
+    "chartGroup.followMain": "\u8DDF\u968F\u4E3B\u8272",
+    "chartGroup.minSpan": "\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6",
+    "chartGroup.minSpanHint": "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
+    "apiKey.configured": "\u5DF2\u914D\u7F6E\uFF08\u5B89\u5168\u5B58\u50A8\uFF09",
+    "apiKey.notConfigured": "\u672A\u914D\u7F6E",
+    "apiKey.setChange": "\u8BBE\u7F6E / \u66F4\u6362",
+    "apiKey.clear": "\u6E05\u9664",
+    "data.historyLabel": "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
+    "data.clearHistory": "\u6E05\u9664\u5386\u53F2",
+    "misc.resetLabel": "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
+    "misc.reset": "\u6062\u590D\u9ED8\u8BA4",
+    "threshold.title": "\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09",
+    "threshold.add": "\u6DFB\u52A0",
+    "threshold.below": "\u4EE5\u4E0B",
+    "threshold.delete": "\u5220\u9664\u8BE5\u9608\u503C",
+    "threshold.hint": "\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002",
+    "tabs.hour": "\u5C0F\u65F6",
+    "tabs.week": "\u5468",
+    "tabs.month": "\u6708",
+    "view.hourly": "\u5206\u65F6",
+    "view.daily": "\u5206\u5929",
+    "view.monthly": "\u5206\u6708",
+    "range.1h": "1 \u5C0F\u65F6",
+    "range.6h": "6 \u5C0F\u65F6",
+    "range.24h": "24 \u5C0F\u65F6",
+    "range.7d": "7 \u5929",
+    "range.30d": "30 \u5929",
+    "range.90d": "90 \u5929",
+    "range.all": "\u5168\u90E8",
+    "range.6m": "6 \u4E2A\u6708",
+    "range.12m": "12 \u4E2A\u6708",
+    "refresh.loading": "\u67E5\u8BE2\u4E2D\u2026",
+    "refresh.ok": "\u5237\u65B0\u6210\u529F",
+    "refresh.fail": "\u5237\u65B0\u5931\u8D25\uFF1A{error}",
+    "refresh.failFallback": "\u8BF7\u67E5\u770B\u5E95\u90E8\u9519\u8BEF\u63D0\u793A",
+    "refresh.idle": "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D",
+    "empty.setApiKey": "\u8BBE\u7F6E API Key",
+    "empty.loading": "\u52A0\u8F7D\u4E2D\u2026",
+    "empty.waitingFirst": "\u7B49\u5F85\u9996\u6B21\u67E5\u8BE2\u7ED3\u679C\u2026",
+    "empty.noKey": "\u672A\u914D\u7F6E API Key",
+    "empty.noViewData": "\u8BE5\u89C6\u56FE\u6682\u65E0\u6570\u636E",
+    "empty.noBalance": "\u8D26\u6237\u6682\u65E0\u4F59\u989D",
+    "chartBars.noConsumption": "\u8BE5\u65F6\u6BB5\u65E0\u6D88\u8D39",
+    "chart.tooltip.total": "\u603B\u4F59\u989D",
+    "chart.tooltip.toppedUp": "\u5145\u503C",
+    "chart.tooltip.granted": "\u8D60\u9001",
+    "chartBars.tooltip.spend": "\u6D88\u8D39",
+    "todaySpend.yesterday": "\u6628\u65E5\u4F59\u989D",
+    "todaySpend.firstToday": "\u4ECA\u65E5\u9996\u6761\u5FEB\u7167"
+  };
+
+  // webview/i18n.ts
+  var DICTS = {
+    en: en_default,
+    "zh-cn": zh_cn_default
+  };
+  var [locale, setLocaleSignal] = createSignal("en");
+  function normalizeLocale(l) {
+    const lang = (l || "").toLowerCase();
+    return lang.startsWith("zh") ? "zh-cn" : "en";
+  }
+  function setLocale(l) {
+    setLocaleSignal(normalizeLocale(l));
+  }
+  function getLocale() {
+    return locale();
+  }
+  function t(key, params) {
+    const cur = locale();
+    let msg = DICTS[cur][key] ?? DICTS.en[key] ?? key;
+    if (params) {
+      msg = msg.replace(
+        /\{(\w+)\}/g,
+        (m, name) => name in params ? String(params[name]) : m
+      );
+    }
+    return msg;
   }
 
   // node_modules/.pnpm/solid-js@1.9.14/node_modules/solid-js/store/dist/store.js
@@ -1341,16 +1649,16 @@
   }
 
   // src/shared/dates.ts
-  function startOfDay(t) {
-    const d = new Date(t);
+  function startOfDay(t2) {
+    const d = new Date(t2);
     d.setHours(0, 0, 0, 0);
     return d.getTime();
   }
-  function startOfDayAt(t, boundary) {
+  function startOfDayAt(t2, boundary) {
     if (boundary === "utc") {
-      return Math.floor(t / 864e5) * 864e5;
+      return Math.floor(t2 / 864e5) * 864e5;
     }
-    return startOfDay(t);
+    return startOfDay(t2);
   }
 
   // webview/logic/format.ts
@@ -1369,53 +1677,53 @@
   function pad(n) {
     return String(n).padStart(2, "0");
   }
-  function fmtClock(t) {
-    const d = new Date(t);
+  function fmtClock(t2) {
+    const d = new Date(t2);
     return `${pad(d.getHours())}:${pad(d.getMinutes())}`;
   }
-  function fmtDay(t) {
-    const d = new Date(t);
+  function fmtDay(t2) {
+    const d = new Date(t2);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
-  function fmtDayShort(t) {
-    const d = new Date(t);
+  function fmtDayShort(t2) {
+    const d = new Date(t2);
     return `${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
   }
-  function fmtMonth(t) {
-    const d = new Date(t);
+  function fmtMonth(t2) {
+    const d = new Date(t2);
     return `${d.getFullYear()}-${pad(d.getMonth() + 1)}`;
   }
 
   // webview/logic/viewport.ts
   var VIEWS = {
     hourly: {
-      label: "\u5206\u65F6",
+      labelKey: "view.hourly",
       ranges: [
-        { key: "1h", label: "1 \u5C0F\u65F6", ms: 36e5 },
-        { key: "6h", label: "6 \u5C0F\u65F6", ms: 6 * 36e5 },
-        { key: "24h", label: "24 \u5C0F\u65F6", ms: 24 * 36e5 },
-        { key: "7d", label: "7 \u5929", ms: 7 * 864e5 }
+        { key: "1h", labelKey: "range.1h", ms: 36e5 },
+        { key: "6h", labelKey: "range.6h", ms: 6 * 36e5 },
+        { key: "24h", labelKey: "range.24h", ms: 24 * 36e5 },
+        { key: "7d", labelKey: "range.7d", ms: 7 * 864e5 }
       ],
       defaultRange: "6h",
       tickLabel: "time"
     },
     daily: {
-      label: "\u5206\u5929",
+      labelKey: "view.daily",
       ranges: [
-        { key: "7d", label: "7 \u5929", ms: 7 * 864e5 },
-        { key: "30d", label: "30 \u5929", ms: 30 * 864e5 },
-        { key: "90d", label: "90 \u5929", ms: 90 * 864e5 },
-        { key: "all", label: "\u5168\u90E8", ms: Infinity }
+        { key: "7d", labelKey: "range.7d", ms: 7 * 864e5 },
+        { key: "30d", labelKey: "range.30d", ms: 30 * 864e5 },
+        { key: "90d", labelKey: "range.90d", ms: 90 * 864e5 },
+        { key: "all", labelKey: "range.all", ms: Infinity }
       ],
       defaultRange: "30d",
       tickLabel: "day"
     },
     monthly: {
-      label: "\u5206\u6708",
+      labelKey: "view.monthly",
       ranges: [
-        { key: "6m", label: "6 \u4E2A\u6708", ms: 6 * 30 * 864e5 },
-        { key: "12m", label: "12 \u4E2A\u6708", ms: 12 * 30 * 864e5 },
-        { key: "all", label: "\u5168\u90E8", ms: Infinity }
+        { key: "6m", labelKey: "range.6m", ms: 6 * 30 * 864e5 },
+        { key: "12m", labelKey: "range.12m", ms: 12 * 30 * 864e5 },
+        { key: "all", labelKey: "range.all", ms: Infinity }
       ],
       defaultRange: "12m",
       tickLabel: "month"
@@ -1571,11 +1879,11 @@
       if (s.t >= yesterdayStart) prevTotal = s.total;
     }
     if (prevTotal !== null) {
-      return { baseline: prevTotal, source: "\u6628\u65E5\u4F59\u989D" };
+      return { baseline: prevTotal, source: "todaySpend.yesterday" };
     }
     const firstToday = data.snapshots.find((s) => s.t >= todayStart);
     if (firstToday) {
-      return { baseline: firstToday.total, source: "\u4ECA\u65E5\u9996\u6761\u5FEB\u7167" };
+      return { baseline: firstToday.total, source: "todaySpend.firstToday" };
     }
     return null;
   }
@@ -1666,7 +1974,7 @@
     return cfg ? {
       statusBarShow: !!cfg.statusBarShow,
       defaultColor: cfg.defaultColor || "",
-      thresholds: (cfg.thresholds || []).map((t) => ({ below: t.below, color: t.color })),
+      thresholds: (cfg.thresholds || []).map((t2) => ({ below: t2.below, color: t2.color })),
       pollMinutes: cfg.pollMinutes || 1,
       rawRetentionDays: cfg.rawRetentionDays || 7,
       showTodaySpend: !!cfg.showTodaySpend,
@@ -1707,6 +2015,7 @@
     });
   }
   function init(payload) {
+    if (payload.locale) setLocale(payload.locale);
     setTooltipInfo(null);
     const view = "hourly";
     const rangeKey = VIEWS[view].defaultRange;
@@ -1800,7 +2109,7 @@
     });
   }
   function onTheme() {
-    setStore("themeTick", (t) => t + 1);
+    setStore("themeTick", (t2) => t2 + 1);
   }
   function setView(view) {
     if (store.view === view) return;
@@ -1852,23 +2161,23 @@
   }
   function emptyInfo() {
     const data = store.data;
-    if (!data) return { msg: "\u52A0\u8F7D\u4E2D\u2026", showAction: false };
+    if (!data) return { msg: t("empty.loading"), showAction: false };
     if (!viewPoints(data, store.view).length) {
       const total = (data.snapshots || []).length + (data.daily || []).length;
       if (total === 0) {
-        return data.hasKey ? { msg: "\u7B49\u5F85\u9996\u6B21\u67E5\u8BE2\u7ED3\u679C\u2026", showAction: false } : { msg: "\u672A\u914D\u7F6E API Key", showAction: true };
+        return data.hasKey ? { msg: t("empty.waitingFirst"), showAction: false } : { msg: t("empty.noKey"), showAction: true };
       }
-      return { msg: "\u8BE5\u89C6\u56FE\u6682\u65E0\u6570\u636E", showAction: false };
+      return { msg: t("empty.noViewData"), showAction: false };
     }
     if (!activeCurrencies(data).length) {
-      return { msg: "\u8D26\u6237\u6682\u65E0\u4F59\u989D", showAction: false };
+      return { msg: t("empty.noBalance"), showAction: false };
     }
     return null;
   }
 
   // webview/components/Header.tsx
-  var _tmpl$ = /* @__PURE__ */ template(`<div class=stat><span class=stat-label>\u4ECA\u65E5\u82B1\u8D39</span><span class=stat-value>`);
-  var _tmpl$2 = /* @__PURE__ */ template(`<div class=head-left><div class=stats><div class=stat><span class=stat-label>\u5F53\u524D\u4F59\u989D</span><span class=stat-value></span></div></div><div class=current-meta><span class=meta>`);
+  var _tmpl$ = /* @__PURE__ */ template(`<div class=stat><span class=stat-label></span><span class=stat-value>`);
+  var _tmpl$2 = /* @__PURE__ */ template(`<div class=head-left><div class=stats><div class=stat><span class=stat-label></span><span class=stat-value></span></div></div><div class=current-meta><span class=meta>`);
   function Header() {
     const balance = createMemo(() => {
       const data = store.data;
@@ -1888,9 +2197,12 @@
       const main = mainCurrency(data);
       const cur = snaps.find((s) => s.currency === main) || snaps[snaps.length - 1];
       if (cur) {
-        return `\u5145\u503C ${fmtMoney(cur.toppedUp, cur.currency)} \xB7 \u8D60\u9001 ${fmtMoney(cur.granted, cur.currency)}`;
+        return t("header.rechargeGrant", {
+          top: fmtMoney(cur.toppedUp, cur.currency),
+          grant: fmtMoney(cur.granted, cur.currency)
+        });
       }
-      return data && data.hasKey ? "\u7B49\u5F85\u6570\u636E\u2026" : "\u672A\u914D\u7F6E API Key";
+      return data && data.hasKey ? t("header.waiting") : t("header.noKey");
     });
     const showSpend = createMemo(() => spendPreview() !== null ? spendPreview() : !!(store.config && store.config.showTodaySpend));
     const spend = createMemo(() => {
@@ -1902,18 +2214,23 @@
       if (!info) {
         return {
           value: "-",
-          title: "\u6570\u636E\u4E0D\u8DB3\u6216\u542B\u5145\u503C\uFF0C\u65E0\u6CD5\u53EF\u9760\u4F30\u7B97\u4ECA\u65E5\u82B1\u8D39"
+          title: t("header.spendUnreliable")
         };
       }
       const currency = main || "CNY";
       const boundary = store.config?.dayBoundary ?? "local";
       return {
         value: `~${fmtMoney(info.spend, currency)}`,
-        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} ${fmtMoney(info.baseline, currency)} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF0C${boundary === "utc" ? "UTC \u65E5\u754C" : "\u672C\u5730\u65E5\u754C"}\uFF09`
+        title: t("header.spendEstimate", {
+          source: t(info.source),
+          baseline: fmtMoney(info.baseline, currency),
+          boundary: boundary === "utc" ? t("header.boundaryUtc") : t("header.boundaryLocal")
+        })
       };
     });
     return (() => {
       var _el$ = _tmpl$2(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$9 = _el$2.nextSibling, _el$0 = _el$9.firstChild;
+      insert(_el$4, () => t("header.balance"));
       insert(_el$5, balance);
       insert(_el$2, createComponent(Show, {
         get when() {
@@ -1921,6 +2238,7 @@
         },
         get children() {
           var _el$6 = _tmpl$(), _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
+          insert(_el$7, () => t("header.todaySpend"));
           insert(_el$8, () => spend().value);
           createRenderEffect(() => setAttribute(_el$6, "title", spend().title));
           return _el$6;
@@ -1936,13 +2254,13 @@
   var _tmpl$22 = /* @__PURE__ */ template(`<button>`);
   var CONS_GRANS = {
     hour: {
-      label: "\u5C0F\u65F6"
+      labelKey: "tabs.hour"
     },
     day: {
-      label: "\u5468"
+      labelKey: "tabs.week"
     },
     month: {
-      label: "\u6708"
+      labelKey: "tabs.month"
     }
   };
   function Tabs() {
@@ -1960,7 +2278,7 @@
             children: ([key, cfg]) => (() => {
               var _el$2 = _tmpl$22();
               _el$2.$$click = () => setConsGran(key);
-              insert(_el$2, () => cfg.label);
+              insert(_el$2, () => t(cfg.labelKey));
               createRenderEffect(() => className(_el$2, "tab" + (key === store.consGran ? " active" : "")));
               return _el$2;
             })()
@@ -1974,7 +2292,7 @@
             children: ([key, cfg]) => (() => {
               var _el$3 = _tmpl$22();
               _el$3.$$click = () => setView(key);
-              insert(_el$3, () => cfg.label);
+              insert(_el$3, () => t(cfg.labelKey));
               createRenderEffect(() => className(_el$3, "tab" + (key === store.view ? " active" : "")));
               return _el$3;
             })()
@@ -1999,7 +2317,7 @@
         children: (r) => (() => {
           var _el$2 = _tmpl$23();
           _el$2.$$click = () => setRange(r.key);
-          insert(_el$2, () => r.label);
+          insert(_el$2, () => t(r.labelKey));
           createRenderEffect(() => className(_el$2, "btn small" + (r.key === store.rangeKey ? " primary" : "")));
           return _el$2;
         })()
@@ -2011,40 +2329,56 @@
 
   // webview/components/Footer.tsx
   var _tmpl$5 = /* @__PURE__ */ template(`<span>`);
-  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><div class=tabs title="\u56FE\u8868\u6A21\u5F0F\uFF1A\u4F59\u989D\u66F2\u7EBF / \u6D88\u8017\u67F1\u72B6\u56FE"><button>\u4F59\u989D</button><button>\u6D88\u8017</button></div><button class=btn title="\u6253\u5F00 DeepSeek \u72B6\u6001\u9875"><i class="codicon codicon-pulse"></i>\u72B6\u6001</button><button class=btn title=\u8BBE\u7F6E><i class="codicon codicon-gear"></i>\u8BBE\u7F6E`);
+  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><div class=tabs><button></button><button></button></div><button class=btn><i class="codicon codicon-pulse"></i></button><button class=btn><i class="codicon codicon-gear">`);
   function Footer() {
     const info = createMemo(() => {
       const d = store.data;
       if (!d) return "";
       const count = (d.snapshots || []).length;
       const last = d.current;
-      const lastStr = last ? `\u4E0A\u6B21\u540C\u6B65 ${new Date(last.t).toLocaleTimeString("zh-CN", {
-        hour12: false
-      })}` : "";
-      return `\u4EC5\u8BB0\u5F55 VS Code \u6253\u5F00\u671F\u95F4\u7684\u6570\u636E \xB7 \u8F6E\u8BE2\u95F4\u9694 ${store.config ? store.config.pollMinutes : 1} \u5206\u949F \xB7 \u5FEB\u7167 ${count} \u6761 \xB7 ${lastStr}`;
+      const lastStr = last ? t("footer.lastSync", {
+        time: new Date(last.t).toLocaleTimeString(getLocale() === "zh-cn" ? "zh-CN" : "en-US", {
+          hour12: false
+        })
+      }) : "";
+      return t("footer.info", {
+        minutes: store.config ? store.config.pollMinutes : 1,
+        count,
+        last: lastStr
+      });
     });
     return [(() => {
       var _el$ = _tmpl$5();
       insert(_el$, info);
       return _el$;
     })(), (() => {
-      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$4.nextSibling, _el$8 = _el$7.nextSibling;
+      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$4.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$7.nextSibling, _el$0 = _el$9.firstChild;
       insert(_el$3, (() => {
         var _c$ = memo(() => !!store.lastError);
         return () => _c$() ? `\u26A0 ${store.lastError}` : "";
       })());
       _el$5.$$click = () => setChartMode("balance");
+      insert(_el$5, () => t("footer.balance"));
       _el$6.$$click = () => setChartMode("spend");
+      insert(_el$6, () => t("footer.spend"));
       addEventListener(_el$7, "click", openStatusPage, true);
-      addEventListener(_el$8, "click", openSettings, true);
+      insert(_el$7, () => t("footer.status"), null);
+      addEventListener(_el$9, "click", openSettings, true);
+      insert(_el$9, () => t("footer.settings"), null);
       createRenderEffect((_p$) => {
-        var _v$ = "tab" + (store.chartMode === "balance" ? " active" : ""), _v$2 = "tab" + (store.chartMode === "spend" ? " active" : "");
-        _v$ !== _p$.e && className(_el$5, _p$.e = _v$);
-        _v$2 !== _p$.t && className(_el$6, _p$.t = _v$2);
+        var _v$ = t("footer.chartModeTitle"), _v$2 = "tab" + (store.chartMode === "balance" ? " active" : ""), _v$3 = "tab" + (store.chartMode === "spend" ? " active" : ""), _v$4 = t("footer.statusPageTitle"), _v$5 = t("footer.settings");
+        _v$ !== _p$.e && setAttribute(_el$4, "title", _p$.e = _v$);
+        _v$2 !== _p$.t && className(_el$5, _p$.t = _v$2);
+        _v$3 !== _p$.a && className(_el$6, _p$.a = _v$3);
+        _v$4 !== _p$.o && setAttribute(_el$7, "title", _p$.o = _v$4);
+        _v$5 !== _p$.i && setAttribute(_el$9, "title", _p$.i = _v$5);
         return _p$;
       }, {
         e: void 0,
-        t: void 0
+        t: void 0,
+        a: void 0,
+        o: void 0,
+        i: void 0
       });
       return _el$2;
     })()];
@@ -2343,9 +2677,9 @@
     var h0 = that._x1 - that._x0, h1 = x2 - that._x1, s0 = (that._y1 - that._y0) / (h0 || h1 < 0 && -0), s1 = (y2 - that._y1) / (h1 || h0 < 0 && -0), p = (s0 * h1 + s1 * h0) / (h0 + h1);
     return (sign(s0) + sign(s1)) * Math.min(Math.abs(s0), Math.abs(s1), 0.5 * Math.abs(p)) || 0;
   }
-  function slope2(that, t) {
+  function slope2(that, t2) {
     var h = that._x1 - that._x0;
-    return h ? (3 * (that._y1 - that._y0) / h - t) / 2 : t;
+    return h ? (3 * (that._y1 - that._y0) / h - t2) / 2 : t2;
   }
   function point(that, t0, t1) {
     var x0 = that._x0, y0 = that._y0, x1 = that._x1, y1 = that._y1, dx = (x1 - x0) / 3;
@@ -2561,10 +2895,10 @@
     }
     return 365 * 864e5;
   }
-  function fmtAxisTime(t, step, view) {
-    if (view === "monthly" || step >= 30 * 864e5) return fmtMonth(t);
-    if (view === "daily" || step >= 24 * 36e5) return fmtDayShort(t);
-    return fmtClock(t);
+  function fmtAxisTime(t2, step, view) {
+    if (view === "monthly" || step >= 30 * 864e5) return fmtMonth(t2);
+    if (view === "daily" || step >= 24 * 36e5) return fmtDayShort(t2);
+    return fmtClock(t2);
   }
   function estimateTextWidth(text, fontSize = 11) {
     let w = 0;
@@ -2706,7 +3040,7 @@
   }
 
   // webview/components/Empty.tsx
-  var _tmpl$7 = /* @__PURE__ */ template(`<button class="btn primary">\u8BBE\u7F6E API Key`);
+  var _tmpl$7 = /* @__PURE__ */ template(`<button class="btn primary">`);
   var _tmpl$26 = /* @__PURE__ */ template(`<div class=empty><div class=empty-icon><i class="codicon codicon-graph-line"></i></div><div class=empty-text>`);
   function Empty() {
     const info = createMemo(() => emptyInfo());
@@ -2724,6 +3058,7 @@
           get children() {
             var _el$4 = _tmpl$7();
             addEventListener(_el$4, "click", setApiKey, true);
+            insert(_el$4, () => t("empty.setApiKey"));
             return _el$4;
           }
         }), null);
@@ -2819,8 +3154,8 @@
         get each() {
           return props.lay.xTicks;
         },
-        children: (t) => {
-          const x2 = props.lay.xOf(t);
+        children: (t2) => {
+          const x2 = props.lay.xOf(t2);
           return (() => {
             var _el$7 = _tmpl$33();
             setAttribute(_el$7, "x1", x2);
@@ -3296,7 +3631,7 @@
       const innerW = plotRight - plotLeft;
       const innerH = h - M.top - M.bottom;
       if (innerW <= 0 || innerH <= 0) return null;
-      const xOf = (t) => plotLeft + (t - t0) / (t1 - t0) * innerW;
+      const xOf = (t2) => plotLeft + (t2 - t0) / (t1 - t0) * innerW;
       const yOf = (v) => M.top + innerH - (v - mainRange.yMin) / (mainRange.yMax - mainRange.yMin) * innerH;
       if (secSeries) {
         yOf2 = (v) => M.top + innerH - (v - yMin2) / (yMax2 - yMin2) * innerH;
@@ -3337,14 +3672,14 @@
       const dur = t1 - t0;
       const xStep = niceTimeStep(dur);
       const xTicks = [];
-      for (let t = Math.ceil(t0 / xStep) * xStep; t <= t1 + 1e-9; t += xStep) xTicks.push(t);
+      for (let t2 = Math.ceil(t0 / xStep) * xStep; t2 <= t1 + 1e-9; t2 += xStep) xTicks.push(t2);
       const xLabels = [];
       {
-        const all = xTicks.map((t) => {
-          const x2 = xOf(t);
-          const text = fmtAxisTime(t, xStep, view);
+        const all = xTicks.map((t2) => {
+          const x2 = xOf(t2);
+          const text = fmtAxisTime(t2, xStep, view);
           return {
-            t,
+            t: t2,
             x: x2,
             text,
             w: estimateTextWidth(text)
@@ -3583,13 +3918,13 @@
       }
       const title = store.view === "monthly" ? fmtMonth(h.p.t) : store.view === "daily" ? fmtDay(h.p.t) : fmtDayShort(h.p.t) + " " + fmtClock(h.p.t);
       const mainRows = [{
-        label: "\u603B\u4F59\u989D",
+        label: t("chart.tooltip.total"),
         value: fmtMoney(h.p.total, h.p.currency)
       }, {
-        label: "\u5145\u503C",
+        label: t("chart.tooltip.toppedUp"),
         value: fmtMoney(h.p.toppedUp, h.p.currency)
       }, {
-        label: "\u8D60\u9001",
+        label: t("chart.tooltip.granted"),
         value: fmtMoney(h.p.granted, h.p.currency)
       }];
       setTooltipInfo(h.p2 ? {
@@ -3604,13 +3939,13 @@
           title: h.p2.p.currency,
           secondary: true,
           rows: [{
-            label: "\u603B\u4F59\u989D",
+            label: t("chart.tooltip.total"),
             value: fmtMoney(h.p2.p.total, h.p2.p.currency)
           }, {
-            label: "\u5145\u503C",
+            label: t("chart.tooltip.toppedUp"),
             value: fmtMoney(h.p2.p.toppedUp, h.p2.p.currency)
           }, {
-            label: "\u8D60\u9001",
+            label: t("chart.tooltip.granted"),
             value: fmtMoney(h.p2.p.granted, h.p2.p.currency)
           }]
         }]
@@ -3721,8 +4056,8 @@
 
   // webview/logic/consumption.ts
   var EPS2 = 1e-6;
-  function bucketStart(t, g) {
-    const d = new Date(t);
+  function bucketStart(t2, g) {
+    const d = new Date(t2);
     if (g === "hour") {
       return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime();
     }
@@ -3749,17 +4084,17 @@
     const end = bucketStart(now, g);
     if (g === "month") {
       const d = new Date(start);
-      for (let t = start; t <= end; ) {
-        const v = acc.get(t) ?? 0;
-        if (!skipZero || v > EPS2) out.push({ t, value: v });
+      for (let t2 = start; t2 <= end; ) {
+        const v = acc.get(t2) ?? 0;
+        if (!skipZero || v > EPS2) out.push({ t: t2, value: v });
         d.setMonth(d.getMonth() + 1);
-        t = d.getTime();
+        t2 = d.getTime();
       }
     } else {
       const step = g === "hour" ? 36e5 : 864e5;
-      for (let t = start; t <= end; t += step) {
-        const v = acc.get(t) ?? 0;
-        if (!skipZero || v > EPS2) out.push({ t, value: v });
+      for (let t2 = start; t2 <= end; t2 += step) {
+        const v = acc.get(t2) ?? 0;
+        if (!skipZero || v > EPS2) out.push({ t: t2, value: v });
       }
     }
     return out;
@@ -3768,7 +4103,7 @@
   // webview/components/ChartBars.tsx
   var _tmpl$12 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$211 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)><g class=bars></svg>`, false, true, false);
-  var _tmpl$36 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>\u8BE5\u65F6\u6BB5\u65E0\u6D88\u8D39`);
+  var _tmpl$36 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>`);
   var _tmpl$44 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
   var _tmpl$54 = /* @__PURE__ */ template(`<svg><rect class=bar rx=2></svg>`, false, true, false);
   var _tmpl$63 = /* @__PURE__ */ template(`<svg><rect class="bar secondary"rx=2></svg>`, false, true, false);
@@ -3834,8 +4169,8 @@
           });
         }
       }
-      return Array.from(byBucket.entries()).sort((a, b) => a[0] - b[0]).map(([t, values]) => ({
-        t,
+      return Array.from(byBucket.entries()).sort((a, b) => a[0] - b[0]).map(([t2, values]) => ({
+        t: t2,
         values
       }));
     });
@@ -3891,7 +4226,7 @@
       const innerH = h - M.top - M.bottom;
       if (innerW <= 0 || innerH <= 0) return null;
       const slotW = innerW / n;
-      const xOf = (t) => plotLeft + t * slotW;
+      const xOf = (t2) => plotLeft + t2 * slotW;
       const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
       if (sec) {
         yOf2 = (v) => M.top + innerH - v / yMax2 * innerH;
@@ -3918,7 +4253,7 @@
       const xTicks = [];
       for (let i = 0; i <= n; i++) xTicks.push(i);
       const crossesDay = startOfDay(bs[0].t) !== startOfDay(bs[n - 1].t);
-      const labelText = (t) => g === "hour" ? (crossesDay ? fmtDayShort(t) + " " : "") + fmtClock(t) : g === "day" ? fmtDayShort(t) : fmtMonth(t);
+      const labelText = (t2) => g === "hour" ? (crossesDay ? fmtDayShort(t2) + " " : "") + fmtClock(t2) : g === "day" ? fmtDayShort(t2) : fmtMonth(t2);
       const labelW = g === "hour" ? crossesDay ? 82 : 42 : g === "day" ? 46 : 62;
       const every = Math.max(1, Math.ceil(n * labelW / Math.max(1, innerW)));
       const xLabels = [];
@@ -4010,7 +4345,7 @@
       const title = store.consGran === "hour" ? fmtDayShort(b.t) + " " + fmtClock(b.t) : store.consGran === "day" ? fmtDay(b.t) : fmtMonth(b.t);
       const mainVal = b.values[lay.currency] ?? 0;
       const mainRow = {
-        label: "\u6D88\u8D39",
+        label: t("chartBars.tooltip.spend"),
         value: fmtMoney(mainVal, lay.currency)
       };
       setTooltipInfo({
@@ -4026,7 +4361,7 @@
             title: lay.currency2,
             secondary: true,
             rows: [{
-              label: "\u6D88\u8D39",
+              label: t("chartBars.tooltip.spend"),
               value: fmtMoney(b.values[lay.currency2] ?? 0, lay.currency2)
             }]
           }]
@@ -4084,31 +4419,31 @@
                 const mainX = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)));
                 const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
                 return [(() => {
-                  var _el$9 = _tmpl$54();
-                  setAttribute(_el$9, "x", mainX);
-                  setAttribute(_el$9, "y", mainTop);
+                  var _el$0 = _tmpl$54();
+                  setAttribute(_el$0, "x", mainX);
+                  setAttribute(_el$0, "y", mainTop);
                   createRenderEffect((_p$) => {
                     var _v$7 = lay.barW, _v$8 = Math.max(0, bottom - mainTop);
-                    _v$7 !== _p$.e && setAttribute(_el$9, "width", _p$.e = _v$7);
-                    _v$8 !== _p$.t && setAttribute(_el$9, "height", _p$.t = _v$8);
+                    _v$7 !== _p$.e && setAttribute(_el$0, "width", _p$.e = _v$7);
+                    _v$8 !== _p$.t && setAttribute(_el$0, "height", _p$.t = _v$8);
                     return _p$;
                   }, {
                     e: void 0,
                     t: void 0
                   });
-                  return _el$9;
+                  return _el$0;
                 })(), createComponent(Show, {
                   get when() {
                     return memo(() => !!lay.currency2)() && lay.yOf2;
                   },
                   get children() {
-                    var _el$0 = _tmpl$63();
+                    var _el$1 = _tmpl$63();
                     createRenderEffect((_p$) => {
                       var _v$9 = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)), _v$0 = lay.yOf2(b.values[lay.currency2] ?? 0), _v$1 = lay.barW, _v$10 = Math.max(0, lay.yOf2(0) - lay.yOf2(b.values[lay.currency2] ?? 0));
-                      _v$9 !== _p$.e && setAttribute(_el$0, "x", _p$.e = _v$9);
-                      _v$0 !== _p$.t && setAttribute(_el$0, "y", _p$.t = _v$0);
-                      _v$1 !== _p$.a && setAttribute(_el$0, "width", _p$.a = _v$1);
-                      _v$10 !== _p$.o && setAttribute(_el$0, "height", _p$.o = _v$10);
+                      _v$9 !== _p$.e && setAttribute(_el$1, "x", _p$.e = _v$9);
+                      _v$0 !== _p$.t && setAttribute(_el$1, "y", _p$.t = _v$0);
+                      _v$1 !== _p$.a && setAttribute(_el$1, "width", _p$.a = _v$1);
+                      _v$10 !== _p$.o && setAttribute(_el$1, "height", _p$.o = _v$10);
                       return _p$;
                     }, {
                       e: void 0,
@@ -4116,7 +4451,7 @@
                       a: void 0,
                       o: void 0
                     });
-                    return _el$0;
+                    return _el$1;
                   }
                 })];
               }
@@ -4131,7 +4466,9 @@
           return memo(() => !!hasData())() && noConsumption();
         },
         get children() {
-          return _tmpl$36();
+          var _el$8 = _tmpl$36(), _el$9 = _el$8.firstChild;
+          insert(_el$9, () => t("chartBars.noConsumption"));
+          return _el$8;
         }
       }), null);
       insert(_el$, createComponent(Show, {
@@ -4231,10 +4568,10 @@
   }
 
   // webview/components/ThresholdEditor.tsx
-  var _tmpl$16 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
+  var _tmpl$16 = /* @__PURE__ */ template(`<div class=threshold-head><span></span><button class="btn small"><i class="codicon codicon-add">`);
   var _tmpl$213 = /* @__PURE__ */ template(`<div id=thresholdList>`);
-  var _tmpl$38 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
-  var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
+  var _tmpl$38 = /* @__PURE__ */ template(`<p class=settings-hint>`);
+  var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep></span><input type=color class=threshold-color><button class="icon threshold-del"><i class="codicon codicon-trash">`);
   function ThresholdEditor(props) {
     function add() {
       props.onChange([...props.thresholds, {
@@ -4243,57 +4580,67 @@
       }]);
     }
     function setBelow(i, v) {
-      props.onChange(props.thresholds.map((t, idx) => idx === i ? {
-        ...t,
+      props.onChange(props.thresholds.map((t2, idx) => idx === i ? {
+        ...t2,
         below: v
-      } : t));
+      } : t2));
     }
     function setColor(i, c) {
-      props.onChange(props.thresholds.map((t, idx) => idx === i ? {
-        ...t,
+      props.onChange(props.thresholds.map((t2, idx) => idx === i ? {
+        ...t2,
         color: c
-      } : t));
+      } : t2));
     }
     function remove(i) {
       props.onChange(props.thresholds.filter((_, idx) => idx !== i));
     }
     return [(() => {
-      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.firstChild;
+      insert(_el$2, () => t("threshold.title"));
       _el$3.$$click = add;
+      insert(_el$3, () => t("threshold.add"), null);
       return _el$;
     })(), (() => {
-      var _el$4 = _tmpl$213();
-      insert(_el$4, createComponent(For, {
+      var _el$5 = _tmpl$213();
+      insert(_el$5, createComponent(For, {
         get each() {
           return props.thresholds;
         },
-        children: (t, i) => (() => {
-          var _el$6 = _tmpl$46(), _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
-          _el$7.$$input = (e) => {
+        children: (t2, i) => (() => {
+          var _el$7 = _tmpl$46(), _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling, _el$1 = _el$0.nextSibling;
+          _el$8.$$input = (e) => {
             const v = parseFloat(e.currentTarget.value);
             if (Number.isFinite(v)) setBelow(i(), v);
           };
-          _el$9.addEventListener("change", (e) => setColor(i(), e.currentTarget.value));
-          _el$0.$$click = () => remove(i());
-          createRenderEffect(() => _el$7.value = t.below);
-          createRenderEffect(() => _el$9.value = t.color);
-          return _el$6;
+          insert(_el$9, () => t("threshold.below"));
+          _el$0.addEventListener("change", (e) => setColor(i(), e.currentTarget.value));
+          _el$1.$$click = () => remove(i());
+          createRenderEffect(() => setAttribute(_el$1, "title", t("threshold.delete")));
+          createRenderEffect(() => _el$8.value = t2.below);
+          createRenderEffect(() => _el$0.value = t2.color);
+          return _el$7;
         })()
       }));
-      return _el$4;
-    })(), _tmpl$38()];
+      return _el$5;
+    })(), (() => {
+      var _el$6 = _tmpl$38();
+      insert(_el$6, () => t("threshold.hint"));
+      return _el$6;
+    })()];
   }
   delegateEvents(["click", "input"]);
 
   // webview/components/settings/StatusBarGroup.tsx
   var _tmpl$17 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
-  var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span></span><i class="codicon codicon-chevron-down">`);
   var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
-  var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
+  var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
   function StatusBarGroup(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
     return [createComponent(SettingRow, {
-      label: "\u663E\u793A\u4F59\u989D",
+      get label() {
+        return t("statusBarGroup.show");
+      },
       "for": "statusBarShowEl",
       get children() {
         var _el$ = _tmpl$17();
@@ -4302,8 +4649,9 @@
         return _el$;
       }
     }), (() => {
-      var _el$2 = _tmpl$214();
+      var _el$2 = _tmpl$214(), _el$3 = _el$2.firstChild;
       _el$2.$$click = () => setColorOpen((o) => !o);
+      insert(_el$3, () => t("statusBarGroup.thresholds"));
       createRenderEffect(() => className(_el$2, "settings-toggle" + (colorOpen() ? " open" : "")));
       return _el$2;
     })(), createComponent(Collapse, {
@@ -4312,22 +4660,25 @@
       },
       get children() {
         return [createComponent(SettingRow, {
-          label: "\u9ED8\u8BA4\u989C\u8272",
+          get label() {
+            return t("statusBarGroup.defaultColor");
+          },
           get children() {
             return [(() => {
-              var _el$3 = _tmpl$39();
-              _el$3.addEventListener("change", (e) => props.setStaged("defaultColor", e.currentTarget.value));
-              createRenderEffect(() => _el$3.disabled = !props.staged?.defaultColor);
-              createRenderEffect(() => _el$3.value = props.staged?.defaultColor || "#000000");
-              return _el$3;
+              var _el$4 = _tmpl$39();
+              _el$4.addEventListener("change", (e) => props.setStaged("defaultColor", e.currentTarget.value));
+              createRenderEffect(() => _el$4.disabled = !props.staged?.defaultColor);
+              createRenderEffect(() => _el$4.value = props.staged?.defaultColor || "#000000");
+              return _el$4;
             })(), (() => {
-              var _el$4 = _tmpl$47(), _el$5 = _el$4.firstChild;
-              _el$5.addEventListener("change", (e) => {
+              var _el$5 = _tmpl$47(), _el$6 = _el$5.firstChild;
+              _el$6.addEventListener("change", (e) => {
                 const theme = e.currentTarget.checked;
                 props.setStaged("defaultColor", theme ? "" : "#000000");
               });
-              createRenderEffect(() => _el$5.checked = !props.staged?.defaultColor);
-              return _el$4;
+              insert(_el$5, () => t("statusBarGroup.followTheme"), null);
+              createRenderEffect(() => _el$6.checked = !props.staged?.defaultColor);
+              return _el$5;
             })()];
           }
         }), createComponent(ThresholdEditor, {
@@ -4342,62 +4693,82 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ChartGroup.tsx
-  var _tmpl$18 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
-  var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=dotted>\u70B9\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=ignore>\u5047\u88C5\u8FDE\u7EED</option><option value=none>\u4E0D\u8FDE\u63A5`);
+  var _tmpl$18 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight></option><option value=smooth>`);
+  var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed></option><option value=dotted></option><option value=solid></option><option value=ignore></option><option value=none>`);
   var _tmpl$310 = /* @__PURE__ */ template(`<input type=color>`);
-  var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
+  var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
   var _tmpl$55 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
   function ChartGroup(props) {
     return [createComponent(SettingRow, {
-      label: "\u7EBF\u6761\u6837\u5F0F",
+      get label() {
+        return t("chartGroup.lineStyle");
+      },
       "for": "lineStyleEl",
       get children() {
-        var _el$ = _tmpl$18();
+        var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
         _el$.addEventListener("change", (e) => props.setStaged("lineStyle", e.currentTarget.value));
+        insert(_el$2, () => t("chartGroup.straight"));
+        insert(_el$3, () => t("chartGroup.smooth"));
         createRenderEffect(() => _el$.value = props.staged?.lineStyle ?? "straight");
         return _el$;
       }
     }), createComponent(SettingRow, {
-      label: "\u65AD\u70B9\u8FDE\u63A5\u7EBF",
+      get label() {
+        return t("chartGroup.connectorStyle");
+      },
       "for": "connectorStyleEl",
-      hint: "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
+      get hint() {
+        return t("chartGroup.connectorStyleHint");
+      },
       get children() {
-        var _el$2 = _tmpl$215();
-        _el$2.addEventListener("change", (e) => props.setStaged("connectorStyle", e.currentTarget.value));
-        createRenderEffect(() => _el$2.value = props.staged?.connectorStyle ?? "dashed");
-        return _el$2;
+        var _el$4 = _tmpl$215(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling;
+        _el$4.addEventListener("change", (e) => props.setStaged("connectorStyle", e.currentTarget.value));
+        insert(_el$5, () => t("chartGroup.dashed"));
+        insert(_el$6, () => t("chartGroup.dotted"));
+        insert(_el$7, () => t("chartGroup.solid"));
+        insert(_el$8, () => t("chartGroup.ignore"));
+        insert(_el$9, () => t("chartGroup.none"));
+        createRenderEffect(() => _el$4.value = props.staged?.connectorStyle ?? "dashed");
+        return _el$4;
       }
     }), createComponent(SettingRow, {
-      label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
+      get label() {
+        return t("chartGroup.connectorColor");
+      },
       get children() {
         return [(() => {
-          var _el$3 = _tmpl$310();
-          _el$3.addEventListener("change", (e) => props.setStaged("connectorColor", e.currentTarget.value));
-          createRenderEffect(() => _el$3.disabled = !props.staged?.connectorColor);
-          createRenderEffect(() => _el$3.value = props.staged?.connectorColor || "#000000");
-          return _el$3;
+          var _el$0 = _tmpl$310();
+          _el$0.addEventListener("change", (e) => props.setStaged("connectorColor", e.currentTarget.value));
+          createRenderEffect(() => _el$0.disabled = !props.staged?.connectorColor);
+          createRenderEffect(() => _el$0.value = props.staged?.connectorColor || "#000000");
+          return _el$0;
         })(), (() => {
-          var _el$4 = _tmpl$48(), _el$5 = _el$4.firstChild;
-          _el$5.addEventListener("change", (e) => {
+          var _el$1 = _tmpl$48(), _el$10 = _el$1.firstChild;
+          _el$10.addEventListener("change", (e) => {
             const theme = e.currentTarget.checked;
             props.setStaged("connectorColor", theme ? "" : "#000000");
           });
-          createRenderEffect(() => _el$5.checked = !props.staged?.connectorColor);
-          return _el$4;
+          insert(_el$1, () => t("chartGroup.followMain"), null);
+          createRenderEffect(() => _el$10.checked = !props.staged?.connectorColor);
+          return _el$1;
         })()];
       }
     }), createComponent(SettingRow, {
-      label: "\u7EB5\u5411\u6700\u5C0F\u8DE8\u5EA6",
+      get label() {
+        return t("chartGroup.minSpan");
+      },
       "for": "yMinSpanRatioEl",
-      hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
+      get hint() {
+        return t("chartGroup.minSpanHint");
+      },
       get children() {
-        var _el$6 = _tmpl$55();
-        _el$6.addEventListener("change", (e) => {
+        var _el$11 = _tmpl$55();
+        _el$11.addEventListener("change", (e) => {
           const v = Number(e.currentTarget.value);
           if (Number.isFinite(v)) props.setYRatio(Math.min(1, Math.max(0, v)));
         });
-        createRenderEffect(() => _el$6.value = props.yRatio);
-        return _el$6;
+        createRenderEffect(() => _el$11.value = props.yRatio);
+        return _el$11;
       }
     })];
   }
@@ -4406,12 +4777,14 @@
   var _tmpl$19 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
   var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
   var _tmpl$311 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
-  var _tmpl$49 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$56 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
+  var _tmpl$49 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint></p><div class=row><button class="btn primary"></button><button class=btn>`);
+  var _tmpl$56 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local></option><option value=utc>`);
   function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
     return [createComponent(SettingRow, {
-      label: "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
+      get label() {
+        return t("general.pollInterval");
+      },
       "for": "pollMinutesEl",
       get children() {
         var _el$ = _tmpl$19();
@@ -4423,7 +4796,9 @@
         return _el$;
       }
     }), createComponent(SettingRow, {
-      label: "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
+      get label() {
+        return t("general.rawRetention");
+      },
       "for": "rawRetentionEl",
       get children() {
         var _el$2 = _tmpl$216();
@@ -4435,7 +4810,9 @@
         return _el$2;
       }
     }), createComponent(SettingRow, {
-      label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
+      get label() {
+        return t("general.showTodaySpend");
+      },
       "for": "showTodaySpendEl",
       get children() {
         var _el$3 = _tmpl$311();
@@ -4456,23 +4833,32 @@
       },
       get children() {
         var _el$4 = _tmpl$49(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
+        insert(_el$5, () => t("general.consent"));
         _el$7.$$click = () => {
           props.setStaged("showTodaySpend", true);
           setConsent(false);
         };
+        insert(_el$7, () => t("general.consentOk"));
         _el$8.$$click = () => {
           props.setStaged("showTodaySpend", false);
           setConsent(false);
         };
+        insert(_el$8, () => t("general.consentCancel"));
         return _el$4;
       }
     }), createComponent(SettingRow, {
-      label: "\u4ECA\u65E5\u82B1\u8D39\u65E5\u754C",
+      get label() {
+        return t("general.dayBoundary");
+      },
       "for": "dayBoundaryEl",
-      hint: "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
+      get hint() {
+        return t("general.dayBoundaryHint");
+      },
       get children() {
-        var _el$9 = _tmpl$56();
+        var _el$9 = _tmpl$56(), _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling;
         _el$9.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
+        insert(_el$0, () => t("general.dayBoundaryLocal"));
+        insert(_el$1, () => t("general.dayBoundaryUtc"));
         createRenderEffect(() => _el$9.value = props.staged?.dayBoundary ?? "local");
         return _el$9;
       }
@@ -4481,12 +4867,12 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ApiKeyGroup.tsx
-  var _tmpl$20 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
-  var _tmpl$217 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
+  var _tmpl$20 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$217 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function ApiKeyGroup() {
     return createComponent(SettingRow, {
       get label() {
-        return store.data && store.data.hasKey ? "\u5DF2\u914D\u7F6E\uFF08\u5B89\u5168\u5B58\u50A8\uFF09" : "\u672A\u914D\u7F6E";
+        return memo(() => !!(store.data && store.data.hasKey))() ? t("apiKey.configured") : t("apiKey.notConfigured");
       },
       get children() {
         return [(() => {
@@ -4494,12 +4880,14 @@
           _el$.$$click = () => postMessage({
             type: "setApiKey"
           });
+          insert(_el$, () => t("apiKey.setChange"));
           return _el$;
         })(), (() => {
           var _el$2 = _tmpl$217();
           _el$2.$$click = () => postMessage({
             type: "clearApiKey"
           });
+          insert(_el$2, () => t("apiKey.clear"));
           return _el$2;
         })()];
       }
@@ -4508,15 +4896,18 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/DataGroup.tsx
-  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
+  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function DataGroup() {
     return createComponent(SettingRow, {
-      label: "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
+      get label() {
+        return t("data.historyLabel");
+      },
       get children() {
         var _el$ = _tmpl$21();
         _el$.$$click = () => postMessage({
           type: "clearHistory"
         });
+        insert(_el$, () => t("data.clearHistory"));
         return _el$;
       }
     });
@@ -4524,15 +4915,18 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/MiscGroup.tsx
-  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
+  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function MiscGroup() {
     return createComponent(SettingRow, {
-      label: "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
+      get label() {
+        return t("misc.resetLabel");
+      },
       get children() {
         var _el$ = _tmpl$30();
         _el$.$$click = () => postMessage({
           type: "resetSettings"
         });
+        insert(_el$, () => t("misc.reset"));
         return _el$;
       }
     });
@@ -4540,7 +4934,7 @@
   delegateEvents(["click"]);
 
   // webview/components/Settings.tsx
-  var _tmpl$31 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
+  var _tmpl$31 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title></span><button class=icon><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i></button><button class=btn></button><button class="btn primary"><i class="codicon codicon-check">`);
   function Settings(props) {
     const [groupsOpen, setGroupsOpen] = createStore({
       statusBar: true,
@@ -4566,9 +4960,9 @@
         statusBarShow: staged.statusBarShow,
         defaultColor: staged.defaultColor,
         // staged 来自 createStore，元素是 proxy；map 成 plain object 再发送
-        thresholds: staged.thresholds.filter((t) => Number.isFinite(t.below)).map((t) => ({
-          below: t.below,
-          color: t.color
+        thresholds: staged.thresholds.filter((t2) => Number.isFinite(t2.below)).map((t2) => ({
+          below: t2.below,
+          color: t2.color
         })).sort((a, b) => a.below - b.below),
         pollMinutes: staged.pollMinutes,
         rawRetentionDays: staged.rawRetentionDays,
@@ -4594,13 +4988,16 @@
       close();
     }
     return (() => {
-      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
+      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.firstChild;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
+      insert(_el$4, () => t("settings.title"));
       _el$5.$$click = close;
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "\u72B6\u6001\u680F",
+        get title() {
+          return t("settings.group.statusBar");
+        },
         icon: "account",
         get open() {
           return groupsOpen.statusBar;
@@ -4614,7 +5011,9 @@
         }
       }), null);
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "\u56FE\u8868",
+        get title() {
+          return t("settings.group.chart");
+        },
         icon: "graph-line",
         get open() {
           return groupsOpen.chart;
@@ -4632,7 +5031,9 @@
         }
       }), null);
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "\u5E38\u89C4",
+        get title() {
+          return t("settings.group.general");
+        },
         icon: "gear",
         get open() {
           return groupsOpen.general;
@@ -4646,7 +5047,9 @@
         }
       }), null);
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "API Key",
+        get title() {
+          return t("settings.group.apiKey");
+        },
         icon: "key",
         get open() {
           return groupsOpen.apiKey;
@@ -4657,7 +5060,9 @@
         }
       }), null);
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "\u6570\u636E",
+        get title() {
+          return t("settings.group.data");
+        },
         icon: "database",
         get open() {
           return groupsOpen.data;
@@ -4668,7 +5073,9 @@
         }
       }), null);
       insert(_el$6, createComponent(SettingsGroup, {
-        title: "\u5176\u4ED6",
+        get title() {
+          return t("settings.group.misc");
+        },
         icon: "ellipsis",
         get open() {
           return groupsOpen.misc;
@@ -4681,8 +5088,12 @@
       _el$8.$$click = () => postMessage({
         type: "openNativeSettings"
       });
-      _el$9.$$click = close;
-      _el$0.$$click = save;
+      insert(_el$8, () => t("settings.openNative"), null);
+      _el$0.$$click = close;
+      insert(_el$0, () => t("settings.cancel"));
+      _el$1.$$click = save;
+      insert(_el$1, () => t("settings.save"), null);
+      createRenderEffect(() => setAttribute(_el$5, "title", t("settings.close")));
       return _el$;
     })();
   }
@@ -4698,10 +5109,12 @@
       return "codicon-refresh";
     });
     const refreshTitle = createMemo(() => {
-      if (store.refreshing) return "\u67E5\u8BE2\u4E2D\u2026";
-      if (store.refreshResult === "ok") return "\u5237\u65B0\u6210\u529F";
-      if (store.refreshResult === "fail") return `\u5237\u65B0\u5931\u8D25\uFF1A${store.lastError || "\u8BF7\u67E5\u770B\u5E95\u90E8\u9519\u8BEF\u63D0\u793A"}`;
-      return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
+      if (store.refreshing) return t("refresh.loading");
+      if (store.refreshResult === "ok") return t("refresh.ok");
+      if (store.refreshResult === "fail") return t("refresh.fail", {
+        error: store.lastError || t("refresh.failFallback")
+      });
+      return t("refresh.idle");
     });
     return (() => {
       var _el$ = _tmpl$40(), _el$2 = _el$.firstChild;
@@ -4725,14 +5138,14 @@
   delegateEvents(["click"]);
 
   // webview/components/App.tsx
-  var _tmpl$41 = /* @__PURE__ */ template(`<button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E`);
-  var _tmpl$218 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
+  var _tmpl$41 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$218 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=icon><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
     createEffect(() => {
       const r = store.refreshResult;
       if (!r) return;
-      const t = setTimeout(() => clearRefreshFeedback(), 1800);
-      onCleanup(() => clearTimeout(t));
+      const t2 = setTimeout(() => clearRefreshFeedback(), 1800);
+      onCleanup(() => clearTimeout(t2));
     });
     return (() => {
       var _el$ = _tmpl$218(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$5 = _el$3.firstChild, _el$6 = _el$2.nextSibling;
@@ -4745,6 +5158,8 @@
           return [createComponent(Ranges, {}), (() => {
             var _el$4 = _tmpl$41();
             addEventListener(_el$4, "click", resetView, true);
+            insert(_el$4, () => t("app.reset"));
+            createRenderEffect(() => setAttribute(_el$4, "title", t("app.resetTitle")));
             return _el$4;
           })()];
         }
@@ -4774,6 +5189,7 @@
           });
         }
       }), null);
+      createRenderEffect(() => setAttribute(_el$5, "title", t("app.openUsageTitle")));
       return _el$;
     })();
   }
@@ -4782,6 +5198,8 @@
   // webview/index.tsx
   var vscode = acquireVsCodeApi();
   initMessaging(vscode);
+  var localeMeta = document.querySelector('meta[name="deepseek-stats:locale"]');
+  setLocale(localeMeta ? localeMeta.getAttribute("content") : "en");
   window.addEventListener("message", (e) => {
     const msg = e.data;
     if (!msg || !msg.type) return;
@@ -4797,6 +5215,8 @@
       onTheme();
     } else if (msg.type === "error") {
       onError(msg.payload && msg.payload.message);
+    } else if (msg.type === "i18n") {
+      setLocale(msg.payload && msg.payload.locale);
     }
   });
   render(() => createComponent(App, {}), document.getElementById("app"));

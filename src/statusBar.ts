@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 import { getDefaultColor, getShowStatusBar, getThresholds } from './config';
+import { t } from './i18n';
 import type { Snapshot } from './historyStore';
 
 export function fmtMoney(n: number, currency: string): string {
@@ -26,8 +27,8 @@ export class StatusBar implements vscode.Disposable {
       this.item.hide();
       return;
     }
-    this.item.text = '$(loading~spin) DeepSeek 查询中…';
-    this.item.tooltip = '正在查询 DeepSeek 余额';
+    this.item.text = `$(loading~spin) ${t('statusBar.loading')}`;
+    this.item.tooltip = t('statusBar.loadingTooltip');
     this.item.color = undefined;
     this.item.show();
   }
@@ -37,8 +38,8 @@ export class StatusBar implements vscode.Disposable {
       this.item.hide();
       return;
     }
-    this.item.text = '$(key) DeepSeek: 未配置';
-    this.item.tooltip = 'DeepSeek Stats：尚未配置 API Key，点击设置';
+    this.item.text = `$(key) ${t('statusBar.noKey')}`;
+    this.item.tooltip = t('statusBar.noKeyTooltip');
     this.item.command = 'deepseek-stats.setApiKey';
     this.item.color = undefined;
     this.item.show();
@@ -49,9 +50,9 @@ export class StatusBar implements vscode.Disposable {
       this.item.hide();
       return;
     }
-    const msg = String(err || '未知错误');
-    this.item.text = '$(warning) DeepSeek 查询失败';
-    this.item.tooltip = `DeepSeek Stats 查询失败：${msg}`;
+    const msg = String(err || t('statusBar.error'));
+    this.item.text = `$(warning) ${t('statusBar.error')}`;
+    this.item.tooltip = t('statusBar.errorTooltip', { msg });
     this.item.color = undefined;
     this.item.show();
   }
@@ -80,12 +81,24 @@ export class StatusBar implements vscode.Disposable {
     this.item.text = `$(graph-line) ${parts.join(' · ')}`;
     this.item.command = 'deepseek-stats.openChart';
     this.item.tooltip = [
-      `DeepSeek 余额（${date} ${time}）`,
-      ...snaps.map((s) => `总余额（${s.currency}）：${fmtMoney(s.total, s.currency)}`),
-      ...snaps.map((s) => `充值（${s.currency}）：${fmtMoney(s.toppedUp, s.currency)}`),
-      ...snaps.map((s) => `赠送（${s.currency}）：${fmtMoney(s.granted, s.currency)}`),
-      main.available ? '账户可用' : '账户余额不足',
-      '点击打开趋势图',
+      t('statusBar.balanceTooltip', { date, time }),
+      ...snaps.map((s) =>
+        t('statusBar.totalTooltip', { currency: s.currency, value: fmtMoney(s.total, s.currency) })
+      ),
+      ...snaps.map((s) =>
+        t('statusBar.toppedUpTooltip', {
+          currency: s.currency,
+          value: fmtMoney(s.toppedUp, s.currency),
+        })
+      ),
+      ...snaps.map((s) =>
+        t('statusBar.grantedTooltip', {
+          currency: s.currency,
+          value: fmtMoney(s.granted, s.currency),
+        })
+      ),
+      main.available ? t('statusBar.available') : t('statusBar.unavailable'),
+      t('statusBar.openChartTooltip'),
     ].join('\n');
     this.applyColor(main.total);
     this.item.show();

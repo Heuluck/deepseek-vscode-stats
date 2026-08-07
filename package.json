@@ -1,7 +1,7 @@
 {
   "name": "deepseek-stats",
   "displayName": "DeepSeek Stats",
-  "description": "在 VS Code 中查询 DeepSeek 账户余额，并查看分时 / 分天 / 分月的余额趋势图",
+  "description": "%deepseek-stats.description%",
   "version": "0.1.0",
   "publisher": "heuluck",
   "license": "MIT",
@@ -25,28 +25,50 @@
     "commands": [
       {
         "command": "deepseek-stats.toggleStatusBar",
-        "title": "DeepSeek Stats: 切换状态栏余额显示"
+        "title": "%deepseek-stats.command.toggleStatusBar.title%"
       }
     ],
     "configuration": {
-      "title": "DeepSeek Stats",
+      "title": "%deepseek-stats.configuration.title%",
       "properties": {
+        "deepseek-stats.language": {
+          "type": "string",
+          "enum": [
+            "auto",
+            "en",
+            "zh-cn"
+          ],
+          "default": "auto",
+          "scope": "application",
+          "title": "%deepseek-stats.config.language%",
+          "description": "%deepseek-stats.config.language.description%",
+          "enumItemLabels": [
+            "%deepseek-stats.config.language.label.auto%",
+            "%deepseek-stats.config.language.label.en%",
+            "%deepseek-stats.config.language.label.zhCn%"
+          ],
+          "enumDescriptions": [
+            "%deepseek-stats.config.language.enum.auto%",
+            "%deepseek-stats.config.language.enum.en%",
+            "%deepseek-stats.config.language.enum.zhCn%"
+          ]
+        },
         "deepseek-stats.pollIntervalMinutes": {
           "type": "number",
           "default": 1,
           "minimum": 1,
-          "description": "余额轮询间隔（分钟）。VS Code 打开期间按此间隔自动查询余额。"
+          "description": "%deepseek-stats.config.pollInterval.description%"
         },
         "deepseek-stats.statusBar.show": {
           "type": "boolean",
           "default": true,
-          "description": "是否在状态栏显示余额。"
+          "description": "%deepseek-stats.config.statusBarShow.description%"
         },
         "deepseek-stats.statusBar.defaultColor": {
           "type": "string",
           "default": "",
           "format": "color",
-          "description": "状态栏余额默认颜色（不匹配任何阈值时）。留空则跟随主题默认颜色。"
+          "description": "%deepseek-stats.config.statusBarDefaultColor.description%"
         },
         "deepseek-stats.statusBar.thresholds": {
           "type": "array",
@@ -65,12 +87,12 @@
             "properties": {
               "below": {
                 "type": "number",
-                "description": "余额低于此值（不含）时使用该颜色"
+                "description": "%deepseek-stats.config.statusBarThresholds.below.description%"
               },
               "color": {
                 "type": "string",
                 "format": "color",
-                "description": "颜色"
+                "description": "%deepseek-stats.config.statusBarThresholds.color.description%"
               }
             },
             "required": [
@@ -78,18 +100,18 @@
               "color"
             ]
           },
-          "description": "按余额阈值设置状态栏颜色。按顺序匹配第一条满足 below 的规则。"
+          "description": "%deepseek-stats.config.statusBarThresholds.description%"
         },
         "deepseek-stats.history.rawRetentionDays": {
           "type": "number",
           "default": 7,
           "minimum": 1,
-          "description": "原始分钟级快照保留天数（分时视图数据来源）。更早的数据会自动滚动聚合为按天记录。"
+          "description": "%deepseek-stats.config.rawRetention.description%"
         },
         "deepseek-stats.showTodaySpend": {
           "type": "boolean",
           "default": false,
-          "description": "在面板头部显示今日花费（估算值，可能因充值或数据断档而不准确，需在设置中同意后启用）。"
+          "description": "%deepseek-stats.config.showTodaySpend.description%"
         },
         "deepseek-stats.chart.connectorStyle": {
           "type": "string",
@@ -101,20 +123,20 @@
             "none"
           ],
           "enumDescriptions": [
-            "虚线连接断点（默认）",
-            "点虚线连接断点",
-            "实线连接断点",
-            "假装连续：把断档当作正常连续数据绘制",
-            "不连接断点"
+            "%deepseek-stats.config.connectorStyle.enum.dashed%",
+            "%deepseek-stats.config.connectorStyle.enum.dotted%",
+            "%deepseek-stats.config.connectorStyle.enum.solid%",
+            "%deepseek-stats.config.connectorStyle.enum.ignore%",
+            "%deepseek-stats.config.connectorStyle.enum.none%"
           ],
           "default": "dashed",
-          "description": "图表中数据断点（缺口）的连接线样式。"
+          "description": "%deepseek-stats.config.connectorStyle.description%"
         },
         "deepseek-stats.chart.connectorColor": {
           "type": "string",
           "default": "",
           "format": "color",
-          "description": "图表断点连接线颜色。留空则跟随图表主线条颜色。"
+          "description": "%deepseek-stats.config.connectorColor.description%"
         },
         "deepseek-stats.chart.lineStyle": {
           "type": "string",
@@ -123,11 +145,11 @@
             "smooth"
           ],
           "enumDescriptions": [
-            "直线连接（默认）",
-            "平滑曲线连接"
+            "%deepseek-stats.config.lineStyle.enum.straight%",
+            "%deepseek-stats.config.lineStyle.enum.smooth%"
           ],
           "default": "straight",
-          "description": "图表主线条的绘制方式：直线或平滑曲线。"
+          "description": "%deepseek-stats.config.lineStyle.description%"
         },
         "deepseek-stats.dayBoundary": {
           "type": "string",
@@ -136,11 +158,11 @@
             "utc"
           ],
           "enumDescriptions": [
-            "本地时区（默认）：按本地自然日计算「今日花费」",
-            "UTC：与 DeepSeek 官方用量口径一致（UTC 日界）"
+            "%deepseek-stats.config.dayBoundary.enum.local%",
+            "%deepseek-stats.config.dayBoundary.enum.utc%"
           ],
           "default": "local",
-          "description": "「今日花费」的日界时区。DeepSeek 官方按 UTC 计算每日用量，选择 UTC 可让今日花费与官方口径一致。"
+          "description": "%deepseek-stats.config.dayBoundary.description%"
         }
       }
     }

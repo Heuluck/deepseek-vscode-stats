@@ -1,12 +1,13 @@
 /** 数据设置组：清除历史快照。 */
 import { postMessage } from '../../messaging';
+import { t } from '../../i18n';
 import { SettingRow } from '../SettingRow';
 
 export function DataGroup() {
   return (
-    <SettingRow label="历史快照（仅 VS Code 打开期间记录）">
+    <SettingRow label={t('data.historyLabel')}>
       <button class="btn danger" onClick={() => postMessage({ type: 'clearHistory' })}>
-        清除历史
+        {t('data.clearHistory')}
       </button>
     </SettingRow>
   );

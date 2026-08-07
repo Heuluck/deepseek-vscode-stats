@@ -17,7 +17,9 @@ export type ExtensionToWebview =
   | { type: 'config'; payload: PanelConfig }
   | { type: 'settingsReset' }
   | { type: 'theme' }
-  | { type: 'error'; payload: { message: string } };
+  | { type: 'error'; payload: { message: string } }
+  /** 语言设置变化时的热更新（payload.locale 为解析后的 locale 码）。 */
+  | { type: 'i18n'; payload: { locale: string } };
 
 export interface SaveSettingsPayload {
   statusBarShow: boolean;

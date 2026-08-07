@@ -4,6 +4,7 @@ import { HistoryStore, Snapshot } from './historyStore';
 import { StatusBar } from './statusBar';
 import { fetchBalance, pickBalanceInfos } from './balanceClient';
 import { getPanelConfig, getPollIntervalMinutes } from './config';
+import { getLocale, t } from './i18n';
 
 /** DeepSeek 官方状态页地址。 */
 const STATUS_PAGE_URL = 'https://status.deepseek.com/';
@@ -188,19 +189,20 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     const failed = results.filter((r) => r.status === 'rejected');
     if (failed.length > 0) {
       console.error('[deepseek-stats] 保存设置失败', failed.length, '项');
-      void vscode.window.showWarningMessage('部分设置保存失败，请检查配置值后重试');
+      void vscode.window.showWarningMessage(t('extension.saveSettingsFailed'));
     }
   }
 
   async function resetSettings(): Promise<void> {
     const pick = await vscode.window.showWarningMessage(
-      '确定恢复 DeepSeek Stats 全部设置为默认值？',
+      t('extension.resetConfirm'),
       { modal: true },
-      '恢复'
+      t('extension.resetConfirmAction')
     );
-    if (pick !== '恢复') return;
+    if (pick !== t('extension.resetConfirmAction')) return;
     const cfg = vscode.workspace.getConfiguration('deepseek-stats');
     const keys = [
+      'language',
       'pollIntervalMinutes',
       'statusBar.show',
       'statusBar.defaultColor',
@@ -224,7 +226,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }
     pushDataToPanel();
     if (chart && chart.alive) chart.postSettingsReset();
-    vscode.window.showInformationMessage('DeepSeek Stats 设置已恢复默认');
+    vscode.window.showInformationMessage(t('extension.resetDone'));
   }
 
   async function checkNow(): Promise<void> {
@@ -235,14 +237,14 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       if (!key) {
         statusBar.showNoKey();
         if (chart && chart.alive) {
-          chart.postError('未配置 API Key，请运行命令 “DeepSeek Stats: 设置 API Key”');
+          chart.postError(t('extension.noApiKey'));
         }
         return;
       }
       const res = await fetchBalance(key);
       const infos = pickBalanceInfos(res);
       if (!infos.length) {
-        throw new Error('接口返回中没有余额数据');
+        throw new Error(t('extension.noBalanceData'));
       }
       // 多币种：每个币种各采集一条快照（CNY 优先作为主账户，其余并列）
       const snaps: Snapshot[] = infos.map((info) => ({
@@ -286,7 +288,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     }),
     vscode.commands.registerCommand('deepseek-stats.setApiKey', async () => {
       const value = await vscode.window.showInputBox({
-        prompt: '输入 DeepSeek API Key（sk-...）',
+        prompt: t('extension.apiKeyPrompt'),
         password: true,
         ignoreFocusOut: true,
         placeHolder: 'sk-...',
@@ -297,22 +299,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       apiKey = key;
       await checkNow();
       pushDataToPanel();
-      vscode.window.showInformationMessage('DeepSeek API Key 已保存');
+      vscode.window.showInformationMessage(t('extension.apiKeySaved'));
     }),
     vscode.commands.registerCommand('deepseek-stats.clearApiKey', async () => {
       await context.secrets.delete(API_KEY_SECRET);
       apiKey = undefined;
       statusBar.showNoKey();
       pushDataToPanel();
-      vscode.window.showInformationMessage('DeepSeek API Key 已清除');
+      vscode.window.showInformationMessage(t('extension.apiKeyCleared'));
     }),
     vscode.commands.registerCommand('deepseek-stats.clearHistory', async () => {
       const pick = await vscode.window.showWarningMessage(
-        '确定清除所有历史余额记录？此操作不可撤销。',
+        t('extension.clearHistoryConfirm'),
         { modal: true },
-        '清除'
+        t('extension.clearHistoryAction')
       );
-      if (pick === '清除') {
+      if (pick === t('extension.clearHistoryAction')) {
         store.clear();
         pushDataToPanel();
       }
@@ -323,6 +325,11 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         schedule();
       }
       if (e.affectsConfiguration('deepseek-stats.statusBar')) {
+        statusBar.refresh();
+      }
+      // 语言设置变更：热更新 webview（locale 驱动其重渲染）+ 刷新状态栏文案
+      if (e.affectsConfiguration('deepseek-stats.language')) {
+        if (chart && chart.alive) chart.postLocale(getLocale());
         statusBar.refresh();
       }
       if (chart && chart.alive) {

@@ -5,6 +5,7 @@
 import { createMemo, onCleanup, onMount, Show, For } from 'solid-js';
 import { createSignal } from 'solid-js';
 import { setTooltipInfo, store } from '../store';
+import { t } from '../i18n';
 import {
   aggregateConsumption,
   bucketStart,
@@ -305,7 +306,7 @@ export function ChartBars() {
         ? fmtDay(b.t)
         : fmtMonth(b.t);
     const mainVal = b.values[lay.currency] ?? 0;
-    const mainRow = { label: '消费', value: fmtMoney(mainVal, lay.currency) };
+    const mainRow = { label: t('chartBars.tooltip.spend'), value: fmtMoney(mainVal, lay.currency) };
     setTooltipInfo({
       pointX: lay.xOf(best + 0.5),
       pointY: lay.yOf(mainVal),
@@ -320,7 +321,7 @@ export function ChartBars() {
                 secondary: true,
                 rows: [
                   {
-                    label: '消费',
+                    label: t('chartBars.tooltip.spend'),
                     value: fmtMoney(b.values[lay.currency2] ?? 0, lay.currency2),
                   },
                 ],
@@ -413,7 +414,7 @@ export function ChartBars() {
       <Tooltip />
       <Show when={hasData() && noConsumption()}>
         <div class="empty">
-          <div class="empty-text">该时段无消费</div>
+          <div class="empty-text">{t('chartBars.noConsumption')}</div>
         </div>
       </Show>
       <Show when={!hasData()}>
