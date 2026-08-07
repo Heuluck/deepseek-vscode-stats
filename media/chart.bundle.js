@@ -1633,6 +1633,8 @@
     refreshing: false,
     refreshResult: null,
     yMinSpanRatio: 0.2,
+    chartMode: "spend",
+    consGran: "hour",
     todayCache: null
   });
   var [tooltipInfo, setTooltipInfo] = createSignal(null);
@@ -1681,6 +1683,7 @@
     });
   }
   function init(payload) {
+    setTooltipInfo(null);
     const view = "hourly";
     const rangeKey = VIEWS[view].defaultRange;
     const r = resetViewRange(payload, view, rangeKey);
@@ -1694,6 +1697,8 @@
       maxWindow: r.maxWindow ?? 0,
       minWindow: r.minWindow ?? 6e4,
       yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
+      chartMode: payload.chartMode ?? "spend",
+      consGran: "hour",
       todayCache: buildTodaySpendCache(
         payload,
         Date.now(),
@@ -1748,8 +1753,17 @@
   function setYMinSpanRatio(ratio) {
     setStore({ yMinSpanRatio: ratio });
   }
+  function setChartMode(mode) {
+    setStore({ chartMode: mode });
+    setTooltipInfo(null);
+    postMessage({ type: "setChartMode", payload: { mode } });
+  }
+  function setConsGran(g) {
+    setStore({ consGran: g });
+    setTooltipInfo(null);
+  }
   function onSettingsReset() {
-    setStore({ settingsOpen: false, yMinSpanRatio: 0.2 });
+    setStore({ settingsOpen: false, yMinSpanRatio: 0.2, chartMode: "spend" });
   }
   function onError(message) {
     setStore({
@@ -1762,6 +1776,7 @@
   }
   function setView(view) {
     if (store.view === view) return;
+    setTooltipInfo(null);
     const rangeKey = VIEWS[view].defaultRange;
     const r = resetViewRange(store.data, view, rangeKey);
     setStore({
@@ -1874,20 +1889,52 @@
   // webview/components/Tabs.tsx
   var _tmpl$3 = /* @__PURE__ */ template(`<div class=tabs id=tabs>`);
   var _tmpl$22 = /* @__PURE__ */ template(`<button>`);
+  var CONS_GRANS = {
+    hour: {
+      label: "\u5C0F\u65F6"
+    },
+    day: {
+      label: "\u5468"
+    },
+    month: {
+      label: "\u6708"
+    }
+  };
   function Tabs() {
     return (() => {
       var _el$ = _tmpl$3();
-      insert(_el$, createComponent(For, {
-        get each() {
-          return Object.entries(VIEWS);
+      insert(_el$, createComponent(Show, {
+        get when() {
+          return store.chartMode === "balance";
         },
-        children: ([key, cfg]) => (() => {
-          var _el$2 = _tmpl$22();
-          _el$2.$$click = () => setView(key);
-          insert(_el$2, () => cfg.label);
-          createRenderEffect(() => className(_el$2, "tab" + (key === store.view ? " active" : "")));
-          return _el$2;
-        })()
+        get fallback() {
+          return createComponent(For, {
+            get each() {
+              return Object.entries(CONS_GRANS);
+            },
+            children: ([key, cfg]) => (() => {
+              var _el$2 = _tmpl$22();
+              _el$2.$$click = () => setConsGran(key);
+              insert(_el$2, () => cfg.label);
+              createRenderEffect(() => className(_el$2, "tab" + (key === store.consGran ? " active" : "")));
+              return _el$2;
+            })()
+          });
+        },
+        get children() {
+          return createComponent(For, {
+            get each() {
+              return Object.entries(VIEWS);
+            },
+            children: ([key, cfg]) => (() => {
+              var _el$3 = _tmpl$22();
+              _el$3.$$click = () => setView(key);
+              insert(_el$3, () => cfg.label);
+              createRenderEffect(() => className(_el$3, "tab" + (key === store.view ? " active" : "")));
+              return _el$3;
+            })()
+          });
+        }
       }));
       return _el$;
     })();
@@ -1919,7 +1966,7 @@
 
   // webview/components/Footer.tsx
   var _tmpl$5 = /* @__PURE__ */ template(`<span>`);
-  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><button class=btn title="\u6253\u5F00 DeepSeek \u72B6\u6001\u9875"><i class="codicon codicon-pulse"></i>\u72B6\u6001</button><button class=btn title=\u8BBE\u7F6E><i class="codicon codicon-gear"></i>\u8BBE\u7F6E`);
+  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><div class=tabs title="\u56FE\u8868\u6A21\u5F0F\uFF1A\u4F59\u989D\u66F2\u7EBF / \u6D88\u8017\u67F1\u72B6\u56FE"><button>\u4F59\u989D</button><button>\u6D88\u8017</button></div><button class=btn title="\u6253\u5F00 DeepSeek \u72B6\u6001\u9875"><i class="codicon codicon-pulse"></i>\u72B6\u6001</button><button class=btn title=\u8BBE\u7F6E><i class="codicon codicon-gear"></i>\u8BBE\u7F6E`);
   function Footer() {
     const info = createMemo(() => {
       const d = store.data;
@@ -1936,13 +1983,24 @@
       insert(_el$, info);
       return _el$;
     })(), (() => {
-      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.nextSibling;
+      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$4.nextSibling, _el$8 = _el$7.nextSibling;
       insert(_el$3, (() => {
         var _c$ = memo(() => !!store.lastError);
         return () => _c$() ? `\u26A0 ${store.lastError}` : "";
       })());
-      addEventListener(_el$4, "click", openStatusPage, true);
-      addEventListener(_el$5, "click", openSettings, true);
+      _el$5.$$click = () => setChartMode("balance");
+      _el$6.$$click = () => setChartMode("spend");
+      addEventListener(_el$7, "click", openStatusPage, true);
+      addEventListener(_el$8, "click", openSettings, true);
+      createRenderEffect((_p$) => {
+        var _v$ = "tab" + (store.chartMode === "balance" ? " active" : ""), _v$2 = "tab" + (store.chartMode === "spend" ? " active" : "");
+        _v$ !== _p$.e && className(_el$5, _p$.e = _v$);
+        _v$2 !== _p$.t && className(_el$6, _p$.t = _v$2);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0
+      });
       return _el$2;
     })()];
   }
@@ -2482,6 +2540,23 @@
   // webview/components/Tooltip.tsx
   var _tmpl$6 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
   var _tmpl$25 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
+  function computePos(info, el, wrap) {
+    const tw = el.offsetWidth;
+    const th = el.offsetHeight;
+    if (tw <= 0 || th <= 0) return null;
+    const ww = wrap ? wrap.clientWidth : 0;
+    const wh = wrap ? wrap.clientHeight : 0;
+    let tx = info.pointX + 14;
+    if (tx + tw > ww - 8) tx = info.pointX - tw - 14;
+    tx = Math.max(4, Math.min(tx, ww - tw - 4));
+    let ty = info.pointY - th - 12;
+    if (ty < 8) ty = info.pointY + 14;
+    ty = Math.max(4, Math.min(ty, wh - th - 4));
+    return {
+      left: tx,
+      top: ty
+    };
+  }
   function Tooltip() {
     let ref;
     const [pos, setPos] = createSignal(null);
@@ -2492,18 +2567,19 @@
         return;
       }
       const wrap = document.getElementById("chartWrap");
-      const tw = ref.offsetWidth;
-      const th = ref.offsetHeight;
-      const ww = wrap ? wrap.clientWidth : 0;
-      let tx = info.pointX + 14;
-      if (tx + tw > ww - 8) tx = info.pointX - tw - 14;
-      if (tx < 8) tx = 8;
-      let ty = info.pointY - th - 12;
-      if (ty < 8) ty = info.pointY + 14;
-      setPos({
-        left: tx,
-        top: ty
-      });
+      const pos2 = computePos(info, ref, wrap);
+      if (!pos2) {
+        const info0 = info;
+        const el = ref;
+        setPos(null);
+        requestAnimationFrame(() => {
+          if (tooltipInfo() === info0 && el) {
+            setPos(computePos(info0, el, document.getElementById("chartWrap")));
+          }
+        });
+        return;
+      }
+      setPos(pos2);
     });
     return createComponent(Show, {
       get when() {
@@ -3319,11 +3395,332 @@
     })();
   }
 
+  // webview/logic/consumption.ts
+  var EPS2 = 1e-6;
+  function bucketStart(t, g) {
+    const d = new Date(t);
+    if (g === "hour") {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate(), d.getHours()).getTime();
+    }
+    if (g === "day") {
+      return new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+    }
+    return new Date(d.getFullYear(), d.getMonth(), 1).getTime();
+  }
+  function aggregateConsumption(snapshots, g, windowMs, skipZero, now) {
+    const acc = /* @__PURE__ */ new Map();
+    const winStart = now - windowMs;
+    let prev = null;
+    for (const s of snapshots) {
+      if (prev && s.total < prev.total - EPS2) {
+        const b = bucketStart(s.t, g);
+        if (b >= winStart) {
+          acc.set(b, (acc.get(b) ?? 0) + (prev.total - s.total));
+        }
+      }
+      prev = s;
+    }
+    const out = [];
+    const start = bucketStart(winStart, g);
+    const end = bucketStart(now, g);
+    if (g === "month") {
+      const d = new Date(start);
+      for (let t = start; t <= end; ) {
+        const v = acc.get(t) ?? 0;
+        if (!skipZero || v > EPS2) out.push({ t, value: v });
+        d.setMonth(d.getMonth() + 1);
+        t = d.getTime();
+      }
+    } else {
+      const step = g === "hour" ? 36e5 : 864e5;
+      for (let t = start; t <= end; t += step) {
+        const v = acc.get(t) ?? 0;
+        if (!skipZero || v > EPS2) out.push({ t, value: v });
+      }
+    }
+    return out;
+  }
+
+  // webview/components/ChartBars.tsx
+  var _tmpl$12 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
+  var _tmpl$211 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)><g class=bars></svg>`, false, true, false);
+  var _tmpl$35 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>\u8BE5\u65F6\u6BB5\u65E0\u6D88\u8D39`);
+  var _tmpl$44 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
+  var _tmpl$52 = /* @__PURE__ */ template(`<svg><rect class=bar rx=2></svg>`, false, true, false);
+  var SKIP_ZERO = {
+    hour: true,
+    day: false,
+    month: false
+  };
+  function ChartBars() {
+    let wrapRef;
+    let svgRef;
+    const [size, setSize] = createSignal({
+      w: 0,
+      h: 0
+    });
+    onMount(() => {
+      const ro = new ResizeObserver(() => {
+        if (wrapRef) setSize({
+          w: wrapRef.clientWidth,
+          h: wrapRef.clientHeight
+        });
+      });
+      ro.observe(wrapRef);
+      if (wrapRef) setSize({
+        w: wrapRef.clientWidth,
+        h: wrapRef.clientHeight
+      });
+      onCleanup(() => ro.disconnect());
+    });
+    const bars = createMemo(() => {
+      const data = store.data;
+      if (!data || !data.snapshots.length) return [];
+      const g = store.consGran;
+      const now = Date.now();
+      let windowMs;
+      if (g === "hour") {
+        windowMs = 24 * 36e5;
+      } else if (g === "day") {
+        windowMs = now - (bucketStart(now, "day") - 6 * 864e5);
+      } else {
+        const t0 = new Date(bucketStart(now, "month"));
+        t0.setMonth(t0.getMonth() - 11);
+        windowMs = now - t0.getTime();
+      }
+      return aggregateConsumption(data.snapshots, g, windowMs, SKIP_ZERO[g], now);
+    });
+    const axisView = createMemo(() => store.consGran === "hour" ? "hourly" : store.consGran === "day" ? "daily" : "monthly");
+    const layout = createMemo(() => {
+      const bs = bars();
+      const {
+        w,
+        h
+      } = size();
+      if (!bs.length || w <= 0 || h <= 0) return null;
+      const g = store.consGran;
+      const n = bs.length;
+      const maxVal = bs.reduce((m, b) => Math.max(m, b.value), 0);
+      const currency = store.data && store.data.current && store.data.current.currency || "CNY";
+      let yTop = Math.max(maxVal, 0.01);
+      let yTicks = niceTicks(0, yTop * 1.1, 5);
+      while (yTicks.length > 1 && yTicks[yTicks.length - 1] < maxVal) {
+        yTop *= 1.3;
+        yTicks = niceTicks(0, yTop, 5);
+      }
+      const yMax = yTicks[yTicks.length - 1];
+      const yMin = 0;
+      const yLabelW = yTicks.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency))), 0);
+      const plotLeft = Math.max(M.left, yLabelW + 14);
+      const plotRight = w - M.right;
+      const innerW = w - plotLeft - M.right;
+      const innerH = h - M.top - M.bottom;
+      if (innerW <= 0 || innerH <= 0) return null;
+      const slotW = innerW / n;
+      const xOf = (t) => plotLeft + t * slotW;
+      const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
+      const barW = Math.max(2, Math.min(slotW * 0.7, 48));
+      const xTicks = [];
+      for (let i = 0; i <= n; i++) xTicks.push(i);
+      const crossesDay = startOfDay(bs[0].t) !== startOfDay(bs[n - 1].t);
+      const labelText = (b) => g === "hour" ? (crossesDay ? fmtDayShort(b.t) + " " : "") + fmtClock(b.t) : g === "day" ? fmtDayShort(b.t) : fmtMonth(b.t);
+      const labelW = g === "hour" ? crossesDay ? 82 : 42 : g === "day" ? 46 : 62;
+      const every = Math.max(1, Math.ceil(n * labelW / Math.max(1, innerW)));
+      const xLabels = [];
+      for (let i = 0; i < n; i += every) {
+        xLabels.push({
+          t: bs[i].t,
+          x: plotLeft + (i + 0.5) * slotW,
+          text: labelText(bs[i]),
+          w: labelW,
+          anchor: "middle"
+        });
+      }
+      if ((n - 1) % every !== 0) {
+        const lastX = plotLeft + (n - 1 + 0.5) * slotW;
+        const prev = xLabels[xLabels.length - 1];
+        if (prev && lastX - prev.x >= labelW) {
+          xLabels.push({
+            t: bs[n - 1].t,
+            x: lastX,
+            text: labelText(bs[n - 1]),
+            w: labelW,
+            anchor: "middle"
+          });
+        }
+      }
+      const yLabels = [];
+      {
+        let lastY = Infinity;
+        for (let i = 0; i < yTicks.length; i++) {
+          const v = yTicks[i];
+          const y2 = yOf(v);
+          const isEdge = i === 0 || i === yTicks.length - 1;
+          if (!isEdge && lastY - y2 < 16) continue;
+          yLabels.push({
+            v,
+            y: y2,
+            text: fmtAxisMoney(v, currency)
+          });
+          lastY = y2;
+        }
+      }
+      return {
+        xOf,
+        yOf,
+        yMin,
+        yMax,
+        currency,
+        w,
+        h,
+        xStep: slotW,
+        xTicks,
+        xLabels,
+        yTicks,
+        yLabels,
+        plotLeft,
+        plotRight,
+        barW
+      };
+    });
+    const onMove = (e) => {
+      const lay = layout();
+      const bs = bars();
+      if (!lay || !svgRef) return;
+      const rect = svgRef.getBoundingClientRect();
+      const x2 = e.clientX - rect.left;
+      let best = -1;
+      let bestD = Infinity;
+      for (let i = 0; i < bs.length; i++) {
+        const d = Math.abs(lay.xOf(i + 0.5) - x2);
+        if (d < bestD) {
+          bestD = d;
+          best = i;
+        }
+      }
+      const thr = Math.max(lay.barW / 2 + 8, 24);
+      if (best < 0 || bestD > thr) {
+        setTooltipInfo(null);
+        return;
+      }
+      const b = bs[best];
+      const title = store.consGran === "hour" ? fmtDayShort(b.t) + " " + fmtClock(b.t) : store.consGran === "day" ? fmtDay(b.t) : fmtMonth(b.t);
+      setTooltipInfo({
+        pointX: lay.xOf(best + 0.5),
+        pointY: lay.yOf(b.value),
+        title,
+        rows: [{
+          label: "\u6D88\u8D39",
+          value: fmtMoney(b.value, lay.currency)
+        }]
+      });
+    };
+    const hasData = () => !!(store.data && store.data.snapshots.length);
+    const noConsumption = () => bars().length === 0 || bars().every((b) => b.value <= EPS2);
+    return (() => {
+      var _el$ = _tmpl$44(), _el$2 = _el$.firstChild;
+      var _ref$ = wrapRef;
+      typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
+      _el$2.addEventListener("mouseleave", () => setTooltipInfo(null));
+      _el$2.$$mousemove = onMove;
+      var _ref$2 = svgRef;
+      typeof _ref$2 === "function" ? use(_ref$2, _el$2) : svgRef = _el$2;
+      insert(_el$2, createComponent(Show, {
+        get when() {
+          return layout();
+        },
+        get children() {
+          return [(() => {
+            var _el$3 = _tmpl$12(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
+            createRenderEffect((_p$) => {
+              var _v$ = layout().plotLeft, _v$2 = M.top, _v$3 = layout().plotRight - layout().plotLeft, _v$4 = size().h - M.bottom - M.top;
+              _v$ !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$);
+              _v$2 !== _p$.t && setAttribute(_el$5, "y", _p$.t = _v$2);
+              _v$3 !== _p$.a && setAttribute(_el$5, "width", _p$.a = _v$3);
+              _v$4 !== _p$.o && setAttribute(_el$5, "height", _p$.o = _v$4);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0,
+              a: void 0,
+              o: void 0
+            });
+            return _el$3;
+          })(), createComponent(ChartAxis, {
+            get lay() {
+              return layout();
+            },
+            get view() {
+              return axisView();
+            }
+          }), (() => {
+            var _el$6 = _tmpl$211(), _el$7 = _el$6.firstChild;
+            insert(_el$7, createComponent(For, {
+              get each() {
+                return bars();
+              },
+              children: (b, i) => {
+                const lay = layout();
+                const x2 = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, lay.xOf(i() + 0.5) - lay.barW / 2));
+                const top = lay.yOf(b.value);
+                const bottom = lay.yOf(lay.yMin);
+                return (() => {
+                  var _el$9 = _tmpl$52();
+                  setAttribute(_el$9, "x", x2);
+                  setAttribute(_el$9, "y", top);
+                  createRenderEffect((_p$) => {
+                    var _v$7 = lay.barW, _v$8 = Math.max(0, bottom - top);
+                    _v$7 !== _p$.e && setAttribute(_el$9, "width", _p$.e = _v$7);
+                    _v$8 !== _p$.t && setAttribute(_el$9, "height", _p$.t = _v$8);
+                    return _p$;
+                  }, {
+                    e: void 0,
+                    t: void 0
+                  });
+                  return _el$9;
+                })();
+              }
+            }));
+            return _el$6;
+          })()];
+        }
+      }));
+      insert(_el$, createComponent(Tooltip, {}), null);
+      insert(_el$, createComponent(Show, {
+        get when() {
+          return memo(() => !!hasData())() && noConsumption();
+        },
+        get children() {
+          return _tmpl$35();
+        }
+      }), null);
+      insert(_el$, createComponent(Show, {
+        get when() {
+          return !hasData();
+        },
+        get children() {
+          return createComponent(Empty, {});
+        }
+      }), null);
+      createRenderEffect((_p$) => {
+        var _v$5 = size().w, _v$6 = size().h;
+        _v$5 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$5);
+        _v$6 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$6);
+        return _p$;
+      }, {
+        e: void 0,
+        t: void 0
+      });
+      return _el$;
+    })();
+  }
+  delegateEvents(["mousemove"]);
+
   // webview/components/Collapse.tsx
-  var _tmpl$12 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
+  var _tmpl$13 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
   function Collapse(props) {
     return (() => {
-      var _el$ = _tmpl$12(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild;
       insert(_el$2, () => props.children);
       createRenderEffect(() => className(_el$, "collapse" + (props.open ? " open" : "")));
       return _el$;
@@ -3331,10 +3728,10 @@
   }
 
   // webview/components/SettingsGroup.tsx
-  var _tmpl$13 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$14 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
   function SettingsGroup(props) {
     return (() => {
-      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
+      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
       addEventListener(_el$2, "click", props.onToggle, true);
       insert(_el$3, () => props.title, null);
       insert(_el$, createComponent(Collapse, {
@@ -3360,22 +3757,22 @@
   delegateEvents(["click"]);
 
   // webview/components/SettingRow.tsx
-  var _tmpl$14 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
-  var _tmpl$211 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
-  var _tmpl$35 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
-  var _tmpl$44 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
+  var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
+  var _tmpl$212 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
+  var _tmpl$36 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
+  var _tmpl$45 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
   function SettingRow(props) {
     return (() => {
-      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
       insert(_el$2, (() => {
         var _c$ = memo(() => !!props.for);
         return () => _c$() ? (() => {
-          var _el$4 = _tmpl$211();
+          var _el$4 = _tmpl$212();
           insert(_el$4, () => props.label);
           createRenderEffect(() => setAttribute(_el$4, "for", props.for));
           return _el$4;
         })() : (() => {
-          var _el$5 = _tmpl$35();
+          var _el$5 = _tmpl$36();
           insert(_el$5, () => props.label);
           return _el$5;
         })();
@@ -3383,7 +3780,7 @@
       insert(_el$2, (() => {
         var _c$2 = memo(() => !!props.hint);
         return () => _c$2() ? (() => {
-          var _el$6 = _tmpl$44();
+          var _el$6 = _tmpl$45();
           insert(_el$6, () => props.hint);
           return _el$6;
         })() : null;
@@ -3394,10 +3791,10 @@
   }
 
   // webview/components/ThresholdEditor.tsx
-  var _tmpl$15 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
-  var _tmpl$212 = /* @__PURE__ */ template(`<div id=thresholdList>`);
-  var _tmpl$36 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
-  var _tmpl$45 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
+  var _tmpl$16 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
+  var _tmpl$213 = /* @__PURE__ */ template(`<div id=thresholdList>`);
+  var _tmpl$37 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
+  var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function ThresholdEditor(props) {
     function add() {
       props.onChange([...props.thresholds, {
@@ -3421,17 +3818,17 @@
       props.onChange(props.thresholds.filter((_, idx) => idx !== i));
     }
     return [(() => {
-      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
       _el$3.$$click = add;
       return _el$;
     })(), (() => {
-      var _el$4 = _tmpl$212();
+      var _el$4 = _tmpl$213();
       insert(_el$4, createComponent(For, {
         get each() {
           return props.thresholds;
         },
         children: (t, i) => (() => {
-          var _el$6 = _tmpl$45(), _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
+          var _el$6 = _tmpl$46(), _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
           _el$7.$$input = (e) => {
             const v = parseFloat(e.currentTarget.value);
             if (Number.isFinite(v)) setBelow(i(), v);
@@ -3444,28 +3841,28 @@
         })()
       }));
       return _el$4;
-    })(), _tmpl$36()];
+    })(), _tmpl$37()];
   }
   delegateEvents(["click", "input"]);
 
   // webview/components/settings/StatusBarGroup.tsx
-  var _tmpl$16 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
-  var _tmpl$213 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
-  var _tmpl$37 = /* @__PURE__ */ template(`<input type=color>`);
-  var _tmpl$46 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
+  var _tmpl$17 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
+  var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$38 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
   function StatusBarGroup(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
     return [createComponent(SettingRow, {
       label: "\u663E\u793A\u4F59\u989D",
       "for": "statusBarShowEl",
       get children() {
-        var _el$ = _tmpl$16();
+        var _el$ = _tmpl$17();
         _el$.addEventListener("change", (e) => props.setStaged("statusBarShow", e.currentTarget.checked));
         createRenderEffect(() => _el$.checked = props.staged?.statusBarShow);
         return _el$;
       }
     }), (() => {
-      var _el$2 = _tmpl$213();
+      var _el$2 = _tmpl$214();
       _el$2.$$click = () => setColorOpen((o) => !o);
       createRenderEffect(() => className(_el$2, "settings-toggle" + (colorOpen() ? " open" : "")));
       return _el$2;
@@ -3478,13 +3875,13 @@
           label: "\u9ED8\u8BA4\u989C\u8272",
           get children() {
             return [(() => {
-              var _el$3 = _tmpl$37();
+              var _el$3 = _tmpl$38();
               _el$3.addEventListener("change", (e) => props.setStaged("defaultColor", e.currentTarget.value));
               createRenderEffect(() => _el$3.disabled = !props.staged?.defaultColor);
               createRenderEffect(() => _el$3.value = props.staged?.defaultColor || "#000000");
               return _el$3;
             })(), (() => {
-              var _el$4 = _tmpl$46(), _el$5 = _el$4.firstChild;
+              var _el$4 = _tmpl$47(), _el$5 = _el$4.firstChild;
               _el$5.addEventListener("change", (e) => {
                 const theme = e.currentTarget.checked;
                 props.setStaged("defaultColor", theme ? "" : "#000000");
@@ -3505,17 +3902,17 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ChartGroup.tsx
-  var _tmpl$17 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
-  var _tmpl$214 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=dotted>\u70B9\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=ignore>\u5047\u88C5\u8FDE\u7EED</option><option value=none>\u4E0D\u8FDE\u63A5`);
-  var _tmpl$38 = /* @__PURE__ */ template(`<input type=color>`);
-  var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
-  var _tmpl$52 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
+  var _tmpl$18 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
+  var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=dotted>\u70B9\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=ignore>\u5047\u88C5\u8FDE\u7EED</option><option value=none>\u4E0D\u8FDE\u63A5`);
+  var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
+  var _tmpl$53 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
   function ChartGroup(props) {
     return [createComponent(SettingRow, {
       label: "\u7EBF\u6761\u6837\u5F0F",
       "for": "lineStyleEl",
       get children() {
-        var _el$ = _tmpl$17();
+        var _el$ = _tmpl$18();
         _el$.addEventListener("change", (e) => props.setStaged("lineStyle", e.currentTarget.value));
         createRenderEffect(() => _el$.value = props.staged?.lineStyle ?? "straight");
         return _el$;
@@ -3525,7 +3922,7 @@
       "for": "connectorStyleEl",
       hint: "\u8F6E\u8BE2\u65AD\u6863\u65F6\u7528\u8FDE\u63A5\u7EBF\u8865\u9F50\u7F3A\u53E3",
       get children() {
-        var _el$2 = _tmpl$214();
+        var _el$2 = _tmpl$215();
         _el$2.addEventListener("change", (e) => props.setStaged("connectorStyle", e.currentTarget.value));
         createRenderEffect(() => _el$2.value = props.staged?.connectorStyle ?? "dashed");
         return _el$2;
@@ -3534,13 +3931,13 @@
       label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
       get children() {
         return [(() => {
-          var _el$3 = _tmpl$38();
+          var _el$3 = _tmpl$39();
           _el$3.addEventListener("change", (e) => props.setStaged("connectorColor", e.currentTarget.value));
           createRenderEffect(() => _el$3.disabled = !props.staged?.connectorColor);
           createRenderEffect(() => _el$3.value = props.staged?.connectorColor || "#000000");
           return _el$3;
         })(), (() => {
-          var _el$4 = _tmpl$47(), _el$5 = _el$4.firstChild;
+          var _el$4 = _tmpl$48(), _el$5 = _el$4.firstChild;
           _el$5.addEventListener("change", (e) => {
             const theme = e.currentTarget.checked;
             props.setStaged("connectorColor", theme ? "" : "#000000");
@@ -3554,7 +3951,7 @@
       "for": "yMinSpanRatioEl",
       hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
       get children() {
-        var _el$6 = _tmpl$52();
+        var _el$6 = _tmpl$53();
         _el$6.addEventListener("change", (e) => {
           const v = Number(e.currentTarget.value);
           if (Number.isFinite(v)) props.setYRatio(Math.min(1, Math.max(0, v)));
@@ -3566,18 +3963,18 @@
   }
 
   // webview/components/settings/GeneralGroup.tsx
-  var _tmpl$18 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
-  var _tmpl$215 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
-  var _tmpl$39 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
-  var _tmpl$48 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$53 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
+  var _tmpl$19 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
+  var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
+  var _tmpl$310 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
+  var _tmpl$49 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
+  var _tmpl$54 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
   function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
     return [createComponent(SettingRow, {
       label: "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
       "for": "pollMinutesEl",
       get children() {
-        var _el$ = _tmpl$18();
+        var _el$ = _tmpl$19();
         _el$.addEventListener("change", (e) => {
           const v = parseInt(e.currentTarget.value, 10);
           if (Number.isFinite(v) && v >= 1) props.setStaged("pollMinutes", v);
@@ -3589,7 +3986,7 @@
       label: "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
       "for": "rawRetentionEl",
       get children() {
-        var _el$2 = _tmpl$215();
+        var _el$2 = _tmpl$216();
         _el$2.addEventListener("change", (e) => {
           const v = parseInt(e.currentTarget.value, 10);
           if (Number.isFinite(v) && v >= 1) props.setStaged("rawRetentionDays", v);
@@ -3601,7 +3998,7 @@
       label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
       "for": "showTodaySpendEl",
       get children() {
-        var _el$3 = _tmpl$39();
+        var _el$3 = _tmpl$310();
         _el$3.addEventListener("change", (e) => {
           if (e.currentTarget.checked) {
             setConsent(true);
@@ -3618,7 +4015,7 @@
         return consent();
       },
       get children() {
-        var _el$4 = _tmpl$48(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
+        var _el$4 = _tmpl$49(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
         _el$7.$$click = () => {
           props.setStaged("showTodaySpend", true);
           setConsent(false);
@@ -3634,7 +4031,7 @@
       "for": "dayBoundaryEl",
       hint: "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
       get children() {
-        var _el$9 = _tmpl$53();
+        var _el$9 = _tmpl$54();
         _el$9.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
         createRenderEffect(() => _el$9.value = props.staged?.dayBoundary ?? "local");
         return _el$9;
@@ -3644,8 +4041,8 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ApiKeyGroup.tsx
-  var _tmpl$19 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
-  var _tmpl$216 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
+  var _tmpl$20 = /* @__PURE__ */ template(`<button class=btn>\u8BBE\u7F6E / \u66F4\u6362`);
+  var _tmpl$217 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664`);
   function ApiKeyGroup() {
     return createComponent(SettingRow, {
       get label() {
@@ -3653,13 +4050,13 @@
       },
       get children() {
         return [(() => {
-          var _el$ = _tmpl$19();
+          var _el$ = _tmpl$20();
           _el$.$$click = () => postMessage({
             type: "setApiKey"
           });
           return _el$;
         })(), (() => {
-          var _el$2 = _tmpl$216();
+          var _el$2 = _tmpl$217();
           _el$2.$$click = () => postMessage({
             type: "clearApiKey"
           });
@@ -3671,12 +4068,12 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/DataGroup.tsx
-  var _tmpl$20 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
+  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">\u6E05\u9664\u5386\u53F2`);
   function DataGroup() {
     return createComponent(SettingRow, {
       label: "\u5386\u53F2\u5FEB\u7167\uFF08\u4EC5 VS Code \u6253\u5F00\u671F\u95F4\u8BB0\u5F55\uFF09",
       get children() {
-        var _el$ = _tmpl$20();
+        var _el$ = _tmpl$21();
         _el$.$$click = () => postMessage({
           type: "clearHistory"
         });
@@ -3687,12 +4084,12 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/MiscGroup.tsx
-  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
+  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">\u6062\u590D\u9ED8\u8BA4`);
   function MiscGroup() {
     return createComponent(SettingRow, {
       label: "\u6062\u590D\u9ED8\u8BA4\u8BBE\u7F6E",
       get children() {
-        var _el$ = _tmpl$21();
+        var _el$ = _tmpl$30();
         _el$.$$click = () => postMessage({
           type: "resetSettings"
         });
@@ -3703,7 +4100,7 @@
   delegateEvents(["click"]);
 
   // webview/components/Settings.tsx
-  var _tmpl$30 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
+  var _tmpl$31 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title>DeepSeek Stats \u8BBE\u7F6E</span><button class=icon title=\u5173\u95ED><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i>\u6253\u5F00 VS Code \u8BBE\u7F6E</button><button class=btn>\u53D6\u6D88</button><button class="btn primary"><i class="codicon codicon-check"></i>\u4FDD\u5B58`);
   function Settings(props) {
     const [groupsOpen, setGroupsOpen] = createStore({
       statusBar: true,
@@ -3757,7 +4154,7 @@
       close();
     }
     return (() => {
-      var _el$ = _tmpl$30(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
+      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.nextSibling, _el$0 = _el$9.nextSibling;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -3852,7 +4249,7 @@
   delegateEvents(["pointerdown", "click"]);
 
   // webview/components/RefreshButton.tsx
-  var _tmpl$31 = /* @__PURE__ */ template(`<button><i>`);
+  var _tmpl$40 = /* @__PURE__ */ template(`<button><i>`);
   function RefreshButton() {
     const refreshIcon = createMemo(() => {
       if (store.refreshing) return "codicon-refresh spinning";
@@ -3867,7 +4264,7 @@
       return "\u7ACB\u5373\u67E5\u8BE2\u4F59\u989D";
     });
     return (() => {
-      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild;
       addEventListener(_el$, "click", checkNow, true);
       createRenderEffect((_p$) => {
         var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
@@ -3888,7 +4285,8 @@
   delegateEvents(["click"]);
 
   // webview/components/App.tsx
-  var _tmpl$40 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E</button><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
+  var _tmpl$41 = /* @__PURE__ */ template(`<button class=btn title=\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4>\u91CD\u7F6E`);
+  var _tmpl$218 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=icon title="\u5728\u6D4F\u89C8\u5668\u6253\u5F00 DeepSeek \u7528\u91CF\u9875"><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
     createEffect(() => {
       const r = store.refreshResult;
@@ -3897,14 +4295,34 @@
       onCleanup(() => clearTimeout(t));
     });
     return (() => {
-      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$2.nextSibling;
+      var _el$ = _tmpl$218(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$5 = _el$3.firstChild, _el$6 = _el$2.nextSibling;
       insert(_el$2, createComponent(Header, {}), _el$3);
-      insert(_el$3, createComponent(Ranges, {}), _el$4);
-      insert(_el$3, createComponent(Tabs, {}), _el$4);
-      addEventListener(_el$4, "click", resetView, true);
+      insert(_el$3, createComponent(Show, {
+        get when() {
+          return store.chartMode === "balance";
+        },
+        get children() {
+          return [createComponent(Ranges, {}), (() => {
+            var _el$4 = _tmpl$41();
+            addEventListener(_el$4, "click", resetView, true);
+            return _el$4;
+          })()];
+        }
+      }), _el$5);
+      insert(_el$3, createComponent(Tabs, {}), _el$5);
       insert(_el$3, createComponent(RefreshButton, {}), _el$5);
       addEventListener(_el$5, "click", openUsage, true);
-      insert(_el$, createComponent(Chart, {}), _el$6);
+      insert(_el$, createComponent(Show, {
+        get when() {
+          return store.chartMode === "balance";
+        },
+        get fallback() {
+          return createComponent(ChartBars, {});
+        },
+        get children() {
+          return createComponent(Chart, {});
+        }
+      }), _el$6);
       insert(_el$6, createComponent(Footer, {}));
       insert(_el$, createComponent(Show, {
         get when() {

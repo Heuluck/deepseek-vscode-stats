@@ -1,5 +1,6 @@
 /** 与扩展侧 src/extension.ts 对齐的消息契约。 */
 import type {
+  ChartMode,
   ConnectorStyle,
   DayBoundary,
   InitPayload,
@@ -43,7 +44,8 @@ export type WebviewToExtension =
   | { type: 'resetSettings' }
   | { type: 'openNativeSettings' }
   | { type: 'saveSettings'; payload: SaveSettingsPayload }
-  | { type: 'setYMinSpanRatio'; payload: { ratio: number } };
+  | { type: 'setYMinSpanRatio'; payload: { ratio: number } }
+  | { type: 'setChartMode'; payload: { mode: ChartMode } };
 
 interface VsCodeApi {
   postMessage(msg: unknown): void;

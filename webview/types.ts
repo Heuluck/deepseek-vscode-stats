@@ -29,6 +29,9 @@ export type ConnectorStyle = 'dashed' | 'dotted' | 'solid' | 'ignore' | 'none';
 
 export type LineStyle = 'straight' | 'smooth';
 
+/** 图表模式：余额曲线 / 消耗柱状图。 */
+export type ChartMode = 'balance' | 'spend';
+
 /** 「今日花费」日界时区：本地自然日 或 UTC（与 DeepSeek 官方口径一致）。 */
 export type DayBoundary = 'local' | 'utc';
 
@@ -54,6 +57,8 @@ export interface InitPayload {
   hasKey: boolean;
   /** 图表 Y 轴最小跨度比例（webview 本地设置，存扩展 globalState，非 VS Code 设置；0 = 关闭）。 */
   yMinSpanRatio: number;
+  /** 图表模式（webview 本地设置，存扩展 globalState）：默认消耗柱状图。 */
+  chartMode: ChartMode;
 }
 
 /** 图表数据点（viewPoints 归一化后的统一形态）。 */

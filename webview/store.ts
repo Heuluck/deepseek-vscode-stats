@@ -2,6 +2,7 @@
 import { createSignal } from 'solid-js';
 import { createStore } from 'solid-js/store';
 import type {
+  ChartMode,
   ConnectorStyle,
   DayBoundary,
   InitPayload,
@@ -11,6 +12,7 @@ import type {
   Threshold,
   TooltipInfo,
 } from './types';
+import type { ConsumptionGranularity } from './logic/consumption';
 import type { ViewKey, ViewRange, ViewState } from './logic/viewport';
 import {
   onNewData,
@@ -44,6 +46,10 @@ export interface AppState {
   refreshResult: 'ok' | 'fail' | null;
   /** 图表 Y 轴最小跨度比例（webview 本地设置，存扩展 globalState；0 = 关闭约束）。 */
   yMinSpanRatio: number;
+  /** 图表模式：余额曲线 / 消耗柱状图（webview 本地设置，存扩展 globalState）。 */
+  chartMode: ChartMode;
+  /** 消耗柱状图粒度（本次会话内有效）。 */
+  consGran: ConsumptionGranularity;
   /** 今日花费增量缓存（基准 + 累计充值），跨天自动重建。 */
   todayCache: TodaySpendCache | null;
 }
@@ -63,6 +69,8 @@ export const [store, setStore] = createStore<AppState>({
   refreshing: false,
   refreshResult: null,
   yMinSpanRatio: 0.2,
+  chartMode: 'spend',
+  consGran: 'hour',
   todayCache: null,
 });
 
@@ -141,6 +149,7 @@ function applyResetPatch(
 
 // ---------- 消息 actions ----------
 export function init(payload: InitPayload): void {
+  setTooltipInfo(null);
   const view: ViewKey = 'hourly';
   const rangeKey = VIEWS[view].defaultRange;
   const r = resetViewRange(payload, view, rangeKey);
@@ -154,6 +163,8 @@ export function init(payload: InitPayload): void {
     maxWindow: r.maxWindow ?? 0,
     minWindow: r.minWindow ?? 60e3,
     yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
+    chartMode: payload.chartMode ?? 'spend',
+    consGran: 'hour',
     todayCache: buildTodaySpendCache(
       payload,
       Date.now(),
@@ -224,8 +235,21 @@ export function setYMinSpanRatio(ratio: number): void {
   setStore({ yMinSpanRatio: ratio });
 }
 
+/** 切换图表模式（余额/消耗）；乐观更新 + 持久化到扩展 globalState。 */
+export function setChartMode(mode: ChartMode): void {
+  setStore({ chartMode: mode });
+  setTooltipInfo(null); // 坐标空间已变，清掉旧 tooltip 防止错位
+  postMessage({ type: 'setChartMode', payload: { mode } });
+}
+
+/** 切换消耗柱状图粒度（仅本次会话，不持久化）。 */
+export function setConsGran(g: ConsumptionGranularity): void {
+  setStore({ consGran: g });
+  setTooltipInfo(null);
+}
+
 export function onSettingsReset(): void {
-  setStore({ settingsOpen: false, yMinSpanRatio: 0.2 });
+  setStore({ settingsOpen: false, yMinSpanRatio: 0.2, chartMode: 'spend' });
 }
 
 export function onError(message: string): void {
@@ -243,6 +267,7 @@ export function onTheme(): void {
 // ---------- 用户操作 actions ----------
 export function setView(view: ViewKey): void {
   if (store.view === view) return;
+  setTooltipInfo(null);
   const rangeKey = VIEWS[view].defaultRange;
   const r = resetViewRange(store.data, view, rangeKey);
   setStore({

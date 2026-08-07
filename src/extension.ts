@@ -12,11 +12,19 @@ const API_KEY_SECRET = 'deepseekStats.apiKey';
 /** 图表 UI 设置（webview 本地，存 globalState，非 VS Code 设置）：Y 轴最小跨度比例默认值。 */
 const DEFAULT_Y_MIN_SPAN_RATIO = 0.2;
 const Y_MIN_SPAN_RATIO_KEY = 'chartUi.yMinSpanRatio';
+/** 图表模式（webview 本地，存 globalState）：默认消耗柱状图。 */
+type ChartMode = 'balance' | 'spend';
+const DEFAULT_CHART_MODE: ChartMode = 'spend';
+const CHART_MODE_KEY = 'chartUi.mode';
 
 function clampRatio(v: unknown): number {
   const n = Number(v);
   if (!Number.isFinite(n)) return DEFAULT_Y_MIN_SPAN_RATIO;
   return Math.min(1, Math.max(0, n));
+}
+
+function sanitizeChartMode(v: unknown): ChartMode {
+  return v === 'balance' ? 'balance' : DEFAULT_CHART_MODE;
 }
 
 /** 合法 6 位十六进制颜色（如 #ffb900）；空串表示“跟随主题/主色”。 */
@@ -114,6 +122,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       }
     } else if (msg.type === 'setYMinSpanRatio') {
       void context.globalState.update(Y_MIN_SPAN_RATIO_KEY, clampRatio(msg.payload?.ratio));
+    } else if (msg.type === 'setChartMode') {
+      void context.globalState.update(CHART_MODE_KEY, sanitizeChartMode(msg.payload?.mode));
     } else if (msg.type === 'openNativeSettings') {
       void vscode.commands.executeCommand('workbench.action.openSettings', 'deepseek-stats');
     } else if (msg.type === 'ready') {
@@ -140,7 +150,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         store,
         getPanelConfig(),
         !!apiKey,
-        context.globalState.get<number>(Y_MIN_SPAN_RATIO_KEY, DEFAULT_Y_MIN_SPAN_RATIO)
+        context.globalState.get<number>(Y_MIN_SPAN_RATIO_KEY, DEFAULT_Y_MIN_SPAN_RATIO),
+        context.globalState.get<ChartMode>(CHART_MODE_KEY, DEFAULT_CHART_MODE)
       );
     }
   }
@@ -206,6 +217,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       keys.map((k) => cfg.update(k, undefined, vscode.ConfigurationTarget.Global))
     );
     await context.globalState.update(Y_MIN_SPAN_RATIO_KEY, undefined);
+    await context.globalState.update(CHART_MODE_KEY, undefined);
     const failed = results.filter((r) => r.status === 'rejected');
     if (failed.length > 0) {
       console.error('[deepseek-stats] 恢复默认设置失败', failed.length, '项');

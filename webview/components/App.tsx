@@ -12,6 +12,7 @@ import { Tabs } from './Tabs';
 import { Ranges } from './Ranges';
 import { Footer } from './Footer';
 import { Chart } from './Chart';
+import { ChartBars } from './ChartBars';
 import { Settings } from './Settings';
 import { RefreshButton } from './RefreshButton';
 
@@ -29,18 +30,23 @@ export function App() {
       <header>
         <Header />
         <div class="controls">
-          <Ranges />
+          {/* 消耗模式无缩放/平移，范围预设与重置只属于余额曲线 */}
+          <Show when={store.chartMode === 'balance'}>
+            <Ranges />
+            <button class="btn" title="重置视图范围" onClick={resetView}>
+              重置
+            </button>
+          </Show>
           <Tabs />
-          <button class="btn" title="重置视图范围" onClick={resetView}>
-            重置
-          </button>
           <RefreshButton />
           <button class="icon" title="在浏览器打开 DeepSeek 用量页" onClick={openUsage}>
             <i class="codicon codicon-link-external"></i>
           </button>
         </div>
       </header>
-      <Chart />
+      <Show when={store.chartMode === 'balance'} fallback={<ChartBars />}>
+        <Chart />
+      </Show>
       <footer>
         <Footer />
       </footer>

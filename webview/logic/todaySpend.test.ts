@@ -22,6 +22,7 @@ function mkData(snapshots: Snapshot[]): InitPayload {
     config: {} as InitPayload['config'],
     hasKey: true,
     yMinSpanRatio: 0.2,
+    chartMode: 'spend',
   };
 }
 type Cache = ReturnType<typeof buildTodaySpendCache>;

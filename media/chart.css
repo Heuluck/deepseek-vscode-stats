@@ -239,6 +239,12 @@ header {
   stroke: none;
 }
 
+/* 消耗模式柱状图 */
+#chart .bars .bar {
+  fill: var(--line);
+  pointer-events: none;
+}
+
 #chart .crosshair {
   stroke: var(--muted);
   stroke-width: 1;
