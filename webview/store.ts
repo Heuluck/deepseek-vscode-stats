@@ -15,6 +15,8 @@ import type {
 import type { ConsumptionGranularity } from './logic/consumption';
 import type { ViewKey, ViewRange, ViewState } from './logic/viewport';
 import {
+  activeCurrencies,
+  mainData,
   onNewData,
   resetViewRange,
   upsertDailyLocal,
@@ -166,7 +168,7 @@ export function init(payload: InitPayload): void {
     chartMode: payload.chartMode ?? 'spend',
     consGran: 'hour',
     todayCache: buildTodaySpendCache(
-      payload,
+      mainData(payload),
       Date.now(),
       payload.config?.dayBoundary ?? 'local'
     ),
@@ -174,21 +176,26 @@ export function init(payload: InitPayload): void {
   });
 }
 
-export function onSnapshot(s: Snapshot): void {
-  if (!store.data) return;
-  const daily = upsertDailyLocal(store.data.daily, s);
-  const prev = store.data.snapshots;
+/** 一次轮询可能到达多条快照（多币种）：批量合并后再统一更新。 */
+export function onSnapshots(snaps: Snapshot[]): void {
+  if (!store.data || !snaps.length) return;
+  let daily = store.data.daily;
+  const merged = store.data.snapshots.slice();
+  for (const s of snaps) {
+    daily = upsertDailyLocal(daily, s);
+    merged.push(s);
+  }
   // 乱序防御：扩展侧正常单调追加；若出现乱序（时钟回拨等），整体重排一次，
   // 保证 viewPoints / todaySpend 依赖的数组有序性不被破坏（viewPoints 已不做每帧排序）
   const snapshots =
-    prev.length === 0 || s.t >= prev[prev.length - 1].t
-      ? [...prev, s]
-      : [...prev, s].sort((a, b) => a.t - b.t);
+    merged.length >= 2 && merged[merged.length - 1].t < merged[merged.length - 2].t
+      ? merged.sort((a, b) => a.t - b.t)
+      : merged;
   const data: InitPayload = {
     ...store.data,
     snapshots,
     daily,
-    current: s,
+    current: snaps[snaps.length - 1],
   };
   const patch = onNewData(data, viewState());
   // 手动刷新成功后：停转并给出成功反馈（自动轮询来的 snapshot 不影响刷新状态）
@@ -196,7 +203,7 @@ export function onSnapshot(s: Snapshot): void {
     data,
     todayCache: advanceTodaySpendCache(
       store.todayCache,
-      data,
+      mainData(data),
       Date.now(),
       store.config?.dayBoundary ?? 'local'
     ),
@@ -214,7 +221,7 @@ export function onConfig(cfg: PanelConfig): void {
     config: cfg,
     // 日界时区切换：todayCache 需按新日界重建（下次 snapshot 也会重建，这里立即生效）
     ...(prev !== next
-      ? { todayCache: buildTodaySpendCache(store.data, Date.now(), next) }
+      ? { todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) }
       : {}),
   });
 }
@@ -226,7 +233,7 @@ export function applySavedConfig(p: SaveSettingsPayload): void {
   setStore('config', (cfg) => (cfg ? { ...cfg, ...p } : cfg));
   // 日界时区切换：乐观更新后立即按新日界重建今日花费缓存
   if (prev !== next) {
-    setStore({ todayCache: buildTodaySpendCache(store.data, Date.now(), next) });
+    setStore({ todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) });
   }
 }
 
@@ -346,6 +353,10 @@ export function emptyInfo(): EmptyInfo | null {
     }
     // 该视图下没有聚合数据（如分时视图尚无快照）——中性提示，非缩放阻断
     return { msg: '该视图暂无数据', showAction: false };
+  }
+  // 有快照但所有币种余额一直为 0（含 7 天前花光、>0 快照已清除的情况）→ 无可绘制币种
+  if (!activeCurrencies(data).length) {
+    return { msg: '账户暂无余额', showAction: false };
   }
   return null;
 }

@@ -1,5 +1,6 @@
-/** 坐标轴：Y/X 网格线与标签（含防重叠去重后的标签集合，逻辑在 layout memo 中）。 */
-import { For } from 'solid-js';
+/** 坐标轴：Y/X 网格线与标签（含防重叠去重后的标签集合，逻辑在 layout memo 中）。
+ * 次币种右轴只画标签不画网格，避免与左轴网格交叉成网。 */
+import { For, Show } from 'solid-js';
 import { M } from '../logic/axis';
 import type { Layout } from '../types';
 import type { ViewKey } from '../logic/viewport';
@@ -29,6 +30,22 @@ export function ChartAxis(props: Props) {
           )}
         </For>
       </g>
+      <Show when={props.lay.yLabels2 && props.lay.yLabels2!.length}>
+        <g class="axis axis-right">
+          <For each={props.lay.yLabels2}>
+            {(lbl) => (
+              <text
+                x={props.lay.plotRight + 8}
+                y={lbl.y}
+                text-anchor="start"
+                dominant-baseline="middle"
+              >
+                {lbl.text}
+              </text>
+            )}
+          </For>
+        </g>
+      </Show>
       <g class="axis">
         <For each={props.lay.xTicks}>
           {(t) => {

@@ -1,10 +1,13 @@
-/** 悬停十字线 + 命中点。 */
+/** 悬停十字线 + 命中点（双轴时额外画次币种命中点）。 */
 import { Show } from 'solid-js';
 import { M } from '../logic/axis';
 
 interface HoverInfo {
   x: number;
   y: number;
+  /** 次币种命中点（双轴叠加时存在）。 */
+  x2?: number;
+  y2?: number;
 }
 
 interface Props {
@@ -24,6 +27,9 @@ export function ChartCrosshair(props: Props) {
         y2={props.h - M.bottom}
       />
       <circle class="hover-dot" cx={props.hover!.x} cy={props.hover!.y} r={4} />
+      <Show when={props.hover!.x2 !== undefined && props.hover!.y2 !== undefined}>
+        <circle class="hover-dot secondary" cx={props.hover!.x2!} cy={props.hover!.y2!} r={4} />
+      </Show>
     </Show>
   );
 }

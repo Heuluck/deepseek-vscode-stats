@@ -75,12 +75,23 @@ export interface TooltipRow {
   value: string;
 }
 
+/** Tooltip 多列（双币种时每币种一列，避免金额混排误导）。 */
+export interface TooltipColumn {
+  /** 列标题（币种名，如 CNY）；空则不渲染标题。 */
+  title: string;
+  rows: TooltipRow[];
+  /** 次币种列：标题用次线色标记。 */
+  secondary?: boolean;
+}
+
 /** 悬停信息（pointX/pointY 为图表坐标，相对 container 左上角；位置由 Tooltip 组件计算）。 */
 export interface TooltipInfo {
   pointX: number;
   pointY: number;
   title: string;
   rows: TooltipRow[];
+  /** 多列布局（双币种时存在）；存在时优先于 rows 渲染。 */
+  columns?: TooltipColumn[];
 }
 
 // ---------- 图表布局（由 Chart.tsx 的 layout memo 派生，拆分子组件共享） ----------
@@ -105,6 +116,13 @@ export interface Layout {
   yMin: number;
   yMax: number;
   currency: string;
+  /** 次币种（右 Y 轴，多币种叠加时存在） */
+  currency2?: string;
+  yOf2?: (v: number) => number;
+  yMin2?: number;
+  yMax2?: number;
+  yTicks2?: number[];
+  yLabels2?: YLabel[];
   w: number;
   h: number;
   xStep: number;

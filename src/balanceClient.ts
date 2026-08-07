@@ -66,8 +66,7 @@ function translateFetchError(err: unknown): Error {
   return err instanceof Error ? err : new Error(String(err));
 }
 
-/** 优先取人民币账户，否则取第一条。 */
-export function pickBalanceInfo(res: BalanceResponse): BalanceInfo | undefined {
-  const infos = res.balance_infos || [];
-  return infos.find((i) => i.currency === 'CNY') || infos[0];
+/** 返回全部币种账户（CNY/USD…）。 */
+export function pickBalanceInfos(res: BalanceResponse): BalanceInfo[] {
+  return res.balance_infos || [];
 }

@@ -1431,6 +1431,28 @@
     const r = cfg.ranges.find((x2) => x2.key === rangeKey) || cfg.ranges[0];
     return r ? r.ms : Infinity;
   }
+  function activeCurrencies(data) {
+    if (!data) return [];
+    const set = /* @__PURE__ */ new Set();
+    for (const s of data.snapshots) if (s.total > 0) set.add(s.currency);
+    const main = mainCurrency(data);
+    return [...set].sort((a, b) => a === main ? -1 : b === main ? 1 : a < b ? -1 : 1);
+  }
+  function mainCurrency(data) {
+    if (!data) return "CNY";
+    const latest = /* @__PURE__ */ new Map();
+    for (const s of data.snapshots) latest.set(s.currency, s.total);
+    const withMoney = [...latest.entries()].filter(([, total]) => total > 0).sort((a, b) => a[0] === "CNY" ? -1 : b[0] === "CNY" ? 1 : a[0] < b[0] ? -1 : 1);
+    if (withMoney.length) return withMoney[0][0];
+    if (data.snapshots.some((s) => s.currency === "CNY")) return "CNY";
+    return data.current?.currency || "CNY";
+  }
+  function mainData(data) {
+    if (!data) return null;
+    const main = mainCurrency(data);
+    if (!data.snapshots.some((s) => s.currency !== main)) return data;
+    return { ...data, snapshots: data.snapshots.filter((s) => s.currency === main) };
+  }
   function viewPoints(data, view) {
     if (!data) return [];
     if (view === "hourly") {
@@ -1448,15 +1470,18 @@
     const byMonth = /* @__PURE__ */ new Map();
     for (const x2 of data.daily) {
       const m = startOfDay(new Date(x2.day).setDate(1));
-      byMonth.set(m, x2);
+      byMonth.set(`${m}:${x2.currency}`, x2);
     }
-    return Array.from(byMonth.entries()).sort((a, b) => a[0] - b[0]).map(([t, x2]) => ({
-      t,
-      total: x2.total,
-      toppedUp: x2.toppedUp,
-      granted: x2.granted,
-      currency: x2.currency
-    }));
+    return Array.from(byMonth.entries()).sort((a, b) => a[0].localeCompare(b[0])).map(([key, x2]) => {
+      const m = Number(key.slice(0, key.indexOf(":")));
+      return {
+        t: m,
+        total: x2.total,
+        toppedUp: x2.toppedUp,
+        granted: x2.granted,
+        currency: x2.currency
+      };
+    });
   }
   function computeDataBounds(data, view) {
     const pts = viewPoints(data, view);
@@ -1517,15 +1542,14 @@
   }
   function upsertDailyLocal(daily, s) {
     const day = startOfDay(s.t);
-    const ex = daily.find((d) => d.day === day);
+    const ex = daily.find((d) => d.day === day && d.currency === s.currency);
     if (ex) {
       return daily.map(
-        (d) => d.day === day ? {
+        (d) => d.day === day && d.currency === s.currency ? {
           ...d,
           total: s.total,
           toppedUp: s.toppedUp,
-          granted: s.granted,
-          currency: s.currency
+          granted: s.granted
         } : d
       );
     }
@@ -1700,30 +1724,34 @@
       chartMode: payload.chartMode ?? "spend",
       consGran: "hour",
       todayCache: buildTodaySpendCache(
-        payload,
+        mainData(payload),
         Date.now(),
         payload.config?.dayBoundary ?? "local"
       ),
       lastError: ""
     });
   }
-  function onSnapshot(s) {
-    if (!store.data) return;
-    const daily = upsertDailyLocal(store.data.daily, s);
-    const prev = store.data.snapshots;
-    const snapshots = prev.length === 0 || s.t >= prev[prev.length - 1].t ? [...prev, s] : [...prev, s].sort((a, b) => a.t - b.t);
+  function onSnapshots(snaps) {
+    if (!store.data || !snaps.length) return;
+    let daily = store.data.daily;
+    const merged = store.data.snapshots.slice();
+    for (const s of snaps) {
+      daily = upsertDailyLocal(daily, s);
+      merged.push(s);
+    }
+    const snapshots = merged.length >= 2 && merged[merged.length - 1].t < merged[merged.length - 2].t ? merged.sort((a, b) => a.t - b.t) : merged;
     const data = {
       ...store.data,
       snapshots,
       daily,
-      current: s
+      current: snaps[snaps.length - 1]
     };
     const patch = onNewData(data, viewState());
     setStore({
       data,
       todayCache: advanceTodaySpendCache(
         store.todayCache,
-        data,
+        mainData(data),
         Date.now(),
         store.config?.dayBoundary ?? "local"
       ),
@@ -1739,7 +1767,7 @@
     setStore({
       config: cfg,
       // 日界时区切换：todayCache 需按新日界重建（下次 snapshot 也会重建，这里立即生效）
-      ...prev !== next ? { todayCache: buildTodaySpendCache(store.data, Date.now(), next) } : {}
+      ...prev !== next ? { todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) } : {}
     });
   }
   function applySavedConfig(p) {
@@ -1747,7 +1775,7 @@
     const next = p.dayBoundary ?? "local";
     setStore("config", (cfg) => cfg ? { ...cfg, ...p } : cfg);
     if (prev !== next) {
-      setStore({ todayCache: buildTodaySpendCache(store.data, Date.now(), next) });
+      setStore({ todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) });
     }
   }
   function setYMinSpanRatio(ratio) {
@@ -1832,6 +1860,9 @@
       }
       return { msg: "\u8BE5\u89C6\u56FE\u6682\u65E0\u6570\u636E", showAction: false };
     }
+    if (!activeCurrencies(data).length) {
+      return { msg: "\u8D26\u6237\u6682\u65E0\u4F59\u989D", showAction: false };
+    }
     return null;
   }
 
@@ -1840,31 +1871,45 @@
   var _tmpl$2 = /* @__PURE__ */ template(`<div class=head-left><div class=stats><div class=stat><span class=stat-label>\u5F53\u524D\u4F59\u989D</span><span class=stat-value></span></div></div><div class=current-meta><span class=meta>`);
   function Header() {
     const balance = createMemo(() => {
-      const cur = store.data && store.data.current;
-      return cur ? fmtMoney(cur.total, cur.currency) : "--";
+      const data = store.data;
+      if (!data || !data.snapshots.length) return "--";
+      const activeSet = new Set(activeCurrencies(data));
+      const byCur = /* @__PURE__ */ new Map();
+      for (const s of data.snapshots) byCur.set(s.currency, s);
+      let entries = [...byCur.entries()].filter(([cur]) => activeSet.has(cur));
+      if (!entries.length) entries = [...byCur.entries()];
+      const main = mainCurrency(data);
+      entries.sort((a, b) => a[0] === main ? -1 : b[0] === main ? 1 : a[0] < b[0] ? -1 : 1);
+      return entries.map(([cur, s]) => fmtMoney(s.total, cur)).join(" \xB7 ");
     });
     const meta = createMemo(() => {
-      const cur = store.data && store.data.current;
+      const data = store.data;
+      const snaps = data?.snapshots || [];
+      const main = mainCurrency(data);
+      const cur = snaps.find((s) => s.currency === main) || snaps[snaps.length - 1];
       if (cur) {
         return `\u5145\u503C ${fmtMoney(cur.toppedUp, cur.currency)} \xB7 \u8D60\u9001 ${fmtMoney(cur.granted, cur.currency)}`;
       }
-      return store.data && store.data.hasKey ? "\u7B49\u5F85\u6570\u636E\u2026" : "\u672A\u914D\u7F6E API Key";
+      return data && data.hasKey ? "\u7B49\u5F85\u6570\u636E\u2026" : "\u672A\u914D\u7F6E API Key";
     });
     const showSpend = createMemo(() => spendPreview() !== null ? spendPreview() : !!(store.config && store.config.showTodaySpend));
     const spend = createMemo(() => {
       if (!showSpend()) return null;
-      const info = todaySpendFromCache(store.todayCache, store.data && store.data.current || null);
+      const data = store.data;
+      const main = mainCurrency(data);
+      const curSnap = (data?.snapshots || []).find((s) => s.currency === main) || data?.current || null;
+      const info = todaySpendFromCache(store.todayCache, curSnap);
       if (!info) {
         return {
           value: "-",
           title: "\u6570\u636E\u4E0D\u8DB3\u6216\u542B\u5145\u503C\uFF0C\u65E0\u6CD5\u53EF\u9760\u4F30\u7B97\u4ECA\u65E5\u82B1\u8D39"
         };
       }
-      const currency = store.data && store.data.current && store.data.current.currency || "CNY";
+      const currency = main || "CNY";
       const boundary = store.config?.dayBoundary ?? "local";
       return {
         value: `~${fmtMoney(info.spend, currency)}`,
-        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} \xA5${info.baseline} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF0C${boundary === "utc" ? "UTC \u65E5\u754C" : "\u672C\u5730\u65E5\u754C"}\uFF09`
+        title: `\u4F30\u7B97\uFF1A\u57FA\u4E8E${info.source} ${fmtMoney(info.baseline, currency)} \u63A8\u7B97\uFF08\u5DF2\u6309\u4ECA\u65E5\u5145\u503C\u6821\u6B63\uFF0C${boundary === "utc" ? "UTC \u65E5\u754C" : "\u672C\u5730\u65E5\u754C"}\uFF09`
       };
     });
     return (() => {
@@ -2538,8 +2583,11 @@
   }
 
   // webview/components/Tooltip.tsx
-  var _tmpl$6 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
-  var _tmpl$25 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
+  var _tmpl$6 = /* @__PURE__ */ template(`<div class=tt-cols>`);
+  var _tmpl$25 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
+  var _tmpl$32 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
+  var _tmpl$42 = /* @__PURE__ */ template(`<div class=tt-col-title>`);
+  var _tmpl$52 = /* @__PURE__ */ template(`<div>`);
   function computePos(info, el, wrap) {
     const tw = el.offsetWidth;
     const th = el.offsetHeight;
@@ -2586,20 +2634,62 @@
         return tooltipInfo();
       },
       get children() {
-        var _el$ = _tmpl$6(), _el$2 = _el$.firstChild;
+        var _el$ = _tmpl$25(), _el$2 = _el$.firstChild;
         var _ref$ = ref;
         typeof _ref$ === "function" ? use(_ref$, _el$) : ref = _el$;
         insert(_el$2, () => tooltipInfo().title);
-        insert(_el$, createComponent(For, {
-          get each() {
-            return tooltipInfo().rows;
+        insert(_el$, createComponent(Show, {
+          get when() {
+            return tooltipInfo().columns;
           },
-          children: (r) => (() => {
-            var _el$3 = _tmpl$25(), _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling;
-            insert(_el$4, () => r.label);
-            insert(_el$5, () => r.value);
+          get fallback() {
+            return createComponent(For, {
+              get each() {
+                return tooltipInfo().rows;
+              },
+              children: (r) => (() => {
+                var _el$4 = _tmpl$32(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling;
+                insert(_el$5, () => r.label);
+                insert(_el$6, () => r.value);
+                return _el$4;
+              })()
+            });
+          },
+          get children() {
+            var _el$3 = _tmpl$6();
+            insert(_el$3, createComponent(For, {
+              get each() {
+                return tooltipInfo().columns;
+              },
+              children: (col) => (() => {
+                var _el$7 = _tmpl$52();
+                insert(_el$7, createComponent(Show, {
+                  get when() {
+                    return col.title;
+                  },
+                  get children() {
+                    var _el$8 = _tmpl$42();
+                    insert(_el$8, () => col.title);
+                    return _el$8;
+                  }
+                }), null);
+                insert(_el$7, createComponent(For, {
+                  get each() {
+                    return col.rows;
+                  },
+                  children: (r) => (() => {
+                    var _el$9 = _tmpl$32(), _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling;
+                    insert(_el$0, () => r.label);
+                    insert(_el$1, () => r.value);
+                    return _el$9;
+                  })()
+                }), null);
+                createRenderEffect(() => className(_el$7, "tt-col" + (col.secondary ? " secondary" : "")));
+                return _el$7;
+              })()
+            }));
             return _el$3;
-          })()
+          }
         }), null);
         createRenderEffect((_p$) => {
           var _v$ = `${pos()?.left ?? 0}px`, _v$2 = `${pos()?.top ?? 0}px`;
@@ -2645,9 +2735,11 @@
 
   // webview/components/ChartAxis.tsx
   var _tmpl$8 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
-  var _tmpl$27 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
-  var _tmpl$32 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
-  var _tmpl$42 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
+  var _tmpl$27 = /* @__PURE__ */ template(`<svg><g class="axis axis-right"></svg>`, false, true, false);
+  var _tmpl$33 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
+  var _tmpl$43 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$53 = /* @__PURE__ */ template(`<svg><text text-anchor=start dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$62 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
   function ChartAxis(props) {
     return [(() => {
       var _el$ = _tmpl$8();
@@ -2658,19 +2750,19 @@
         children: (v) => {
           const y2 = props.lay.yOf(v);
           return (() => {
-            var _el$3 = _tmpl$27();
-            setAttribute(_el$3, "y1", y2);
-            setAttribute(_el$3, "y2", y2);
+            var _el$4 = _tmpl$33();
+            setAttribute(_el$4, "y1", y2);
+            setAttribute(_el$4, "y2", y2);
             createRenderEffect((_p$) => {
               var _v$ = props.lay.plotLeft, _v$2 = props.lay.plotRight;
-              _v$ !== _p$.e && setAttribute(_el$3, "x1", _p$.e = _v$);
-              _v$2 !== _p$.t && setAttribute(_el$3, "x2", _p$.t = _v$2);
+              _v$ !== _p$.e && setAttribute(_el$4, "x1", _p$.e = _v$);
+              _v$2 !== _p$.t && setAttribute(_el$4, "x2", _p$.t = _v$2);
               return _p$;
             }, {
               e: void 0,
               t: void 0
             });
-            return _el$3;
+            return _el$4;
           })();
         }
       }), null);
@@ -2679,99 +2771,128 @@
           return props.lay.yLabels;
         },
         children: (lbl) => (() => {
-          var _el$4 = _tmpl$32();
-          insert(_el$4, () => lbl.text);
+          var _el$5 = _tmpl$43();
+          insert(_el$5, () => lbl.text);
           createRenderEffect((_p$) => {
             var _v$3 = props.lay.plotLeft - 8, _v$4 = lbl.y;
-            _v$3 !== _p$.e && setAttribute(_el$4, "x", _p$.e = _v$3);
-            _v$4 !== _p$.t && setAttribute(_el$4, "y", _p$.t = _v$4);
+            _v$3 !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$3);
+            _v$4 !== _p$.t && setAttribute(_el$5, "y", _p$.t = _v$4);
             return _p$;
           }, {
             e: void 0,
             t: void 0
           });
-          return _el$4;
+          return _el$5;
         })()
       }), null);
       return _el$;
-    })(), (() => {
-      var _el$2 = _tmpl$8();
-      insert(_el$2, createComponent(For, {
+    })(), createComponent(Show, {
+      get when() {
+        return memo(() => !!props.lay.yLabels2)() && props.lay.yLabels2.length;
+      },
+      get children() {
+        var _el$2 = _tmpl$27();
+        insert(_el$2, createComponent(For, {
+          get each() {
+            return props.lay.yLabels2;
+          },
+          children: (lbl) => (() => {
+            var _el$6 = _tmpl$53();
+            insert(_el$6, () => lbl.text);
+            createRenderEffect((_p$) => {
+              var _v$5 = props.lay.plotRight + 8, _v$6 = lbl.y;
+              _v$5 !== _p$.e && setAttribute(_el$6, "x", _p$.e = _v$5);
+              _v$6 !== _p$.t && setAttribute(_el$6, "y", _p$.t = _v$6);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0
+            });
+            return _el$6;
+          })()
+        }));
+        return _el$2;
+      }
+    }), (() => {
+      var _el$3 = _tmpl$8();
+      insert(_el$3, createComponent(For, {
         get each() {
           return props.lay.xTicks;
         },
         children: (t) => {
           const x2 = props.lay.xOf(t);
           return (() => {
-            var _el$5 = _tmpl$27();
-            setAttribute(_el$5, "x1", x2);
-            setAttribute(_el$5, "x2", x2);
+            var _el$7 = _tmpl$33();
+            setAttribute(_el$7, "x1", x2);
+            setAttribute(_el$7, "x2", x2);
             createRenderEffect((_p$) => {
-              var _v$5 = M.top, _v$6 = props.lay.h - M.bottom;
-              _v$5 !== _p$.e && setAttribute(_el$5, "y1", _p$.e = _v$5);
-              _v$6 !== _p$.t && setAttribute(_el$5, "y2", _p$.t = _v$6);
+              var _v$7 = M.top, _v$8 = props.lay.h - M.bottom;
+              _v$7 !== _p$.e && setAttribute(_el$7, "y1", _p$.e = _v$7);
+              _v$8 !== _p$.t && setAttribute(_el$7, "y2", _p$.t = _v$8);
               return _p$;
             }, {
               e: void 0,
               t: void 0
             });
-            return _el$5;
+            return _el$7;
           })();
         }
       }), null);
-      insert(_el$2, createComponent(For, {
+      insert(_el$3, createComponent(For, {
         get each() {
           return props.lay.xLabels;
         },
         children: (lbl) => (() => {
-          var _el$6 = _tmpl$42();
-          insert(_el$6, () => lbl.text);
+          var _el$8 = _tmpl$62();
+          insert(_el$8, () => lbl.text);
           createRenderEffect((_p$) => {
-            var _v$7 = lbl.x, _v$8 = props.lay.h - M.bottom + 16, _v$9 = lbl.anchor;
-            _v$7 !== _p$.e && setAttribute(_el$6, "x", _p$.e = _v$7);
-            _v$8 !== _p$.t && setAttribute(_el$6, "y", _p$.t = _v$8);
-            _v$9 !== _p$.a && setAttribute(_el$6, "text-anchor", _p$.a = _v$9);
+            var _v$9 = lbl.x, _v$0 = props.lay.h - M.bottom + 16, _v$1 = lbl.anchor;
+            _v$9 !== _p$.e && setAttribute(_el$8, "x", _p$.e = _v$9);
+            _v$0 !== _p$.t && setAttribute(_el$8, "y", _p$.t = _v$0);
+            _v$1 !== _p$.a && setAttribute(_el$8, "text-anchor", _p$.a = _v$1);
             return _p$;
           }, {
             e: void 0,
             t: void 0,
             a: void 0
           });
-          return _el$6;
+          return _el$8;
         })()
       }), null);
-      return _el$2;
+      return _el$3;
     })()];
   }
 
   // webview/components/ChartSeries.tsx
   var _tmpl$9 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
-  var _tmpl$28 = /* @__PURE__ */ template(`<svg><path class=area></svg>`, false, true, false);
-  var _tmpl$33 = /* @__PURE__ */ template(`<svg><path class=line></svg>`, false, true, false);
-  var _tmpl$43 = /* @__PURE__ */ template(`<svg><circle class="line isolated"r=3></svg>`, false, true, false);
+  var _tmpl$28 = /* @__PURE__ */ template(`<svg><circle r=3></svg>`, false, true, false);
   function ChartSeries(props) {
+    const yOf = () => props.secondary && props.lay.yOf2 ? props.lay.yOf2 : props.lay.yOf;
+    const cls = (base) => props.secondary ? `${base} secondary` : base;
     return [createComponent(For, {
       get each() {
         return props.connectorDraws;
       },
       children: (c) => [memo(() => memo(() => !!c.area)() ? (() => {
-        var _el$2 = _tmpl$28();
+        var _el$2 = _tmpl$9();
         createRenderEffect((_p$) => {
-          var _v$4 = c.area, _v$5 = c.color ? {
+          var _v$4 = cls("area"), _v$5 = c.area, _v$6 = c.color ? {
             fill: c.color
           } : void 0;
-          _v$4 !== _p$.e && setAttribute(_el$2, "d", _p$.e = _v$4);
-          _p$.t = style(_el$2, _v$5, _p$.t);
+          _v$4 !== _p$.e && setAttribute(_el$2, "class", _p$.e = _v$4);
+          _v$5 !== _p$.t && setAttribute(_el$2, "d", _p$.t = _v$5);
+          _p$.a = style(_el$2, _v$6, _p$.a);
           return _p$;
         }, {
           e: void 0,
-          t: void 0
+          t: void 0,
+          a: void 0
         });
         return _el$2;
       })() : null), (() => {
         var _el$ = _tmpl$9();
         createRenderEffect((_p$) => {
-          var _v$ = "connector" + (c.kind === "solid" || c.kind === "ignore" ? " solid" : c.kind === "dotted" ? " dotted" : ""), _v$2 = c.d, _v$3 = c.color ? {
+          var _v$ = cls("connector") + (c.kind === "solid" || c.kind === "ignore" ? " solid" : c.kind === "dotted" ? " dotted" : ""), _v$2 = c.d, _v$3 = c.color ? {
             stroke: c.color
           } : void 0;
           _v$ !== _p$.e && setAttribute(_el$, "class", _p$.e = _v$);
@@ -2790,12 +2911,28 @@
         return props.solidDraws;
       },
       children: (s) => [(() => {
-        var _el$3 = _tmpl$28();
-        createRenderEffect(() => setAttribute(_el$3, "d", s.area));
+        var _el$3 = _tmpl$9();
+        createRenderEffect((_p$) => {
+          var _v$7 = cls("area"), _v$8 = s.area;
+          _v$7 !== _p$.e && setAttribute(_el$3, "class", _p$.e = _v$7);
+          _v$8 !== _p$.t && setAttribute(_el$3, "d", _p$.t = _v$8);
+          return _p$;
+        }, {
+          e: void 0,
+          t: void 0
+        });
         return _el$3;
       })(), (() => {
-        var _el$4 = _tmpl$33();
-        createRenderEffect(() => setAttribute(_el$4, "d", s.d));
+        var _el$4 = _tmpl$9();
+        createRenderEffect((_p$) => {
+          var _v$9 = cls("line"), _v$0 = s.d;
+          _v$9 !== _p$.e && setAttribute(_el$4, "class", _p$.e = _v$9);
+          _v$0 !== _p$.t && setAttribute(_el$4, "d", _p$.t = _v$0);
+          return _p$;
+        }, {
+          e: void 0,
+          t: void 0
+        });
         return _el$4;
       })()]
     }), createComponent(For, {
@@ -2803,15 +2940,17 @@
         return props.isolated;
       },
       children: (p) => (() => {
-        var _el$5 = _tmpl$43();
+        var _el$5 = _tmpl$28();
         createRenderEffect((_p$) => {
-          var _v$6 = props.lay.xOf(p.t), _v$7 = props.lay.yOf(p.total);
-          _v$6 !== _p$.e && setAttribute(_el$5, "cx", _p$.e = _v$6);
-          _v$7 !== _p$.t && setAttribute(_el$5, "cy", _p$.t = _v$7);
+          var _v$1 = cls("line isolated"), _v$10 = props.lay.xOf(p.t), _v$11 = yOf()(p.total);
+          _v$1 !== _p$.e && setAttribute(_el$5, "class", _p$.e = _v$1);
+          _v$10 !== _p$.t && setAttribute(_el$5, "cx", _p$.t = _v$10);
+          _v$11 !== _p$.a && setAttribute(_el$5, "cy", _p$.a = _v$11);
           return _p$;
         }, {
           e: void 0,
-          t: void 0
+          t: void 0,
+          a: void 0
         });
         return _el$5;
       })()
@@ -2821,6 +2960,7 @@
   // webview/components/ChartCrosshair.tsx
   var _tmpl$10 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
   var _tmpl$29 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
+  var _tmpl$34 = /* @__PURE__ */ template(`<svg><circle class="hover-dot secondary"r=4></svg>`, false, true, false);
   function ChartCrosshair(props) {
     return createComponent(Show, {
       get when() {
@@ -2855,7 +2995,24 @@
             t: void 0
           });
           return _el$2;
-        })()];
+        })(), createComponent(Show, {
+          get when() {
+            return memo(() => props.hover.x2 !== void 0)() && props.hover.y2 !== void 0;
+          },
+          get children() {
+            var _el$3 = _tmpl$34();
+            createRenderEffect((_p$) => {
+              var _v$7 = props.hover.x2, _v$8 = props.hover.y2;
+              _v$7 !== _p$.e && setAttribute(_el$3, "cx", _p$.e = _v$7);
+              _v$8 !== _p$.t && setAttribute(_el$3, "cy", _p$.t = _v$8);
+              return _p$;
+            }, {
+              e: void 0,
+              t: void 0
+            });
+            return _el$3;
+          }
+        })];
       }
     });
   }
@@ -2991,7 +3148,7 @@
   // webview/components/Chart.tsx
   var _tmpl$11 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$210 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
-  var _tmpl$34 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
+  var _tmpl$35 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
   function Chart() {
     let wrapRef;
     let svgRef;
@@ -3021,7 +3178,13 @@
       wrapRef: () => wrapRef,
       svgRef: () => svgRef,
       getLayout: () => layout(),
-      getChartData: () => chartData()
+      // 手势命中基于主系列几何（悬停命中同样只针对主系列）
+      getChartData: () => {
+        const cd = chartData();
+        return cd ? {
+          geom: cd.series[0].geom
+        } : null;
+      }
     });
     const chartData = createMemo(() => {
       const data = store.data;
@@ -3037,13 +3200,28 @@
         start: bounds.minT,
         end: bounds.maxT
       };
-      const decimated = decimate(all, 4e3);
-      const gapMs = effectiveGapMs(decimated, view);
+      const main = mainCurrency(data);
+      const activeSet = new Set(activeCurrencies(data));
+      const groups = /* @__PURE__ */ new Map();
+      for (const p of all) {
+        if (!activeSet.has(p.currency)) continue;
+        const list = groups.get(p.currency);
+        if (list) list.push(p);
+        else groups.set(p.currency, [p]);
+      }
+      const series = Array.from(groups.entries()).sort((a, b) => a[0] === main ? -1 : b[0] === main ? 1 : a[0] < b[0] ? -1 : 1).map(([currency, pts]) => {
+        const decimated = decimate(pts, 4e3);
+        return {
+          currency,
+          geom: computeChartGeometry(decimated, vr, effectiveGapMs(decimated, view))
+        };
+      });
+      if (!series.length) return null;
       return {
         view,
         vr,
         bounds,
-        geom: computeChartGeometry(decimated, vr, gapMs)
+        series
       };
     });
     const layout = createMemo(() => {
@@ -3055,51 +3233,91 @@
       if (!cd || w <= 0 || h <= 0) return null;
       const {
         vr,
-        geom,
         view
       } = cd;
+      const mainSeries = cd.series[0];
+      const secSeries = cd.series[1];
       const t0 = vr.start;
       const t1 = vr.end;
-      const yPts = [];
-      for (const seg of geom.solid) for (const p of seg) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
-      for (const p of geom.isolated) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
-      for (const g of geom.gaps) {
-        if (g.to.t >= vr.start && g.from.t <= vr.end) {
-          yPts.push(g.from);
-          yPts.push(g.to);
+      const collectY = (geom) => {
+        const yPts = [];
+        for (const seg of geom.solid) for (const p of seg) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
+        for (const p of geom.isolated) if (p.t >= vr.start && p.t <= vr.end) yPts.push(p);
+        for (const g of geom.gaps) {
+          if (g.to.t >= vr.start && g.from.t <= vr.end) {
+            yPts.push(g.from);
+            yPts.push(g.to);
+          }
         }
-      }
-      let yMin = Infinity;
-      let yMax = -Infinity;
-      for (const p of yPts) {
-        if (p.total < yMin) yMin = p.total;
-        if (p.total > yMax) yMax = p.total;
-      }
-      if (!isFinite(yMin)) {
-        yMin = 0;
-        yMax = 1;
-      }
-      const startAtZero = yMin <= yMax * 0.2;
-      if (startAtZero) yMin = 0;
-      let padY = (yMax - yMin) * 0.08 || Math.max(1, Math.abs(yMax) * 0.05);
-      if (padY === 0) padY = 1;
-      yMin = Math.max(0, yMin - padY);
-      yMax += padY;
-      const spanRatio = store.yMinSpanRatio ?? 0.2;
-      ({
-        yMin,
-        yMax
-      } = enforceMinSpan(yMin, yMax, spanRatio));
-      const currency = yPts[0]?.currency || "CNY";
-      const yTicks = niceTicks(yMin, yMax, 5);
+        return yPts;
+      };
+      const rangeOf = (yPts) => {
+        let yMin = Infinity;
+        let yMax = -Infinity;
+        for (const p of yPts) {
+          if (p.total < yMin) yMin = p.total;
+          if (p.total > yMax) yMax = p.total;
+        }
+        if (!isFinite(yMin)) {
+          yMin = 0;
+          yMax = 1;
+        }
+        const startAtZero = yMin <= yMax * 0.2;
+        if (startAtZero) yMin = 0;
+        let padY = (yMax - yMin) * 0.08 || Math.max(1, Math.abs(yMax) * 0.05);
+        if (padY === 0) padY = 1;
+        yMin = Math.max(0, yMin - padY);
+        yMax += padY;
+        const spanRatio = store.yMinSpanRatio ?? 0.2;
+        return enforceMinSpan(yMin, yMax, spanRatio);
+      };
+      const mainRange = rangeOf(collectY(mainSeries.geom));
+      const currency = mainSeries.currency || "CNY";
+      const yTicks = niceTicks(mainRange.yMin, mainRange.yMax, 5);
       const yLabelW = yTicks.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency))), 0);
       const plotLeft = Math.max(M.left, yLabelW + 14);
-      const plotRight = w - M.right;
-      const innerW = w - plotLeft - M.right;
+      let currency2;
+      let yMin2 = 0;
+      let yMax2 = 1;
+      let yTicks2 = [];
+      let yLabels2;
+      let yOf2;
+      let rightAxisW = 0;
+      if (secSeries) {
+        const r2 = rangeOf(collectY(secSeries.geom));
+        yMin2 = r2.yMin;
+        yMax2 = r2.yMax;
+        currency2 = secSeries.currency;
+        yTicks2 = niceTicks(yMin2, yMax2, 5);
+        const rightLabelW = yTicks2.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency2))), 0);
+        rightAxisW = Math.max(M.left, rightLabelW + 14);
+      }
+      const plotRight = w - M.right - rightAxisW;
+      const innerW = plotRight - plotLeft;
       const innerH = h - M.top - M.bottom;
       if (innerW <= 0 || innerH <= 0) return null;
       const xOf = (t) => plotLeft + (t - t0) / (t1 - t0) * innerW;
-      const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
+      const yOf = (v) => M.top + innerH - (v - mainRange.yMin) / (mainRange.yMax - mainRange.yMin) * innerH;
+      if (secSeries) {
+        yOf2 = (v) => M.top + innerH - (v - yMin2) / (yMax2 - yMin2) * innerH;
+        const labels2 = [];
+        {
+          let lastY = Infinity;
+          for (let i = 0; i < yTicks2.length; i++) {
+            const v = yTicks2[i];
+            const y2 = yOf2(v);
+            const isEdge = i === 0 || i === yTicks2.length - 1;
+            if (!isEdge && lastY - y2 < 16) continue;
+            labels2.push({
+              v,
+              y: y2,
+              text: fmtAxisMoney(v, currency2)
+            });
+            lastY = y2;
+          }
+        }
+        yLabels2 = labels2;
+      }
       const yLabels = [];
       {
         let lastY = Infinity;
@@ -3172,9 +3390,15 @@
       return {
         xOf,
         yOf,
-        yMin,
-        yMax,
+        yMin: mainRange.yMin,
+        yMax: mainRange.yMax,
         currency,
+        currency2,
+        yOf2,
+        yMin2,
+        yMax2,
+        yTicks2,
+        yLabels2,
         w,
         h,
         xStep,
@@ -3186,39 +3410,32 @@
         plotRight
       };
     });
-    const solidDraws = createMemo(() => {
-      const cd = chartData();
-      const lay = layout();
-      if (!cd || !lay) return [];
+    const buildSolid = (geom, lay, yOf, yMin) => {
       const smooth = (store.config?.lineStyle ?? "straight") === "smooth";
-      const baseY = lay.yOf(lay.yMin);
-      return cd.geom.solid.map((seg) => {
-        const d = smooth ? smoothPath(seg, lay.xOf, lay.yOf) : straightPath(seg, lay.xOf, lay.yOf);
+      const baseY = yOf(yMin);
+      return geom.solid.map((seg) => {
+        const d = smooth ? smoothPath(seg, lay.xOf, yOf) : straightPath(seg, lay.xOf, yOf);
         return {
           d,
           area: `${d} L${lay.xOf(seg[seg.length - 1].t).toFixed(1)},${baseY.toFixed(1)} L${lay.xOf(seg[0].t).toFixed(1)},${baseY.toFixed(1)} Z`
         };
       });
-    });
-    const connectorDraws = createMemo(() => {
-      const cd = chartData();
-      const lay = layout();
-      if (!cd || !lay) return [];
+    };
+    const buildConnectors = (geom, lay, yOf, yMin) => {
       const style2 = store.config?.connectorStyle ?? "dashed";
       if (style2 === "none") return [];
       const color = store.config?.connectorColor ?? "";
       const smooth = (store.config?.lineStyle ?? "straight") === "smooth";
       const {
-        xOf,
-        yOf
+        xOf
       } = lay;
       const plotX = lay.plotLeft;
       const plotY = M.top;
       const plotRight = lay.plotRight;
       const plotBottom = lay.h - M.bottom;
-      const baseY = lay.yOf(lay.yMin);
+      const baseY = yOf(yMin);
       const out = [];
-      for (const g of cd.geom.gaps) {
+      for (const g of geom.gaps) {
         let d;
         if (smooth) {
           d = polylineToClippedPath(flattenSmoothSegment(g.prev ?? g.from, g.from, g.to, g.next ?? g.to, xOf, yOf), plotX, plotY, plotRight, plotBottom);
@@ -3239,27 +3456,60 @@
         out.push(item);
       }
       return out;
+    };
+    const buildIsolated = (geom) => {
+      if ((store.config?.connectorStyle ?? "dashed") !== "ignore") return geom.isolated;
+      const connected = /* @__PURE__ */ new Set();
+      for (const g of geom.gaps) {
+        connected.add(g.from);
+        connected.add(g.to);
+      }
+      return geom.isolated.filter((p) => !connected.has(p));
+    };
+    const solidDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay) return [];
+      return buildSolid(cd.series[0].geom, lay, lay.yOf, lay.yMin);
+    });
+    const connectorDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay) return [];
+      return buildConnectors(cd.series[0].geom, lay, lay.yOf, lay.yMin);
     });
     const isolatedDraws = createMemo(() => {
       const cd = chartData();
       if (!cd) return [];
-      if ((store.config?.connectorStyle ?? "dashed") !== "ignore") return cd.geom.isolated;
-      const connected = /* @__PURE__ */ new Set();
-      for (const g of cd.geom.gaps) {
-        connected.add(g.from);
-        connected.add(g.to);
-      }
-      return cd.geom.isolated.filter((p) => !connected.has(p));
+      return buildIsolated(cd.series[0].geom);
+    });
+    const secondarySolidDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay || !cd.series[1] || !lay.yOf2) return [];
+      return buildSolid(cd.series[1].geom, lay, lay.yOf2, lay.yMin2);
+    });
+    const secondaryConnectorDraws = createMemo(() => {
+      const cd = chartData();
+      const lay = layout();
+      if (!cd || !lay || !cd.series[1] || !lay.yOf2) return [];
+      return buildConnectors(cd.series[1].geom, lay, lay.yOf2, lay.yMin2);
+    });
+    const secondaryIsolatedDraws = createMemo(() => {
+      const cd = chartData();
+      if (!cd || !cd.series[1]) return [];
+      return buildIsolated(cd.series[1].geom);
     });
     const hover = createMemo(() => {
       const cd = chartData();
       const lay = layout();
       if (!cd || !lay) return null;
+      const mainGeom = cd.series[0].geom;
       const pts = [];
       const t0 = cd.vr.start;
       const t1 = cd.vr.end;
-      for (const seg of cd.geom.solid) for (const p2 of seg) if (p2.t >= t0 && p2.t <= t1) pts.push(p2);
-      for (const p2 of cd.geom.isolated) if (p2.t >= t0 && p2.t <= t1) pts.push(p2);
+      for (const seg of mainGeom.solid) for (const p3 of seg) if (p3.t >= t0 && p3.t <= t1) pts.push(p3);
+      for (const p3 of mainGeom.isolated) if (p3.t >= t0 && p3.t <= t1) pts.push(p3);
       if (!pts.length) return null;
       const {
         xOf,
@@ -3289,10 +3539,39 @@
       }
       if (idx < 0) return null;
       const p = pts[idx];
+      let p2 = null;
+      if (cd.series.length >= 2 && lay.yOf2) {
+        const secGeom = cd.series[1].geom;
+        let b2 = Infinity;
+        const consider = (q) => {
+          const dx = Math.abs(q.t - p.t);
+          if (dx < b2) {
+            b2 = dx;
+            p2 = {
+              x: xOf(q.t),
+              y: lay.yOf2(q.total),
+              p: q
+            };
+          }
+        };
+        for (const seg of secGeom.solid) for (const q of seg) if (q.t >= t0 && q.t <= t1) consider(q);
+        for (const q of secGeom.isolated) if (q.t >= t0 && q.t <= t1) consider(q);
+      }
       return {
         x: xOf(p.t),
         y: yOf(p.total),
-        p
+        p,
+        p2
+      };
+    });
+    const crosshairHover = createMemo(() => {
+      const h = hover();
+      if (!h) return null;
+      return {
+        x: h.x,
+        y: h.y,
+        x2: h.p2?.x,
+        y2: h.p2?.y
       };
     });
     createEffect(() => {
@@ -3303,24 +3582,47 @@
         return;
       }
       const title = store.view === "monthly" ? fmtMonth(h.p.t) : store.view === "daily" ? fmtDay(h.p.t) : fmtDayShort(h.p.t) + " " + fmtClock(h.p.t);
-      setTooltipInfo({
+      const mainRows = [{
+        label: "\u603B\u4F59\u989D",
+        value: fmtMoney(h.p.total, h.p.currency)
+      }, {
+        label: "\u5145\u503C",
+        value: fmtMoney(h.p.toppedUp, h.p.currency)
+      }, {
+        label: "\u8D60\u9001",
+        value: fmtMoney(h.p.granted, h.p.currency)
+      }];
+      setTooltipInfo(h.p2 ? {
         pointX: h.x,
         pointY: h.y,
         title,
-        rows: [{
-          label: "\u603B\u4F59\u989D",
-          value: fmtMoney(h.p.total, lay.currency)
+        rows: mainRows,
+        columns: [{
+          title: h.p.currency,
+          rows: mainRows
         }, {
-          label: "\u5145\u503C",
-          value: fmtMoney(h.p.toppedUp, lay.currency)
-        }, {
-          label: "\u8D60\u9001",
-          value: fmtMoney(h.p.granted, lay.currency)
+          title: h.p2.p.currency,
+          secondary: true,
+          rows: [{
+            label: "\u603B\u4F59\u989D",
+            value: fmtMoney(h.p2.p.total, h.p2.p.currency)
+          }, {
+            label: "\u5145\u503C",
+            value: fmtMoney(h.p2.p.toppedUp, h.p2.p.currency)
+          }, {
+            label: "\u8D60\u9001",
+            value: fmtMoney(h.p2.p.granted, h.p2.p.currency)
+          }]
         }]
+      } : {
+        pointX: h.x,
+        pointY: h.y,
+        title,
+        rows: mainRows
       });
     });
     return (() => {
-      var _el$ = _tmpl$34(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$35(), _el$2 = _el$.firstChild;
       var _ref$ = wrapRef;
       typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
       var _ref$2 = svgRef;
@@ -3368,11 +3670,33 @@
               get connectorDraws() {
                 return connectorDraws();
               }
-            }));
+            }), null);
+            insert(_el$6, createComponent(Show, {
+              get when() {
+                return layout().yOf2;
+              },
+              get children() {
+                return createComponent(ChartSeries, {
+                  secondary: true,
+                  get lay() {
+                    return layout();
+                  },
+                  get isolated() {
+                    return secondaryIsolatedDraws();
+                  },
+                  get solidDraws() {
+                    return secondarySolidDraws();
+                  },
+                  get connectorDraws() {
+                    return secondaryConnectorDraws();
+                  }
+                });
+              }
+            }), null);
             return _el$6;
           })(), createComponent(ChartCrosshair, {
             get hover() {
-              return hover();
+              return crosshairHover();
             },
             get h() {
               return size().h;
@@ -3444,9 +3768,10 @@
   // webview/components/ChartBars.tsx
   var _tmpl$12 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$211 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)><g class=bars></svg>`, false, true, false);
-  var _tmpl$35 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>\u8BE5\u65F6\u6BB5\u65E0\u6D88\u8D39`);
+  var _tmpl$36 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>\u8BE5\u65F6\u6BB5\u65E0\u6D88\u8D39`);
   var _tmpl$44 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
-  var _tmpl$52 = /* @__PURE__ */ template(`<svg><rect class=bar rx=2></svg>`, false, true, false);
+  var _tmpl$54 = /* @__PURE__ */ template(`<svg><rect class=bar rx=2></svg>`, false, true, false);
+  var _tmpl$63 = /* @__PURE__ */ template(`<svg><rect class="bar secondary"rx=2></svg>`, false, true, false);
   var SKIP_ZERO = {
     hour: true,
     day: false,
@@ -3473,7 +3798,7 @@
       });
       onCleanup(() => ro.disconnect());
     });
-    const bars = createMemo(() => {
+    const buckets = createMemo(() => {
       const data = store.data;
       if (!data || !data.snapshots.length) return [];
       const g = store.consGran;
@@ -3488,11 +3813,35 @@
         t0.setMonth(t0.getMonth() - 11);
         windowMs = now - t0.getTime();
       }
-      return aggregateConsumption(data.snapshots, g, windowMs, SKIP_ZERO[g], now);
+      const main = mainCurrency(data);
+      const activeSet = new Set(activeCurrencies(data));
+      const groups = /* @__PURE__ */ new Map();
+      for (const s of data.snapshots) {
+        if (!activeSet.has(s.currency)) continue;
+        const list = groups.get(s.currency);
+        if (list) list.push(s);
+        else groups.set(s.currency, [s]);
+      }
+      const ordered = [...groups.keys()].sort((a, b) => a === main ? -1 : b === main ? 1 : a < b ? -1 : 1);
+      const byBucket = /* @__PURE__ */ new Map();
+      for (const cur of ordered) {
+        const bars = aggregateConsumption(groups.get(cur), g, windowMs, SKIP_ZERO[g], now);
+        for (const b of bars) {
+          const m = byBucket.get(b.t);
+          if (m) m[cur] = b.value;
+          else byBucket.set(b.t, {
+            [cur]: b.value
+          });
+        }
+      }
+      return Array.from(byBucket.entries()).sort((a, b) => a[0] - b[0]).map(([t, values]) => ({
+        t,
+        values
+      }));
     });
     const axisView = createMemo(() => store.consGran === "hour" ? "hourly" : store.consGran === "day" ? "daily" : "monthly");
     const layout = createMemo(() => {
-      const bs = bars();
+      const bs = buckets();
       const {
         w,
         h
@@ -3500,30 +3849,76 @@
       if (!bs.length || w <= 0 || h <= 0) return null;
       const g = store.consGran;
       const n = bs.length;
-      const maxVal = bs.reduce((m, b) => Math.max(m, b.value), 0);
-      const currency = store.data && store.data.current && store.data.current.currency || "CNY";
-      let yTop = Math.max(maxVal, 0.01);
-      let yTicks = niceTicks(0, yTop * 1.1, 5);
-      while (yTicks.length > 1 && yTicks[yTicks.length - 1] < maxVal) {
-        yTop *= 1.3;
-        yTicks = niceTicks(0, yTop, 5);
-      }
-      const yMax = yTicks[yTicks.length - 1];
+      const currency = mainCurrency(store.data) || "CNY";
+      const curKeys = Array.from(new Set(bs.flatMap((b) => Object.keys(b.values))));
+      const sec = curKeys.find((c) => c !== currency);
+      const rangeOf = (vals) => {
+        const maxVal = vals.reduce((m, v) => Math.max(m, v), 0);
+        let yTop = Math.max(maxVal, 0.01);
+        let yTicks3 = niceTicks(0, yTop * 1.1, 5);
+        while (yTicks3.length > 1 && yTicks3[yTicks3.length - 1] < maxVal) {
+          yTop *= 1.3;
+          yTicks3 = niceTicks(0, yTop, 5);
+        }
+        return {
+          yMax: yTicks3[yTicks3.length - 1],
+          yTicks: yTicks3
+        };
+      };
+      const {
+        yMax,
+        yTicks
+      } = rangeOf(bs.map((b) => b.values[currency] ?? 0));
       const yMin = 0;
       const yLabelW = yTicks.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, currency))), 0);
       const plotLeft = Math.max(M.left, yLabelW + 14);
-      const plotRight = w - M.right;
-      const innerW = w - plotLeft - M.right;
+      let currency2;
+      let yMax2 = 0;
+      let yTicks2 = [];
+      let yLabels2;
+      let yOf2;
+      let rightAxisW = 0;
+      if (sec) {
+        currency2 = sec;
+        const r2 = rangeOf(bs.map((b) => b.values[sec] ?? 0));
+        yMax2 = r2.yMax;
+        yTicks2 = r2.yTicks;
+        const rightLabelW = yTicks2.reduce((m, v) => Math.max(m, estimateTextWidth(fmtAxisMoney(v, sec))), 0);
+        rightAxisW = Math.max(M.left, rightLabelW + 14);
+      }
+      const plotRight = w - M.right - rightAxisW;
+      const innerW = plotRight - plotLeft;
       const innerH = h - M.top - M.bottom;
       if (innerW <= 0 || innerH <= 0) return null;
       const slotW = innerW / n;
       const xOf = (t) => plotLeft + t * slotW;
       const yOf = (v) => M.top + innerH - (v - yMin) / (yMax - yMin) * innerH;
-      const barW = Math.max(2, Math.min(slotW * 0.7, 48));
+      if (sec) {
+        yOf2 = (v) => M.top + innerH - v / yMax2 * innerH;
+        const labels2 = [];
+        {
+          let lastY = Infinity;
+          for (let i = 0; i < yTicks2.length; i++) {
+            const v = yTicks2[i];
+            const y2 = yOf2(v);
+            const isEdge = i === 0 || i === yTicks2.length - 1;
+            if (!isEdge && lastY - y2 < 16) continue;
+            labels2.push({
+              v,
+              y: y2,
+              text: fmtAxisMoney(v, currency2)
+            });
+            lastY = y2;
+          }
+        }
+        yLabels2 = labels2;
+      }
+      const barW = sec ? Math.max(2, Math.min(slotW * 0.32, 22)) : Math.max(2, Math.min(slotW * 0.7, 48));
+      const barGap = sec ? Math.max(2, Math.min(slotW * 0.08, 6)) : 0;
       const xTicks = [];
       for (let i = 0; i <= n; i++) xTicks.push(i);
       const crossesDay = startOfDay(bs[0].t) !== startOfDay(bs[n - 1].t);
-      const labelText = (b) => g === "hour" ? (crossesDay ? fmtDayShort(b.t) + " " : "") + fmtClock(b.t) : g === "day" ? fmtDayShort(b.t) : fmtMonth(b.t);
+      const labelText = (t) => g === "hour" ? (crossesDay ? fmtDayShort(t) + " " : "") + fmtClock(t) : g === "day" ? fmtDayShort(t) : fmtMonth(t);
       const labelW = g === "hour" ? crossesDay ? 82 : 42 : g === "day" ? 46 : 62;
       const every = Math.max(1, Math.ceil(n * labelW / Math.max(1, innerW)));
       const xLabels = [];
@@ -3531,7 +3926,7 @@
         xLabels.push({
           t: bs[i].t,
           x: plotLeft + (i + 0.5) * slotW,
-          text: labelText(bs[i]),
+          text: labelText(bs[i].t),
           w: labelW,
           anchor: "middle"
         });
@@ -3543,7 +3938,7 @@
           xLabels.push({
             t: bs[n - 1].t,
             x: lastX,
-            text: labelText(bs[n - 1]),
+            text: labelText(bs[n - 1].t),
             w: labelW,
             anchor: "middle"
           });
@@ -3571,6 +3966,12 @@
         yMin,
         yMax,
         currency,
+        currency2,
+        yOf2,
+        yMin2: 0,
+        yMax2,
+        yTicks2,
+        yLabels2,
         w,
         h,
         xStep: slotW,
@@ -3580,12 +3981,14 @@
         yLabels,
         plotLeft,
         plotRight,
-        barW
+        barW,
+        barGap,
+        slotW
       };
     });
     const onMove = (e) => {
       const lay = layout();
-      const bs = bars();
+      const bs = buckets();
       if (!lay || !svgRef) return;
       const rect = svgRef.getBoundingClientRect();
       const x2 = e.clientX - rect.left;
@@ -3598,25 +4001,40 @@
           best = i;
         }
       }
-      const thr = Math.max(lay.barW / 2 + 8, 24);
+      const thr = Math.max(lay.slotW * 0.45, 24);
       if (best < 0 || bestD > thr) {
         setTooltipInfo(null);
         return;
       }
       const b = bs[best];
       const title = store.consGran === "hour" ? fmtDayShort(b.t) + " " + fmtClock(b.t) : store.consGran === "day" ? fmtDay(b.t) : fmtMonth(b.t);
+      const mainVal = b.values[lay.currency] ?? 0;
+      const mainRow = {
+        label: "\u6D88\u8D39",
+        value: fmtMoney(mainVal, lay.currency)
+      };
       setTooltipInfo({
         pointX: lay.xOf(best + 0.5),
-        pointY: lay.yOf(b.value),
+        pointY: lay.yOf(mainVal),
         title,
-        rows: [{
-          label: "\u6D88\u8D39",
-          value: fmtMoney(b.value, lay.currency)
-        }]
+        rows: [mainRow],
+        ...lay.currency2 && lay.yOf2 ? {
+          columns: [{
+            title: lay.currency,
+            rows: [mainRow]
+          }, {
+            title: lay.currency2,
+            secondary: true,
+            rows: [{
+              label: "\u6D88\u8D39",
+              value: fmtMoney(b.values[lay.currency2] ?? 0, lay.currency2)
+            }]
+          }]
+        } : {}
       });
     };
     const hasData = () => !!(store.data && store.data.snapshots.length);
-    const noConsumption = () => bars().length === 0 || bars().every((b) => b.value <= EPS2);
+    const noConsumption = () => buckets().length === 0 || buckets().every((b) => Object.values(b.values).every((v) => v <= EPS2));
     return (() => {
       var _el$ = _tmpl$44(), _el$2 = _el$.firstChild;
       var _ref$ = wrapRef;
@@ -3657,19 +4075,20 @@
             var _el$6 = _tmpl$211(), _el$7 = _el$6.firstChild;
             insert(_el$7, createComponent(For, {
               get each() {
-                return bars();
+                return buckets();
               },
               children: (b, i) => {
                 const lay = layout();
-                const x2 = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, lay.xOf(i() + 0.5) - lay.barW / 2));
-                const top = lay.yOf(b.value);
+                const center = lay.xOf(i() + 0.5);
                 const bottom = lay.yOf(lay.yMin);
-                return (() => {
-                  var _el$9 = _tmpl$52();
-                  setAttribute(_el$9, "x", x2);
-                  setAttribute(_el$9, "y", top);
+                const mainX = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)));
+                const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
+                return [(() => {
+                  var _el$9 = _tmpl$54();
+                  setAttribute(_el$9, "x", mainX);
+                  setAttribute(_el$9, "y", mainTop);
                   createRenderEffect((_p$) => {
-                    var _v$7 = lay.barW, _v$8 = Math.max(0, bottom - top);
+                    var _v$7 = lay.barW, _v$8 = Math.max(0, bottom - mainTop);
                     _v$7 !== _p$.e && setAttribute(_el$9, "width", _p$.e = _v$7);
                     _v$8 !== _p$.t && setAttribute(_el$9, "height", _p$.t = _v$8);
                     return _p$;
@@ -3678,7 +4097,28 @@
                     t: void 0
                   });
                   return _el$9;
-                })();
+                })(), createComponent(Show, {
+                  get when() {
+                    return memo(() => !!lay.currency2)() && lay.yOf2;
+                  },
+                  get children() {
+                    var _el$0 = _tmpl$63();
+                    createRenderEffect((_p$) => {
+                      var _v$9 = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)), _v$0 = lay.yOf2(b.values[lay.currency2] ?? 0), _v$1 = lay.barW, _v$10 = Math.max(0, lay.yOf2(0) - lay.yOf2(b.values[lay.currency2] ?? 0));
+                      _v$9 !== _p$.e && setAttribute(_el$0, "x", _p$.e = _v$9);
+                      _v$0 !== _p$.t && setAttribute(_el$0, "y", _p$.t = _v$0);
+                      _v$1 !== _p$.a && setAttribute(_el$0, "width", _p$.a = _v$1);
+                      _v$10 !== _p$.o && setAttribute(_el$0, "height", _p$.o = _v$10);
+                      return _p$;
+                    }, {
+                      e: void 0,
+                      t: void 0,
+                      a: void 0,
+                      o: void 0
+                    });
+                    return _el$0;
+                  }
+                })];
               }
             }));
             return _el$6;
@@ -3691,7 +4131,7 @@
           return memo(() => !!hasData())() && noConsumption();
         },
         get children() {
-          return _tmpl$35();
+          return _tmpl$36();
         }
       }), null);
       insert(_el$, createComponent(Show, {
@@ -3759,7 +4199,7 @@
   // webview/components/SettingRow.tsx
   var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
   var _tmpl$212 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
-  var _tmpl$36 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
+  var _tmpl$37 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
   var _tmpl$45 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
   function SettingRow(props) {
     return (() => {
@@ -3772,7 +4212,7 @@
           createRenderEffect(() => setAttribute(_el$4, "for", props.for));
           return _el$4;
         })() : (() => {
-          var _el$5 = _tmpl$36();
+          var _el$5 = _tmpl$37();
           insert(_el$5, () => props.label);
           return _el$5;
         })();
@@ -3793,7 +4233,7 @@
   // webview/components/ThresholdEditor.tsx
   var _tmpl$16 = /* @__PURE__ */ template(`<div class=threshold-head><span>\u4F59\u989D\u9608\u503C\uFF08\u4F4E\u4E8E \u2192 \u989C\u8272\uFF09</span><button class="btn small"><i class="codicon codicon-add"></i>\u6DFB\u52A0`);
   var _tmpl$213 = /* @__PURE__ */ template(`<div id=thresholdList>`);
-  var _tmpl$37 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
+  var _tmpl$38 = /* @__PURE__ */ template(`<p class=settings-hint>\u4F59\u989D\u4F4E\u4E8E\u9608\u503C\uFF08\u4E0D\u542B\uFF09\u65F6\u663E\u793A\u5BF9\u5E94\u989C\u8272\u3002`);
   var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep>\u4EE5\u4E0B</span><input type=color class=threshold-color><button class="icon threshold-del"title=\u5220\u9664\u8BE5\u9608\u503C><i class="codicon codicon-trash">`);
   function ThresholdEditor(props) {
     function add() {
@@ -3841,14 +4281,14 @@
         })()
       }));
       return _el$4;
-    })(), _tmpl$37()];
+    })(), _tmpl$38()];
   }
   delegateEvents(["click", "input"]);
 
   // webview/components/settings/StatusBarGroup.tsx
   var _tmpl$17 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
   var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span>\u9608\u503C\u989C\u8272</span><i class="codicon codicon-chevron-down">`);
-  var _tmpl$38 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u9898`);
   function StatusBarGroup(props) {
     const [colorOpen, setColorOpen] = createSignal(false);
@@ -3875,7 +4315,7 @@
           label: "\u9ED8\u8BA4\u989C\u8272",
           get children() {
             return [(() => {
-              var _el$3 = _tmpl$38();
+              var _el$3 = _tmpl$39();
               _el$3.addEventListener("change", (e) => props.setStaged("defaultColor", e.currentTarget.value));
               createRenderEffect(() => _el$3.disabled = !props.staged?.defaultColor);
               createRenderEffect(() => _el$3.value = props.staged?.defaultColor || "#000000");
@@ -3904,9 +4344,9 @@
   // webview/components/settings/ChartGroup.tsx
   var _tmpl$18 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight>\u76F4\u7EBF</option><option value=smooth>\u66F2\u7EBF`);
   var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed>\u865A\u7EBF</option><option value=dotted>\u70B9\u865A\u7EBF</option><option value=solid>\u5B9E\u7EBF</option><option value=ignore>\u5047\u88C5\u8FDE\u7EED</option><option value=none>\u4E0D\u8FDE\u63A5`);
-  var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
+  var _tmpl$310 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>\u8DDF\u968F\u4E3B\u8272`);
-  var _tmpl$53 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
+  var _tmpl$55 = /* @__PURE__ */ template(`<input type=number id=yMinSpanRatioEl min=0 max=1 step=0.05 class=settings-number>`);
   function ChartGroup(props) {
     return [createComponent(SettingRow, {
       label: "\u7EBF\u6761\u6837\u5F0F",
@@ -3931,7 +4371,7 @@
       label: "\u8FDE\u63A5\u7EBF\u989C\u8272",
       get children() {
         return [(() => {
-          var _el$3 = _tmpl$39();
+          var _el$3 = _tmpl$310();
           _el$3.addEventListener("change", (e) => props.setStaged("connectorColor", e.currentTarget.value));
           createRenderEffect(() => _el$3.disabled = !props.staged?.connectorColor);
           createRenderEffect(() => _el$3.value = props.staged?.connectorColor || "#000000");
@@ -3951,7 +4391,7 @@
       "for": "yMinSpanRatioEl",
       hint: "\u9650\u5236\u66F2\u7EBF\u7EB5\u5411\u653E\u5927\uFF1B0 \u4E3A\u5B8C\u5168\u81EA\u9002\u5E94",
       get children() {
-        var _el$6 = _tmpl$53();
+        var _el$6 = _tmpl$55();
         _el$6.addEventListener("change", (e) => {
           const v = Number(e.currentTarget.value);
           if (Number.isFinite(v)) props.setYRatio(Math.min(1, Math.max(0, v)));
@@ -3965,9 +4405,9 @@
   // webview/components/settings/GeneralGroup.tsx
   var _tmpl$19 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
   var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
-  var _tmpl$310 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
+  var _tmpl$311 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
   var _tmpl$49 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint>\u4ECA\u65E5\u82B1\u8D39\u4E3A\u6839\u636E\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\u7684\u4F30\u7B97\u503C\uFF0C\u53EF\u80FD\u56E0\u5145\u503C\u6216\u6570\u636E\u65AD\u6863\u800C\u4E0D\u51C6\u786E\u3002</p><div class=row><button class="btn primary">\u540C\u610F\u542F\u7528</button><button class=btn>\u53D6\u6D88`);
-  var _tmpl$54 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
+  var _tmpl$56 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local>\u672C\u5730\u65F6\u533A</option><option value=utc>UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09`);
   function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
     return [createComponent(SettingRow, {
@@ -3998,7 +4438,7 @@
       label: "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
       "for": "showTodaySpendEl",
       get children() {
-        var _el$3 = _tmpl$310();
+        var _el$3 = _tmpl$311();
         _el$3.addEventListener("change", (e) => {
           if (e.currentTarget.checked) {
             setConsent(true);
@@ -4031,7 +4471,7 @@
       "for": "dayBoundaryEl",
       hint: "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
       get children() {
-        var _el$9 = _tmpl$54();
+        var _el$9 = _tmpl$56();
         _el$9.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
         createRenderEffect(() => _el$9.value = props.staged?.dayBoundary ?? "local");
         return _el$9;
@@ -4347,8 +4787,8 @@
     if (!msg || !msg.type) return;
     if (msg.type === "init") {
       init(msg.payload);
-    } else if (msg.type === "snapshot") {
-      onSnapshot(msg.payload);
+    } else if (msg.type === "snapshots") {
+      onSnapshots(msg.payload);
     } else if (msg.type === "config") {
       onConfig(msg.payload);
     } else if (msg.type === "settingsReset") {

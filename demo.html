@@ -1,0 +1,150 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>DeepSeek 余额 · 多币种演示</title>
+  <link rel="stylesheet" href="media/codicons/codicon.css" />
+  <link rel="stylesheet" href="media/chart.css" />
+  <style>
+    /* 模拟 VS Code 深色主题变量（chart.css 依赖） */
+    :root {
+      --vscode-editor-background: #1e1e1e;
+      --vscode-foreground: #cccccc;
+      --vscode-descriptionForeground: #9d9d9d;
+      --vscode-panel-border: rgba(128, 128, 128, 0.35);
+      --vscode-editorWidget-background: #252526;
+      --vscode-editorWidget-border: #454545;
+      --vscode-charts-line: #4e9bef;
+      --vscode-editor-lineHighlightBorder: rgba(128, 128, 128, 0.25);
+      --vscode-button-background: #0e639c;
+      --vscode-button-foreground: #ffffff;
+      --vscode-button-hoverBackground: #1177bb;
+      --vscode-button-secondaryBackground: #3a3d41;
+      --vscode-button-secondaryForeground: #ffffff;
+      --vscode-font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
+      --vscode-font-size: 13px;
+    }
+    /* 演示说明条（真实 webview 没有） */
+    .demo-note {
+      position: fixed;
+      left: 12px;
+      right: 12px;
+      top: 8px;
+      z-index: 999;
+      pointer-events: none; /* 不拦截图表交互 */
+      display: flex;
+      align-items: center;
+      gap: 16px;
+      padding: 8px 14px;
+      background: #2d2d30;
+      border: 1px solid rgba(128, 128, 128, 0.4);
+      border-radius: 6px;
+      color: #cccccc;
+      font: 12px/1.5 var(--vscode-font-family);
+    }
+    .demo-note b { font-weight: 600; }
+    .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; }
+    .sw.cny { background: #4e9bef; }
+    .sw.usd { background: #e0a83c; }
+    #app { height: calc(100vh - 52px); }
+  </style>
+</head>
+<body>
+  <div class="demo-note">
+    <span><b>模拟数据演示</b> · 你的账户没有 USD，这里用假数据展示双币种叠加效果</span>
+    <span><span class="sw cny"></span> CNY（左轴）</span>
+    <span><span class="sw usd"></span> USD（右轴）</span>
+    <span>每 4 秒模拟一次轮询，可看到曲线实时右滑</span>
+  </div>
+  <div id="app"></div>
+
+  <script>
+    // mock VS Code 宿主：webview 向扩展发的消息全部丢弃
+    window.acquireVsCodeApi = () => ({ postMessage: () => {} });
+
+    // —— 生成 CNY + USD 双币种模拟数据 ——
+    const r2 = (n) => Math.round(n * 100) / 100;
+    let seed = 12345;
+    const rand = () => { seed = (seed * 1103515245 + 12345) % 2147483648; return seed / 2147483648; };
+
+    function generatePayload() {
+      const now = Date.now();
+      const HOUR = 3600e3, DAY = 86400e3, STEP = 30 * 60e3;
+      const snapshots = [];
+      // 过去 24h，每 30min 一对（CNY + USD 同 t）
+      const N = 48;
+      const cny0 = 520, cny1 = 486;
+      const usd0 = 74.5, usd1 = 70.2;
+      for (let i = N - 1; i >= 0; i--) {
+        const t = now - i * STEP;
+        const f = (N - 1 - i) / (N - 1);
+        const cny = cny0 - (cny0 - cny1) * f + (rand() - 0.5) * 6;
+        const usd = usd0 - (usd0 - usd1) * f + (rand() - 0.5) * 0.9;
+        // toppedUp/granted 为该账户累计值（两币种各有独立充值/赠送）
+        snapshots.push(
+          { t, total: r2(cny), toppedUp: 100, granted: 30, currency: 'CNY', available: true },
+          { t, total: r2(usd), toppedUp: 20, granted: 5, currency: 'USD', available: true }
+        );
+      }
+      snapshots.sort((a, b) => a.t - b.t);
+
+      // 最近 30 天每日聚合（分天/分月视图用）
+      const daily = [];
+      let dc = 522, du = 75;
+      for (let i = 30; i >= 1; i--) {
+        const d = new Date(now - i * DAY);
+        const dayStart = new Date(d.getFullYear(), d.getMonth(), d.getDate()).getTime();
+        dc -= (rand() - 0.35) * 2;
+        du -= (rand() - 0.35) * 0.3;
+        daily.push({ day: dayStart, total: r2(dc), toppedUp: 0, granted: 0, currency: 'CNY' });
+        daily.push({ day: dayStart, total: r2(du), toppedUp: 0, granted: 0, currency: 'USD' });
+      }
+      daily.sort((a, b) => a.day - b.day);
+
+      return {
+        snapshots,
+        daily,
+        current: snapshots[snapshots.length - 1],
+        config: {
+          pollMinutes: 1,
+          statusBarShow: true,
+          defaultColor: '',
+          thresholds: [],
+          rawRetentionDays: 7,
+          showTodaySpend: true,
+          connectorStyle: 'dashed',
+          connectorColor: '',
+          lineStyle: 'straight',
+          dayBoundary: 'local',
+        },
+        hasKey: true,
+        yMinSpanRatio: 0.2,
+        chartMode: 'balance',
+      };
+    }
+
+    window.addEventListener('DOMContentLoaded', () => {
+      window.postMessage({ type: 'init', payload: generatePayload() }, '*');
+      // 模拟轮询：每 4 秒追加一对新点，followLive 右缘自动滑动
+      let live = { cny: 486, usd: 70.2 };
+      setInterval(() => {
+        const t = Date.now();
+        live.cny += (Math.random() - 0.52) * 1.2;
+        live.usd += (Math.random() - 0.52) * 0.18;
+        window.postMessage(
+          {
+            type: 'snapshots',
+            payload: [
+              { t, total: r2(live.cny), toppedUp: 0, granted: 0, currency: 'CNY', available: true },
+              { t, total: r2(live.usd), toppedUp: 0, granted: 0, currency: 'USD', available: true },
+            ],
+          },
+          '*'
+        );
+      }, 4000);
+    });
+  </script>
+  <script src="media/chart.bundle.js"></script>
+</body>
+</html>

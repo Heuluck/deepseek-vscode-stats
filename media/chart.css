@@ -6,6 +6,7 @@
   --widget-bg: var(--vscode-editorWidget-background);
   --widget-border: var(--vscode-editorWidget-border, var(--vscode-panel-border));
   --line: var(--vscode-charts-line, #4e9bef);
+  --line2: #e0a83c;
   --grid: var(--vscode-editor-lineHighlightBorder, rgba(128, 128, 128, 0.25));
   --button-bg: var(--vscode-button-background);
   --button-fg: var(--vscode-button-foreground);
@@ -239,10 +240,41 @@ header {
   stroke: none;
 }
 
+/* 次币种系列（双轴叠加） */
+#chart .line.secondary {
+  stroke: var(--line2);
+}
+
+#chart .connector.secondary {
+  stroke: var(--line2);
+}
+
+#chart .area.secondary {
+  fill: var(--line2);
+}
+
+#chart .line.isolated.secondary {
+  fill: var(--line2);
+}
+
+#chart .hover-dot.secondary {
+  fill: var(--line2);
+}
+
+.axis-right text {
+  fill: var(--line2);
+  font-size: 11px;
+}
+
 /* 消耗模式柱状图 */
 #chart .bars .bar {
   fill: var(--line);
   pointer-events: none;
+}
+
+/* 次币种柱（双币种分组柱） */
+#chart .bars .bar.secondary {
+  fill: var(--line2);
 }
 
 #chart .crosshair {
@@ -287,6 +319,39 @@ header {
 
 .tooltip .tt-row b {
   font-weight: 600;
+}
+
+/* 双币种分列（每币种一列，标题带线色标记） */
+.tooltip .tt-cols {
+  display: flex;
+  gap: 16px;
+}
+
+.tooltip .tt-col + .tt-col {
+  border-left: 1px solid var(--border);
+  padding-left: 14px;
+}
+
+.tooltip .tt-col-title {
+  color: var(--muted);
+  font-size: 11px;
+  font-weight: 600;
+  margin-bottom: 4px;
+  display: flex;
+  align-items: center;
+  gap: 6px;
+}
+
+.tooltip .tt-col-title::before {
+  content: '';
+  width: 8px;
+  height: 8px;
+  border-radius: 2px;
+  background: var(--line);
+}
+
+.tooltip .tt-col.secondary .tt-col-title::before {
+  background: var(--line2);
 }
 
 .empty {

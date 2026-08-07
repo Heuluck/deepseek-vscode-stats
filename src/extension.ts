@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import { ChartPanel } from './panel';
 import { HistoryStore, Snapshot } from './historyStore';
 import { StatusBar } from './statusBar';
-import { fetchBalance, pickBalanceInfo } from './balanceClient';
+import { fetchBalance, pickBalanceInfos } from './balanceClient';
 import { getPanelConfig, getPollIntervalMinutes } from './config';
 
 /** DeepSeek 官方状态页地址。 */
@@ -240,21 +240,22 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         return;
       }
       const res = await fetchBalance(key);
-      const info = pickBalanceInfo(res);
-      if (!info) {
+      const infos = pickBalanceInfos(res);
+      if (!infos.length) {
         throw new Error('接口返回中没有余额数据');
       }
-      const snap: Snapshot = {
+      // 多币种：每个币种各采集一条快照（CNY 优先作为主账户，其余并列）
+      const snaps: Snapshot[] = infos.map((info) => ({
         t: Date.now(),
         total: Number(info.total_balance) || 0,
         toppedUp: Number(info.topped_up_balance) || 0,
         granted: Number(info.granted_balance) || 0,
         currency: info.currency || 'CNY',
         available: !!res.is_available,
-      };
-      store.append(snap);
-      statusBar.update(snap);
-      if (chart && chart.alive) chart.postSnapshot(snap);
+      }));
+      store.appendMany(snaps);
+      statusBar.update(snaps);
+      if (chart && chart.alive) chart.postSnapshots(snaps);
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
       statusBar.showError(msg);

@@ -32,8 +32,9 @@ export class ChartPanel {
     this.panel?.reveal(vscode.ViewColumn.One);
   }
 
-  postSnapshot(s: Snapshot): void {
-    this.panel?.webview.postMessage({ type: 'snapshot', payload: s });
+  /** 批量推送一次轮询的快照（可能含多币种）。 */
+  postSnapshots(snaps: Snapshot[]): void {
+    this.panel?.webview.postMessage({ type: 'snapshots', payload: snaps });
   }
 
   postData(

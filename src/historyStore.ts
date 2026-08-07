@@ -44,8 +44,15 @@ export class HistoryStore {
   }
 
   append(s: Snapshot): void {
-    this.snapshots.push(s);
-    this.upsertDaily(s);
+    this.appendMany([s]);
+  }
+
+  /** 批量追加（多币种一次轮询会产出多条快照）。 */
+  appendMany(snaps: Snapshot[]): void {
+    for (const s of snaps) {
+      this.snapshots.push(s);
+      this.upsertDaily(s);
+    }
     this.prune();
     void this.persist();
   }
@@ -69,13 +76,13 @@ export class HistoryStore {
   }
 
   private upsertDaily(s: Snapshot): void {
+    // 按「天 + 币种」维度聚合：同一天多个币种各占一条，互不覆盖
     const day = startOfDay(s.t);
-    const existing = this.daily.find((d) => d.day === day);
+    const existing = this.daily.find((d) => d.day === day && d.currency === s.currency);
     if (existing) {
       existing.total = s.total;
       existing.toppedUp = s.toppedUp;
       existing.granted = s.granted;
-      existing.currency = s.currency;
     } else {
       this.daily.push({
         day,

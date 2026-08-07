@@ -5,10 +5,15 @@
 import { describe, expect, it } from 'vitest';
 import type { InitPayload, Snapshot } from '../types';
 import {
+  activeCurrencies,
   clampRange,
   computeDataBounds,
+  hasEverHadMoney,
+  mainCurrency,
+  mainData,
   onNewData,
   resetViewRange,
+  upsertDailyLocal,
   viewPoints,
   type ViewState,
 } from './viewport';
@@ -189,5 +194,141 @@ describe('viewPoints（P1 优化后：依赖数据有序）', () => {
     const d = mkData(1000 + 2 * H, 1000);
     const b = computeDataBounds(d, 'hourly');
     expect(b).toEqual({ minT: 1000, maxT: 1000 + 2 * H });
+  });
+});
+
+describe('多币种', () => {
+  it('upsertDailyLocal：同一天不同币种各占一条，互不覆盖', () => {
+    const day = new Date(2026, 7, 6).getTime();
+    const cny: Snapshot = { ...mkSnap(day + 10e3, 100), currency: 'CNY' };
+    const usd: Snapshot = { ...mkSnap(day + 20e3, 15), currency: 'USD' };
+    let daily = upsertDailyLocal([], cny);
+    daily = upsertDailyLocal(daily, usd);
+    daily = upsertDailyLocal(daily, { ...cny, total: 90 }); // 同日 CNY 更新
+    expect(daily).toHaveLength(2);
+    expect(daily.find((d) => d.currency === 'CNY')!.total).toBe(90);
+    expect(daily.find((d) => d.currency === 'USD')!.total).toBe(15);
+  });
+
+  it('mainCurrency：出现 CNY 即主币种，否则取最新快照币种', () => {
+    expect(mainCurrency(mkData(1000))).toBe('CNY');
+    const usdOnly: InitPayload = {
+      ...mkData(1000),
+      snapshots: [{ ...mkSnap(1000, 10), currency: 'USD' }],
+      current: { ...mkSnap(1000, 10), currency: 'USD' },
+    };
+    expect(mainCurrency(usdOnly)).toBe('USD');
+    // 有 USD 也有 CNY 时仍以 CNY 为主
+    const mixed: InitPayload = {
+      ...mkData(1000),
+      snapshots: [{ ...mkSnap(1000, 10), currency: 'USD' }, mkSnap(2000, 50)],
+    };
+    expect(mainCurrency(mixed)).toBe('CNY');
+  });
+
+  it('mainCurrency：有钱优先——CNY 没钱时选有钱的 USD，都有钱时仍 CNY', () => {
+    // CNY 存在但全 0，USD 有钱 → 主币种 USD
+    const cnyZero: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 0), currency: 'CNY' },
+        { ...mkSnap(2000, 65), currency: 'USD' },
+      ],
+      current: { ...mkSnap(2000, 65), currency: 'USD' },
+    };
+    expect(mainCurrency(cnyZero)).toBe('USD');
+    // 都有钱 → CNY 优先
+    const both: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 50), currency: 'CNY' },
+        { ...mkSnap(2000, 65), currency: 'USD' },
+      ],
+    };
+    expect(mainCurrency(both)).toBe('CNY');
+    // 全都没钱 → 历史出现过 CNY 优先
+    const allZero: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 0), currency: 'CNY' },
+        { ...mkSnap(2000, 0), currency: 'USD' },
+      ],
+    };
+    expect(mainCurrency(allZero)).toBe('CNY');
+  });
+
+  it('activeCurrencies：只含曾有过余额的币种；之前有钱现在花光的仍保留', () => {
+    const cnyZero: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 0), currency: 'CNY' },
+        { ...mkSnap(2000, 65), currency: 'USD' },
+        { ...mkSnap(3000, 64), currency: 'USD' },
+      ],
+    };
+    expect(activeCurrencies(cnyZero)).toEqual(['USD']);
+    const spent: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 50), currency: 'CNY' }, // 曾有钱
+        { ...mkSnap(2000, 0), currency: 'CNY' }, // 现在 0（花光）
+        { ...mkSnap(2000, 65), currency: 'USD' },
+      ],
+    };
+    // 主币种 = 当前有钱的 USD（CNY 已花光但仍展示，排在 USD 后）
+    expect(activeCurrencies(spent)).toEqual(['USD', 'CNY']);
+  });
+
+  it('hasEverHadMoney', () => {
+    const d: InitPayload = {
+      ...mkData(1000),
+      snapshots: [
+        { ...mkSnap(1000, 0), currency: 'CNY' },
+        { ...mkSnap(2000, 5), currency: 'USD' },
+      ],
+    };
+    expect(hasEverHadMoney(d, 'CNY')).toBe(false);
+    expect(hasEverHadMoney(d, 'USD')).toBe(true);
+  });
+
+  it('花光超过 7 天（>0 快照被 prune 清除）→ 不再保留展示', () => {
+    // daily 里还留着 7 天前的历史（>0），但 7 天内的原始快照已被扩展侧 prune 成全 0
+    const d: InitPayload = {
+      ...mkData(1000),
+      snapshots: [{ ...mkSnap(1000, 0), currency: 'CNY' }],
+      daily: [
+        { day: new Date(2026, 6, 1).getTime(), total: 500, toppedUp: 0, granted: 0, currency: 'CNY' },
+      ],
+    };
+    expect(hasEverHadMoney(d, 'CNY')).toBe(false);
+    expect(activeCurrencies(d)).toEqual([]); // 不再展示
+    expect(mainCurrency(d)).toBe('CNY'); // 全没钱时主币种退回 CNY
+  });
+
+  it('mainData：过滤出主币种快照（单币种原样返回）', () => {
+    const mixed: InitPayload = {
+      ...mkData(1000),
+      snapshots: [mkSnap(1000, 50), { ...mkSnap(2000, 7), currency: 'USD' }, mkSnap(3000, 45)],
+    };
+    const md = mainData(mixed)!;
+    expect(md.snapshots.map((s) => s.currency)).toEqual(['CNY', 'CNY']);
+    const single = mkData(1000);
+    expect(mainData(single)).toBe(single); // 单币种原样返回（同一引用）
+  });
+
+  it('viewPoints monthly：同月不同币种各占一点', () => {
+    const d: InitPayload = {
+      ...mkData(1000),
+      snapshots: [],
+      daily: [
+        { day: new Date(2026, 0, 5).getTime(), total: 100, toppedUp: 0, granted: 0, currency: 'CNY' },
+        { day: new Date(2026, 0, 20).getTime(), total: 20, toppedUp: 0, granted: 0, currency: 'USD' },
+        { day: new Date(2026, 1, 3).getTime(), total: 80, toppedUp: 0, granted: 0, currency: 'CNY' },
+      ],
+    };
+    const pts = viewPoints(d, 'monthly');
+    expect(pts).toHaveLength(3);
+    expect(pts.filter((p) => p.currency === 'CNY')).toHaveLength(2);
+    expect(pts.filter((p) => p.currency === 'USD')).toHaveLength(1);
   });
 });

@@ -6,7 +6,7 @@ import {
   onConfig,
   onError,
   onSettingsReset,
-  onSnapshot,
+  onSnapshots,
   onTheme,
 } from './store';
 import { App } from './components/App';
@@ -21,8 +21,8 @@ window.addEventListener('message', (e) => {
   if (!msg || !msg.type) return;
   if (msg.type === 'init') {
     init(msg.payload);
-  } else if (msg.type === 'snapshot') {
-    onSnapshot(msg.payload);
+  } else if (msg.type === 'snapshots') {
+    onSnapshots(msg.payload);
   } else if (msg.type === 'config') {
     onConfig(msg.payload);
   } else if (msg.type === 'settingsReset') {

@@ -80,6 +80,45 @@ export function currentRangeMs(view: ViewKey, rangeKey: string | null): number {
   return r ? r.ms : Infinity;
 }
 
+/** 该币种历史上是否曾有过余额（任一快照 total > 0）——全 0 币种没有信息量，不参与展示。 */
+export function hasEverHadMoney(data: InitPayload | null, currency: string): boolean {
+  if (!data) return false;
+  return data.snapshots.some((s) => s.currency === currency && s.total > 0);
+}
+
+/** 参与展示的币种（曾有过余额的），主币种在前。 */
+export function activeCurrencies(data: InitPayload | null): string[] {
+  if (!data) return [];
+  const set = new Set<string>();
+  for (const s of data.snapshots) if (s.total > 0) set.add(s.currency);
+  const main = mainCurrency(data);
+  return [...set].sort((a, b) => (a === main ? -1 : b === main ? 1 : a < b ? -1 : 1));
+}
+
+/**
+ * 主币种：在「当前有钱」的币种里优先人民币（CNY 有钱则 CNY）；
+ * 全都没钱时退回「历史出现过 CNY 优先」，再退回最新快照币种。
+ */
+export function mainCurrency(data: InitPayload | null): string {
+  if (!data) return 'CNY';
+  const latest = new Map<string, number>();
+  for (const s of data.snapshots) latest.set(s.currency, s.total); // 有序，最后覆盖 = 最新
+  const withMoney = [...latest.entries()]
+    .filter(([, total]) => total > 0)
+    .sort((a, b) => (a[0] === 'CNY' ? -1 : b[0] === 'CNY' ? 1 : a[0] < b[0] ? -1 : 1));
+  if (withMoney.length) return withMoney[0][0];
+  if (data.snapshots.some((s) => s.currency === 'CNY')) return 'CNY';
+  return data.current?.currency || 'CNY';
+}
+
+/** 过滤出主币种快照的数据副本（供今日花费等单币种计算使用）；已是主币种则原样返回。 */
+export function mainData(data: InitPayload | null): InitPayload | null {
+  if (!data) return null;
+  const main = mainCurrency(data);
+  if (!data.snapshots.some((s) => s.currency !== main)) return data;
+  return { ...data, snapshots: data.snapshots.filter((s) => s.currency === main) };
+}
+
 export function viewPoints(data: InitPayload | null, view: ViewKey): ChartPoint[] {
   if (!data) return [];
   if (view === 'hourly') {
@@ -97,21 +136,24 @@ export function viewPoints(data: InitPayload | null, view: ViewKey): ChartPoint[
         currency: x.currency,
       }));
   }
-  // monthly：按自然月聚合，取当月最后一条
-  const byMonth = new Map<number, DayAgg>();
+  // monthly：按「自然月 + 币种」聚合，取当月最后一条（同月不同币种各占一点）
+  const byMonth = new Map<string, DayAgg>();
   for (const x of data.daily) {
     const m = startOfDay(new Date(x.day).setDate(1));
-    byMonth.set(m, x);
+    byMonth.set(`${m}:${x.currency}`, x);
   }
   return Array.from(byMonth.entries())
-    .sort((a, b) => a[0] - b[0])
-    .map(([t, x]) => ({
-      t,
-      total: x.total,
-      toppedUp: x.toppedUp,
-      granted: x.granted,
-      currency: x.currency,
-    }));
+    .sort((a, b) => a[0].localeCompare(b[0])) // key 为「13 位时间戳:币种」，字符串序即时间序
+    .map(([key, x]) => {
+      const m = Number(key.slice(0, key.indexOf(':')));
+      return {
+        t: m,
+        total: x.total,
+        toppedUp: x.toppedUp,
+        granted: x.granted,
+        currency: x.currency,
+      };
+    });
 }
 
 export function computeDataBounds(
@@ -193,19 +235,18 @@ export function onNewData(data: InitPayload | null, vs: ViewState): Partial<View
   return {};
 }
 
-/** 本地 upsert 按天聚合（纯函数，返回新数组）。 */
+/** 本地 upsert 按天聚合（纯函数，返回新数组）；按「天 + 币种」维度，同天多币种各占一条。 */
 export function upsertDailyLocal(daily: DayAgg[], s: Snapshot): DayAgg[] {
   const day = startOfDay(s.t);
-  const ex = daily.find((d) => d.day === day);
+  const ex = daily.find((d) => d.day === day && d.currency === s.currency);
   if (ex) {
     return daily.map((d) =>
-      d.day === day
+      d.day === day && d.currency === s.currency
         ? {
             ...d,
             total: s.total,
             toppedUp: s.toppedUp,
             granted: s.granted,
-            currency: s.currency,
           }
         : d
     );

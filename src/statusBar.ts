@@ -13,7 +13,7 @@ export function fmtMoney(n: number, currency: string): string {
 /** 状态栏余额显示：点击打开图表；支持按阈值变色 + 默认颜色配置。 */
 export class StatusBar implements vscode.Disposable {
   private item: vscode.StatusBarItem;
-  private current: Snapshot | null = null;
+  private latest: Snapshot[] = [];
 
   constructor() {
     this.item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 100);
@@ -56,32 +56,44 @@ export class StatusBar implements vscode.Disposable {
     this.item.show();
   }
 
-  update(s: Snapshot): void {
-    this.current = s;
+  /** 一次轮询可能产出多币种快照：主账户（CNY 优先）决定阈值变色，其余币种并列展示。 */
+  update(snaps: Snapshot[]): void {
+    if (!snaps.length) return;
+    this.latest = snaps;
     if (!getShowStatusBar()) {
       this.item.hide();
       return;
     }
-    const d = new Date(s.t);
+    // 主币种：当前有钱的优先（CNY 优先），全没钱则退回 CNY，再退回第一条
+    const withMoney = snaps.filter((s) => s.total > 0);
+    const main =
+      withMoney.find((s) => s.currency === 'CNY') ||
+      withMoney[0] ||
+      snaps.find((s) => s.currency === 'CNY') ||
+      snaps[0];
+    // 其余只展示当前有钱的（避免状态栏塞一堆 0 余额账户）
+    const others = snaps.filter((s) => s !== main && s.total > 0);
+    const d = new Date(main.t);
     const date = d.toLocaleDateString('zh-CN');
     const time = d.toLocaleTimeString('zh-CN', { hour12: false });
-    this.item.text = `$(graph-line) ${fmtMoney(s.total, s.currency)}`;
+    const parts = [fmtMoney(main.total, main.currency), ...others.map((s) => fmtMoney(s.total, s.currency))];
+    this.item.text = `$(graph-line) ${parts.join(' · ')}`;
     this.item.command = 'deepseek-stats.openChart';
     this.item.tooltip = [
       `DeepSeek 余额（${date} ${time}）`,
-      `总余额：${fmtMoney(s.total, s.currency)}`,
-      `充值：${fmtMoney(s.toppedUp, s.currency)}`,
-      `赠送：${fmtMoney(s.granted, s.currency)}`,
-      s.available ? '账户可用' : '账户余额不足',
+      ...snaps.map((s) => `总余额（${s.currency}）：${fmtMoney(s.total, s.currency)}`),
+      ...snaps.map((s) => `充值（${s.currency}）：${fmtMoney(s.toppedUp, s.currency)}`),
+      ...snaps.map((s) => `赠送（${s.currency}）：${fmtMoney(s.granted, s.currency)}`),
+      main.available ? '账户可用' : '账户余额不足',
       '点击打开趋势图',
     ].join('\n');
-    this.applyColor(s.total);
+    this.applyColor(main.total);
     this.item.show();
   }
 
   refresh(): void {
-    if (this.current) {
-      this.update(this.current);
+    if (this.latest.length) {
+      this.update(this.latest);
     } else {
       this.showLoading();
     }

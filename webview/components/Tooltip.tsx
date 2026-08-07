@@ -56,14 +56,32 @@ export function Tooltip() {
     <Show when={tooltipInfo()}>
       <div ref={ref} class="tooltip" style={{ left: `${pos()?.left ?? 0}px`, top: `${pos()?.top ?? 0}px` }}>
         <div class="tt-time">{tooltipInfo()!.title}</div>
-        <For each={tooltipInfo()!.rows}>
-          {(r) => (
-            <div class="tt-row">
-              <span>{r.label}</span>
-              <b>{r.value}</b>
-            </div>
-          )}
-        </For>
+        <Show when={tooltipInfo()!.columns} fallback={<For each={tooltipInfo()!.rows}>{(r) => (
+          <div class="tt-row">
+            <span>{r.label}</span>
+            <b>{r.value}</b>
+          </div>
+        )}</For>}>
+          <div class="tt-cols">
+            <For each={tooltipInfo()!.columns}>
+              {(col) => (
+                <div class={'tt-col' + (col.secondary ? ' secondary' : '')}>
+                  <Show when={col.title}>
+                    <div class="tt-col-title">{col.title}</div>
+                  </Show>
+                  <For each={col.rows}>
+                    {(r) => (
+                      <div class="tt-row">
+                        <span>{r.label}</span>
+                        <b>{r.value}</b>
+                      </div>
+                    )}
+                  </For>
+                </div>
+              )}
+            </For>
+          </div>
+        </Show>
       </div>
     </Show>
   );
