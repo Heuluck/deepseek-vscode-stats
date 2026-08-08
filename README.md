@@ -19,7 +19,7 @@ Stop opening platform.deepseek.com to check your balance. DeepSeek Stats keeps i
 - **Three time views** — hourly (raw minute data) / daily (aggregated) / monthly (aggregated)
 - **Interactive charts** — hover for top-up/grant details, mouse-wheel zoom, drag to pan, one-click reset
 - **Spend mode** — switch between balance line and consumption bar chart; hour / week / month buckets; recharge-immune
-- **Today's spend** — corrected for recharges; honors your local day boundary or UTC (matches the official usage report)
+- **Today's spend** — corrected for recharges; honors your local day boundary or UTC (matches the official usage report). Off by default — enable it in Settings
 - **Multi-currency** — CNY & USD overlaid on dual axes, each scaled to its own Y-axis
 - **Honest gaps** — VS Code closed? The chart breaks instead of fabricating data (dashed connector by default)
 - **i18n** — follows VS Code display language, or force English / 简体中文
@@ -69,6 +69,7 @@ The main currency prefers an account that currently has a balance (CNY first); a
 | `deepseek-stats.chart.connectorStyle` | `dashed` | Gap connector: `dashed` / `dotted` / `solid` / `ignore` / `none` |
 | `deepseek-stats.chart.connectorColor` | `""` | Connector color (empty = follow main line) |
 | `deepseek-stats.chart.lineStyle` | `straight` | Main line: `straight` / `smooth` |
+| `deepseek-stats.showTodaySpend` | `false` | Show today's spend at the top of the panel (estimate; may be inaccurate with top-ups or gaps) |
 | `deepseek-stats.dayBoundary` | `local` | Day boundary for today's spend: `local` / `utc` |
 
 Default thresholds: balance < 10 → red `#e51400`, < 50 → yellow `#ffb900`.

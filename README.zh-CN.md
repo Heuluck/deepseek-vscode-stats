@@ -19,7 +19,7 @@
 - **三种时间视图** — 分时（分钟级原始数据）/ 分天（按天聚合）/ 分月（按月聚合）
 - **交互图表** — 悬停显示充值/赠送明细、滚轮缩放、拖拽平移、一键重置
 - **消耗模式** — 余额/消耗一键切换，小时/周/月桶粒度，充值免疫
-- **今日花费** — 已按充值校正；支持本地日界或 UTC 日界
+- **今日花费** — 已按充值校正；支持本地日界或 UTC 日界（默认关闭，可在设置中开启）
 - **多币种** — CNY/USD 双轴叠加，各按自己的刻度绘制，互不干扰
 - **诚实断档** — VS Code 没开的时段**断线不连线**，绝不伪造中间数据（默认虚线连接）
 - **国际化** — 跟随 VS Code 显示语言，或强制英文 / 简体中文
@@ -69,6 +69,7 @@
 | `deepseek-stats.chart.connectorStyle` | `dashed` | 断点连接线：`dashed` / `dotted` / `solid` / `ignore` / `none` |
 | `deepseek-stats.chart.connectorColor` | `""` | 断点连接线颜色（留空跟随主线条） |
 | `deepseek-stats.chart.lineStyle` | `straight` | 主线条：`straight` 直线 / `smooth` 平滑曲线 |
+| `deepseek-stats.showTodaySpend` | `false` | 在面板头部显示今日花费（估算，充值/断档时可能不准） |
 | `deepseek-stats.dayBoundary` | `local` | 今日花费日界：`local` 本地 / `utc`（与官方用量口径一致） |
 
 默认阈值：余额 < 10 红色 `#e51400`，< 50 黄色 `#ffb900`。
