@@ -1,5 +1,5 @@
-/** 坐标轴：Y/X 网格线与标签（含防重叠去重后的标签集合，逻辑在 layout memo 中）。
- * 次币种右轴只画标签不画网格，避免与左轴网格交叉成网。 */
+/** 坐标轴：Y/X 轴标签（含防重叠去重后的标签集合，逻辑在 layout memo 中），不画网格线。
+ * 次币种右轴只画标签。 */
 import { For, Show } from 'solid-js';
 import { M } from '../logic/axis';
 import type { Layout } from '../types';
@@ -14,14 +14,6 @@ export function ChartAxis(props: Props) {
   return (
     <>
       <g class="axis">
-        <For each={props.lay.yTicks}>
-          {(v) => {
-            const y = props.lay.yOf(v);
-            return (
-              <line class="grid" x1={props.lay.plotLeft} y1={y} x2={props.lay.plotRight} y2={y} />
-            );
-          }}
-        </For>
         <For each={props.lay.yLabels}>
           {(lbl) => (
             <text x={props.lay.plotLeft - 8} y={lbl.y} text-anchor="end" dominant-baseline="middle">
@@ -47,12 +39,6 @@ export function ChartAxis(props: Props) {
         </g>
       </Show>
       <g class="axis">
-        <For each={props.lay.xTicks}>
-          {(t) => {
-            const x = props.lay.xOf(t);
-            return <line class="grid" x1={x} y1={M.top} x2={x} y2={props.lay.h - M.bottom} />;
-          }}
-        </For>
         <For each={props.lay.xLabels}>
           {(lbl) => (
             <text

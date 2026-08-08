@@ -7,7 +7,6 @@
   --widget-border: var(--vscode-editorWidget-border, var(--vscode-panel-border));
   --line: var(--vscode-charts-line, #4e9bef);
   --line2: #e0a83c;
-  --grid: var(--vscode-editor-lineHighlightBorder, rgba(128, 128, 128, 0.25));
   --button-bg: var(--vscode-button-background);
   --button-fg: var(--vscode-button-foreground);
   --button-hover: var(--vscode-button-hoverBackground);
@@ -192,11 +191,6 @@ header {
   width: 100%;
   height: 100%;
   display: block;
-}
-
-#chart .grid {
-  stroke: var(--grid);
-  stroke-width: 1;
 }
 
 #chart .axis text {

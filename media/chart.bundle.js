@@ -3117,55 +3117,31 @@
   // webview/components/ChartAxis.tsx
   var _tmpl$9 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
   var _tmpl$27 = /* @__PURE__ */ template(`<svg><g class="axis axis-right"></svg>`, false, true, false);
-  var _tmpl$33 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
-  var _tmpl$43 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
-  var _tmpl$53 = /* @__PURE__ */ template(`<svg><text text-anchor=start dominant-baseline=middle></svg>`, false, true, false);
-  var _tmpl$62 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
+  var _tmpl$33 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$43 = /* @__PURE__ */ template(`<svg><text text-anchor=start dominant-baseline=middle></svg>`, false, true, false);
+  var _tmpl$53 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
   function ChartAxis(props) {
     return [(() => {
       var _el$ = _tmpl$9();
       insert(_el$, createComponent(For, {
         get each() {
-          return props.lay.yTicks;
-        },
-        children: (v) => {
-          const y2 = props.lay.yOf(v);
-          return (() => {
-            var _el$4 = _tmpl$33();
-            setAttribute(_el$4, "y1", y2);
-            setAttribute(_el$4, "y2", y2);
-            createRenderEffect((_p$) => {
-              var _v$ = props.lay.plotLeft, _v$2 = props.lay.plotRight;
-              _v$ !== _p$.e && setAttribute(_el$4, "x1", _p$.e = _v$);
-              _v$2 !== _p$.t && setAttribute(_el$4, "x2", _p$.t = _v$2);
-              return _p$;
-            }, {
-              e: void 0,
-              t: void 0
-            });
-            return _el$4;
-          })();
-        }
-      }), null);
-      insert(_el$, createComponent(For, {
-        get each() {
           return props.lay.yLabels;
         },
         children: (lbl) => (() => {
-          var _el$5 = _tmpl$43();
-          insert(_el$5, () => lbl.text);
+          var _el$4 = _tmpl$33();
+          insert(_el$4, () => lbl.text);
           createRenderEffect((_p$) => {
-            var _v$3 = props.lay.plotLeft - 8, _v$4 = lbl.y;
-            _v$3 !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$3);
-            _v$4 !== _p$.t && setAttribute(_el$5, "y", _p$.t = _v$4);
+            var _v$ = props.lay.plotLeft - 8, _v$2 = lbl.y;
+            _v$ !== _p$.e && setAttribute(_el$4, "x", _p$.e = _v$);
+            _v$2 !== _p$.t && setAttribute(_el$4, "y", _p$.t = _v$2);
             return _p$;
           }, {
             e: void 0,
             t: void 0
           });
-          return _el$5;
+          return _el$4;
         })()
-      }), null);
+      }));
       return _el$;
     })(), createComponent(Show, {
       get when() {
@@ -3178,18 +3154,18 @@
             return props.lay.yLabels2;
           },
           children: (lbl) => (() => {
-            var _el$6 = _tmpl$53();
-            insert(_el$6, () => lbl.text);
+            var _el$5 = _tmpl$43();
+            insert(_el$5, () => lbl.text);
             createRenderEffect((_p$) => {
-              var _v$5 = props.lay.plotRight + 8, _v$6 = lbl.y;
-              _v$5 !== _p$.e && setAttribute(_el$6, "x", _p$.e = _v$5);
-              _v$6 !== _p$.t && setAttribute(_el$6, "y", _p$.t = _v$6);
+              var _v$3 = props.lay.plotRight + 8, _v$4 = lbl.y;
+              _v$3 !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$3);
+              _v$4 !== _p$.t && setAttribute(_el$5, "y", _p$.t = _v$4);
               return _p$;
             }, {
               e: void 0,
               t: void 0
             });
-            return _el$6;
+            return _el$5;
           })()
         }));
         return _el$2;
@@ -3198,48 +3174,25 @@
       var _el$3 = _tmpl$9();
       insert(_el$3, createComponent(For, {
         get each() {
-          return props.lay.xTicks;
-        },
-        children: (t2) => {
-          const x2 = props.lay.xOf(t2);
-          return (() => {
-            var _el$7 = _tmpl$33();
-            setAttribute(_el$7, "x1", x2);
-            setAttribute(_el$7, "x2", x2);
-            createRenderEffect((_p$) => {
-              var _v$7 = M.top, _v$8 = props.lay.h - M.bottom;
-              _v$7 !== _p$.e && setAttribute(_el$7, "y1", _p$.e = _v$7);
-              _v$8 !== _p$.t && setAttribute(_el$7, "y2", _p$.t = _v$8);
-              return _p$;
-            }, {
-              e: void 0,
-              t: void 0
-            });
-            return _el$7;
-          })();
-        }
-      }), null);
-      insert(_el$3, createComponent(For, {
-        get each() {
           return props.lay.xLabels;
         },
         children: (lbl) => (() => {
-          var _el$8 = _tmpl$62();
-          insert(_el$8, () => lbl.text);
+          var _el$6 = _tmpl$53();
+          insert(_el$6, () => lbl.text);
           createRenderEffect((_p$) => {
-            var _v$9 = lbl.x, _v$0 = props.lay.h - M.bottom + 16, _v$1 = lbl.anchor;
-            _v$9 !== _p$.e && setAttribute(_el$8, "x", _p$.e = _v$9);
-            _v$0 !== _p$.t && setAttribute(_el$8, "y", _p$.t = _v$0);
-            _v$1 !== _p$.a && setAttribute(_el$8, "text-anchor", _p$.a = _v$1);
+            var _v$5 = lbl.x, _v$6 = props.lay.h - M.bottom + 16, _v$7 = lbl.anchor;
+            _v$5 !== _p$.e && setAttribute(_el$6, "x", _p$.e = _v$5);
+            _v$6 !== _p$.t && setAttribute(_el$6, "y", _p$.t = _v$6);
+            _v$7 !== _p$.a && setAttribute(_el$6, "text-anchor", _p$.a = _v$7);
             return _p$;
           }, {
             e: void 0,
             t: void 0,
             a: void 0
           });
-          return _el$8;
+          return _el$6;
         })()
-      }), null);
+      }));
       return _el$3;
     })()];
   }
@@ -4170,7 +4123,7 @@
   var _tmpl$36 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>`);
   var _tmpl$44 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
   var _tmpl$54 = /* @__PURE__ */ template(`<svg><rect class=bar rx=2></svg>`, false, true, false);
-  var _tmpl$63 = /* @__PURE__ */ template(`<svg><rect class="bar secondary"rx=2></svg>`, false, true, false);
+  var _tmpl$62 = /* @__PURE__ */ template(`<svg><rect class="bar secondary"rx=2></svg>`, false, true, false);
   var SKIP_ZERO = {
     hour: true,
     day: false,
@@ -4509,7 +4462,7 @@
                   return s.secondary;
                 },
                 get children() {
-                  var _el$1 = _tmpl$63();
+                  var _el$1 = _tmpl$62();
                   createRenderEffect((_p$) => {
                     var _v$11 = s.secondary.x, _v$12 = s.secondary.y, _v$13 = s.secondary.w, _v$14 = s.secondary.h;
                     _v$11 !== _p$.e && setAttribute(_el$1, "x", _p$.e = _v$11);
@@ -4854,7 +4807,7 @@
   var _tmpl$311 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
   var _tmpl$49 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
   var _tmpl$56 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint></p><div class=row><button class="btn primary"></button><button class=btn>`);
-  var _tmpl$64 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local></option><option value=utc>`);
+  var _tmpl$63 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local></option><option value=utc>`);
   function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
     return [createComponent(SettingRow, {
@@ -4945,7 +4898,7 @@
         return t("general.dayBoundaryHint");
       },
       get children() {
-        var _el$11 = _tmpl$64(), _el$12 = _el$11.firstChild, _el$13 = _el$12.nextSibling;
+        var _el$11 = _tmpl$63(), _el$12 = _el$11.firstChild, _el$13 = _el$12.nextSibling;
         _el$11.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
         insert(_el$12, () => t("general.dayBoundaryLocal"));
         insert(_el$13, () => t("general.dayBoundaryUtc"));
