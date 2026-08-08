@@ -1,6 +1,13 @@
 .vscode/**
 src/**
-tsconfig.json
+webview/**
+scripts/**
+docs/**
 node_modules/**
 .gitignore
 **/*.map
+tsconfig.json
+jsconfig.json
+build.mjs
+demo.html
+pnpm-lock.yaml

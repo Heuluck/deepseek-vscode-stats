@@ -5,6 +5,14 @@
   "version": "0.1.0",
   "publisher": "heuluck",
   "license": "MIT",
+  "icon": "media/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/Heuluck/deepseek-vscode-stat.git"
+  },
+  "bugs": {
+    "url": "https://github.com/Heuluck/deepseek-vscode-stat/issues"
+  },
   "engines": {
     "vscode": "^1.85.0"
   },
