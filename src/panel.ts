@@ -2,7 +2,7 @@ import * as vscode from 'vscode';
 import * as fs from 'fs';
 import type { HistoryStore, Snapshot } from './historyStore';
 import type { PanelConfig } from './config';
-import { getLocale, t } from './i18n';
+import { getLocale, getVscodeLocale, t } from './i18n';
 
 /** 余额趋势图 Webview 面板（单例，重复打开复用）。 */
 export class ChartPanel {
@@ -56,6 +56,7 @@ export class ChartPanel {
         yMinSpanRatio,
         chartMode,
         locale: getLocale(),
+        vscodeLocale: getVscodeLocale(),
       },
     });
   }

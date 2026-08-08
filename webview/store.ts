@@ -6,6 +6,7 @@ import type {
   ConnectorStyle,
   DayBoundary,
   InitPayload,
+  LanguageSetting,
   LineStyle,
   PanelConfig,
   Snapshot,
@@ -53,6 +54,8 @@ export interface AppState {
   chartMode: ChartMode;
   /** 消耗柱状图粒度（本次会话内有效）。 */
   consGran: ConsumptionGranularity;
+  /** 跟随 VS Code 显示语言的 locale（语言设置为 auto 时应用；由 init payload 提供）。 */
+  vscodeLocale: string;
   /** 今日花费增量缓存（基准 + 累计充值），跨天自动重建。 */
   todayCache: TodaySpendCache | null;
 }
@@ -74,6 +77,7 @@ export const [store, setStore] = createStore<AppState>({
   yMinSpanRatio: 0.2,
   chartMode: 'spend',
   consGran: 'hour',
+  vscodeLocale: 'en',
   todayCache: null,
 });
 
@@ -93,6 +97,7 @@ export interface StagedConfig {
   connectorColor: string;
   lineStyle: LineStyle;
   dayBoundary: DayBoundary;
+  language: LanguageSetting;
 }
 
 export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
@@ -108,6 +113,7 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         connectorColor: cfg.connectorColor || '',
         lineStyle: cfg.lineStyle || 'straight',
         dayBoundary: cfg.dayBoundary || 'local',
+        language: cfg.language || 'auto',
       }
     : {
         statusBarShow: true,
@@ -120,6 +126,7 @@ export function stagedFromConfig(cfg: PanelConfig | null): StagedConfig {
         connectorColor: '',
         lineStyle: 'straight',
         dayBoundary: 'local',
+        language: 'auto',
       };
 }
 
@@ -170,6 +177,7 @@ export function init(payload: InitPayload): void {
     yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
     chartMode: payload.chartMode ?? 'spend',
     consGran: 'hour',
+    vscodeLocale: payload.vscodeLocale || 'en',
     todayCache: buildTodaySpendCache(
       mainData(payload),
       Date.now(),
@@ -233,10 +241,16 @@ export function onConfig(cfg: PanelConfig): void {
 export function applySavedConfig(p: SaveSettingsPayload): void {
   const prev = store.config?.dayBoundary ?? 'local';
   const next = p.dayBoundary ?? 'local';
+  const prevLang = store.config?.language ?? 'auto';
+  const nextLang = p.language ?? 'auto';
   setStore('config', (cfg) => (cfg ? { ...cfg, ...p } : cfg));
   // 日界时区切换：乐观更新后立即按新日界重建今日花费缓存
   if (prev !== next) {
     setStore({ todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) });
+  }
+  // 语言乐观生效：'auto' 回到跟随 VS Code 的 locale（vscodeLocale 由 init payload 提供）
+  if (prevLang !== nextLang) {
+    setLocale(nextLang === 'auto' ? store.vscodeLocale : nextLang);
   }
 }
 

@@ -24,6 +24,7 @@ function mkData(snapshots: Snapshot[]): InitPayload {
     yMinSpanRatio: 0.2,
     chartMode: 'spend',
     locale: 'en',
+    vscodeLocale: 'en',
   };
 }
 type Cache = ReturnType<typeof buildTodaySpendCache>;

@@ -32,6 +32,9 @@ export type LineStyle = 'straight' | 'smooth';
 /** 图表模式：余额曲线 / 消耗柱状图。 */
 export type ChartMode = 'balance' | 'spend';
 
+/** 语言设置项取值（与扩展侧 deepseek-stats.language 对齐）。 */
+export type LanguageSetting = 'auto' | 'en' | 'zh-cn';
+
 /** 「今日花费」日界时区：本地自然日 或 UTC（与 DeepSeek 官方口径一致）。 */
 export type DayBoundary = 'local' | 'utc';
 
@@ -46,6 +49,7 @@ export interface PanelConfig {
   connectorColor: string;
   lineStyle: LineStyle;
   dayBoundary: DayBoundary;
+  language: LanguageSetting;
 }
 
 /** webview init 消息 payload。 */
@@ -61,6 +65,8 @@ export interface InitPayload {
   chartMode: ChartMode;
   /** 扩展侧解析后的界面语言（配合 HTML 注入的初始 locale，用于 webview 首帧/同步）。 */
   locale: string;
+  /** 跟随 VS Code 显示语言应生效的 locale（语言设置为 auto 时的兜底值）。 */
+  vscodeLocale: string;
 }
 
 /** 图表数据点（viewPoints 归一化后的统一形态）。 */

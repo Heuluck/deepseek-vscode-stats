@@ -18,6 +18,20 @@ export function GeneralGroup(props: Props) {
 
   return (
     <>
+      <SettingRow label={t('settings.language')} for="languageEl">
+        <select
+          id="languageEl"
+          class="settings-select"
+          value={props.staged?.language ?? 'auto'}
+          onChange={(e) =>
+            props.setStaged('language', e.currentTarget.value as StagedConfig['language'])
+          }
+        >
+          <option value="auto">{t('settings.language.auto')}</option>
+          <option value="en">{t('settings.language.en')}</option>
+          <option value="zh-cn">{t('settings.language.zhCn')}</option>
+        </select>
+      </SettingRow>
       <SettingRow label={t('general.pollInterval')} for="pollMinutesEl">
         <input
           type="number"

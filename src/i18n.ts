@@ -23,12 +23,16 @@ export function getLanguageSetting(): LanguageSetting {
   return v === 'en' || v === 'zh-cn' ? v : 'auto';
 }
 
+/** 跟随 VS Code 显示语言的 locale（忽略语言设置项；供 webview「自动」档兜底）。 */
+export function getVscodeLocale(): Locale {
+  const lang = (vscode.env.language || 'en').toLowerCase();
+  return lang.startsWith('zh') ? 'zh-cn' : 'en';
+}
+
 /** 解析最终生效的 locale：'auto' 时按 VS Code 显示语言归一化。 */
 export function resolveLocale(): Locale {
   const setting = getLanguageSetting();
-  if (setting !== 'auto') return setting;
-  const lang = (vscode.env.language || 'en').toLowerCase();
-  return lang.startsWith('zh') ? 'zh-cn' : 'en';
+  return setting === 'auto' ? getVscodeLocale() : setting;
 }
 
 function loadMessages(locale: Locale): Record<string, string> {

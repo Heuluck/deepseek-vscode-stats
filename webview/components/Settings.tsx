@@ -74,6 +74,7 @@ export function Settings(props: SettingsProps) {
       connectorColor: staged.connectorColor,
       lineStyle: staged.lineStyle,
       dayBoundary: staged.dayBoundary,
+      language: staged.language,
     };
     // 乐观更新本地 config：config 回传是异步的，先让 Header/Footer 立即用新值，避免闪回旧值
     applySavedConfig(payload);

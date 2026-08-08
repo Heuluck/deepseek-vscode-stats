@@ -35,6 +35,7 @@ function mkData(maxT: number, minT = 1000): InitPayload {
     yMinSpanRatio: 0.2,
     chartMode: 'spend',
     locale: 'en',
+    vscodeLocale: 'en',
   };
 }
 
@@ -84,6 +85,7 @@ describe('resetViewRange（B1 修复回归：数据不足时左侧留空，不�
       yMinSpanRatio: 0.2,
       chartMode: 'spend',
       locale: 'en',
+      vscodeLocale: 'en',
     };
     const r = resetViewRange(d, 'daily', 'all');
     const span = maxT - minT;

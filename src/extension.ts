@@ -42,6 +42,7 @@ interface SaveSettingsPayload {
   connectorColor: string;
   lineStyle: 'straight' | 'smooth';
   dayBoundary: 'local' | 'utc';
+  language: 'auto' | 'en' | 'zh-cn';
 }
 
 /**
@@ -78,6 +79,8 @@ function sanitizeSavePayload(p: unknown): SaveSettingsPayload | null {
       ? o.connectorStyle
       : 'dashed';
   const lineStyle = o.lineStyle === 'smooth' ? 'smooth' : 'straight';
+  const language =
+    o.language === 'en' || o.language === 'zh-cn' || o.language === 'auto' ? o.language : 'auto';
   return {
     statusBarShow: !!o.statusBarShow,
     defaultColor: validColor(o.defaultColor),
@@ -89,6 +92,7 @@ function sanitizeSavePayload(p: unknown): SaveSettingsPayload | null {
     connectorColor: validColor(o.connectorColor),
     lineStyle,
     dayBoundary: o.dayBoundary === 'utc' ? 'utc' : 'local',
+    language,
   };
 }
 
@@ -185,6 +189,7 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       ),
       cfg.update('chart.lineStyle', p.lineStyle, vscode.ConfigurationTarget.Global),
       cfg.update('dayBoundary', p.dayBoundary, vscode.ConfigurationTarget.Global),
+      cfg.update('language', p.language, vscode.ConfigurationTarget.Global),
     ]);
     const failed = results.filter((r) => r.status === 'rejected');
     if (failed.length > 0) {

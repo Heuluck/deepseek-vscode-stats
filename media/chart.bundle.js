@@ -1176,6 +1176,10 @@
     "settings.openNative": "Open VS Code Settings",
     "settings.cancel": "Cancel",
     "settings.save": "Save",
+    "settings.language": "Languages",
+    "settings.language.auto": "Auto (follow VS Code)",
+    "settings.language.en": "English",
+    "settings.language.zhCn": "\u7B80\u4F53\u4E2D\u6587",
     "general.pollInterval": "Poll interval (minutes)",
     "general.rawRetention": "Minute-level snapshot retention (days)",
     "general.showTodaySpend": "Show today's spend (estimate)",
@@ -1316,6 +1320,10 @@
     "settings.openNative": "\u6253\u5F00 VS Code \u8BBE\u7F6E",
     "settings.cancel": "\u53D6\u6D88",
     "settings.save": "\u4FDD\u5B58",
+    "settings.language": "\u8BED\u8A00",
+    "settings.language.auto": "\u81EA\u52A8\uFF08\u8DDF\u968F VS Code\uFF09",
+    "settings.language.en": "English",
+    "settings.language.zhCn": "\u7B80\u4F53\u4E2D\u6587",
     "general.pollInterval": "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
     "general.rawRetention": "\u5206\u949F\u7EA7\u5FEB\u7167\u4FDD\u7559\uFF08\u5929\uFF09",
     "general.showTodaySpend": "\u663E\u793A\u4ECA\u65E5\u82B1\u8D39\uFF08\u4F30\u7B97\uFF09",
@@ -1967,6 +1975,7 @@
     yMinSpanRatio: 0.2,
     chartMode: "spend",
     consGran: "hour",
+    vscodeLocale: "en",
     todayCache: null
   });
   var [tooltipInfo, setTooltipInfo] = createSignal(null);
@@ -1981,7 +1990,8 @@
       connectorStyle: cfg.connectorStyle || "dashed",
       connectorColor: cfg.connectorColor || "",
       lineStyle: cfg.lineStyle || "straight",
-      dayBoundary: cfg.dayBoundary || "local"
+      dayBoundary: cfg.dayBoundary || "local",
+      language: cfg.language || "auto"
     } : {
       statusBarShow: true,
       defaultColor: "",
@@ -1992,7 +2002,8 @@
       connectorStyle: "dashed",
       connectorColor: "",
       lineStyle: "straight",
-      dayBoundary: "local"
+      dayBoundary: "local",
+      language: "auto"
     };
   }
   var [spendPreview, setSpendPreview] = createSignal(null);
@@ -2032,6 +2043,7 @@
       yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
       chartMode: payload.chartMode ?? "spend",
       consGran: "hour",
+      vscodeLocale: payload.vscodeLocale || "en",
       todayCache: buildTodaySpendCache(
         mainData(payload),
         Date.now(),
@@ -2082,9 +2094,14 @@
   function applySavedConfig(p) {
     const prev = store.config?.dayBoundary ?? "local";
     const next = p.dayBoundary ?? "local";
+    const prevLang = store.config?.language ?? "auto";
+    const nextLang = p.language ?? "auto";
     setStore("config", (cfg) => cfg ? { ...cfg, ...p } : cfg);
     if (prev !== next) {
       setStore({ todayCache: buildTodaySpendCache(mainData(store.data), Date.now(), next) });
+    }
+    if (prevLang !== nextLang) {
+      setLocale(nextLang === "auto" ? store.vscodeLocale : nextLang);
     }
   }
   function setYMinSpanRatio(ratio) {
@@ -4774,26 +4791,41 @@
   }
 
   // webview/components/settings/GeneralGroup.tsx
-  var _tmpl$19 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
-  var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
-  var _tmpl$311 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
-  var _tmpl$49 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint></p><div class=row><button class="btn primary"></button><button class=btn>`);
-  var _tmpl$56 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local></option><option value=utc>`);
+  var _tmpl$19 = /* @__PURE__ */ template(`<select id=languageEl class=settings-select><option value=auto></option><option value=en></option><option value=zh-cn>`);
+  var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
+  var _tmpl$311 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
+  var _tmpl$49 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
+  var _tmpl$56 = /* @__PURE__ */ template(`<div class=settings-consent><p class=settings-hint></p><div class=row><button class="btn primary"></button><button class=btn>`);
+  var _tmpl$64 = /* @__PURE__ */ template(`<select id=dayBoundaryEl class=settings-select><option value=local></option><option value=utc>`);
   function GeneralGroup(props) {
     const [consent, setConsent] = createSignal(false);
     return [createComponent(SettingRow, {
+      get label() {
+        return t("settings.language");
+      },
+      "for": "languageEl",
+      get children() {
+        var _el$ = _tmpl$19(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
+        _el$.addEventListener("change", (e) => props.setStaged("language", e.currentTarget.value));
+        insert(_el$2, () => t("settings.language.auto"));
+        insert(_el$3, () => t("settings.language.en"));
+        insert(_el$4, () => t("settings.language.zhCn"));
+        createRenderEffect(() => _el$.value = props.staged?.language ?? "auto");
+        return _el$;
+      }
+    }), createComponent(SettingRow, {
       get label() {
         return t("general.pollInterval");
       },
       "for": "pollMinutesEl",
       get children() {
-        var _el$ = _tmpl$19();
-        _el$.addEventListener("change", (e) => {
+        var _el$5 = _tmpl$216();
+        _el$5.addEventListener("change", (e) => {
           const v = parseInt(e.currentTarget.value, 10);
           if (Number.isFinite(v) && v >= 1) props.setStaged("pollMinutes", v);
         });
-        createRenderEffect(() => _el$.value = props.staged?.pollMinutes);
-        return _el$;
+        createRenderEffect(() => _el$5.value = props.staged?.pollMinutes);
+        return _el$5;
       }
     }), createComponent(SettingRow, {
       get label() {
@@ -4801,13 +4833,13 @@
       },
       "for": "rawRetentionEl",
       get children() {
-        var _el$2 = _tmpl$216();
-        _el$2.addEventListener("change", (e) => {
+        var _el$6 = _tmpl$311();
+        _el$6.addEventListener("change", (e) => {
           const v = parseInt(e.currentTarget.value, 10);
           if (Number.isFinite(v) && v >= 1) props.setStaged("rawRetentionDays", v);
         });
-        createRenderEffect(() => _el$2.value = props.staged?.rawRetentionDays);
-        return _el$2;
+        createRenderEffect(() => _el$6.value = props.staged?.rawRetentionDays);
+        return _el$6;
       }
     }), createComponent(SettingRow, {
       get label() {
@@ -4815,8 +4847,8 @@
       },
       "for": "showTodaySpendEl",
       get children() {
-        var _el$3 = _tmpl$311();
-        _el$3.addEventListener("change", (e) => {
+        var _el$7 = _tmpl$49();
+        _el$7.addEventListener("change", (e) => {
           if (e.currentTarget.checked) {
             setConsent(true);
           } else {
@@ -4824,27 +4856,27 @@
             setConsent(false);
           }
         });
-        createRenderEffect(() => _el$3.checked = props.staged?.showTodaySpend || consent());
-        return _el$3;
+        createRenderEffect(() => _el$7.checked = props.staged?.showTodaySpend || consent());
+        return _el$7;
       }
     }), createComponent(Show, {
       get when() {
         return consent();
       },
       get children() {
-        var _el$4 = _tmpl$49(), _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$7.nextSibling;
-        insert(_el$5, () => t("general.consent"));
-        _el$7.$$click = () => {
+        var _el$8 = _tmpl$56(), _el$9 = _el$8.firstChild, _el$0 = _el$9.nextSibling, _el$1 = _el$0.firstChild, _el$10 = _el$1.nextSibling;
+        insert(_el$9, () => t("general.consent"));
+        _el$1.$$click = () => {
           props.setStaged("showTodaySpend", true);
           setConsent(false);
         };
-        insert(_el$7, () => t("general.consentOk"));
-        _el$8.$$click = () => {
+        insert(_el$1, () => t("general.consentOk"));
+        _el$10.$$click = () => {
           props.setStaged("showTodaySpend", false);
           setConsent(false);
         };
-        insert(_el$8, () => t("general.consentCancel"));
-        return _el$4;
+        insert(_el$10, () => t("general.consentCancel"));
+        return _el$8;
       }
     }), createComponent(SettingRow, {
       get label() {
@@ -4855,12 +4887,12 @@
         return t("general.dayBoundaryHint");
       },
       get children() {
-        var _el$9 = _tmpl$56(), _el$0 = _el$9.firstChild, _el$1 = _el$0.nextSibling;
-        _el$9.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
-        insert(_el$0, () => t("general.dayBoundaryLocal"));
-        insert(_el$1, () => t("general.dayBoundaryUtc"));
-        createRenderEffect(() => _el$9.value = props.staged?.dayBoundary ?? "local");
-        return _el$9;
+        var _el$11 = _tmpl$64(), _el$12 = _el$11.firstChild, _el$13 = _el$12.nextSibling;
+        _el$11.addEventListener("change", (e) => props.setStaged("dayBoundary", e.currentTarget.value));
+        insert(_el$12, () => t("general.dayBoundaryLocal"));
+        insert(_el$13, () => t("general.dayBoundaryUtc"));
+        createRenderEffect(() => _el$11.value = props.staged?.dayBoundary ?? "local");
+        return _el$11;
       }
     })];
   }
@@ -4970,7 +5002,8 @@
         connectorStyle: staged.connectorStyle,
         connectorColor: staged.connectorColor,
         lineStyle: staged.lineStyle,
-        dayBoundary: staged.dayBoundary
+        dayBoundary: staged.dayBoundary,
+        language: staged.language
       };
       applySavedConfig(payload);
       postMessage({

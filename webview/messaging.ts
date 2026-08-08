@@ -4,6 +4,7 @@ import type {
   ConnectorStyle,
   DayBoundary,
   InitPayload,
+  LanguageSetting,
   LineStyle,
   PanelConfig,
   Snapshot,
@@ -32,6 +33,7 @@ export interface SaveSettingsPayload {
   connectorColor: string;
   lineStyle: LineStyle;
   dayBoundary: DayBoundary;
+  language: LanguageSetting;
 }
 
 /** webview → 扩展。 */

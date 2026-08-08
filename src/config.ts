@@ -1,4 +1,5 @@
 import * as vscode from 'vscode';
+import { getLanguageSetting, type LanguageSetting } from './i18n';
 
 export interface Threshold {
   below: number;
@@ -76,6 +77,7 @@ export interface PanelConfig {
   connectorColor: string;
   lineStyle: LineStyle;
   dayBoundary: DayBoundary;
+  language: LanguageSetting;
 }
 
 export function getPanelConfig(): PanelConfig {
@@ -90,5 +92,6 @@ export function getPanelConfig(): PanelConfig {
     connectorColor: getConnectorColor(),
     lineStyle: getLineStyle(),
     dayBoundary: getDayBoundary(),
+    language: getLanguageSetting(),
   };
 }
