@@ -384,14 +384,36 @@ footer {
   flex-wrap: wrap;
 }
 
-footer .err {
-  color: var(--vscode-errorForeground, var(--vscode-charts-red));
+footer > :first-child {
+  min-width: 0;
+  white-space: nowrap;
+  overflow: hidden;
+  text-overflow: ellipsis;
 }
 
 footer .footer-right {
   display: inline-flex;
   align-items: center;
   gap: 8px;
+}
+
+/* 错误横幅：header 与图表之间独立一行完整展示，不参与 footer 布局 */
+.error-banner {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  padding: 5px 12px;
+  font-size: 11px;
+  line-height: 1.5;
+  color: var(--vscode-errorForeground, var(--vscode-charts-red));
+  background: var(--vscode-inputValidation-errorBackground, rgba(196, 43, 28, 0.1));
+  border-radius: 4px;
+  overflow-wrap: anywhere;
+}
+
+.error-banner .codicon {
+  font-size: 14px;
+  flex-shrink: 0;
 }
 
 /* 图标按钮 / 危险按钮 / 设置页 */

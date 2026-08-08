@@ -1149,11 +1149,7 @@
     "extension.clearHistoryConfirm": "Clear all historical balance records? This action cannot be undone.",
     "extension.clearHistoryAction": "Clear",
     "balance.timeout": "Request timed out (no response in 15 seconds). Please check your network and retry",
-    "balance.dns": "Cannot reach the DeepSeek server (DNS resolution failed). Please check your network",
-    "balance.connectTimeout": "Connection to the DeepSeek server timed out. Please check your network",
-    "balance.refused": "Connection to the DeepSeek server was refused. Please check your network or try again later",
-    "balance.reset": "Connection to the DeepSeek server was reset. Please check your network",
-    "balance.network": "Network request failed. Please check your network connection",
+    "balance.network": "Network request failed: {detail}",
     "balance.invalidKey": "DeepSeek API Key is invalid (HTTP 401)",
     "app.reset": "Reset",
     "app.resetTitle": "Reset view range",
@@ -1303,11 +1299,7 @@
     "extension.clearHistoryConfirm": "\u786E\u5B9A\u6E05\u9664\u6240\u6709\u5386\u53F2\u4F59\u989D\u8BB0\u5F55\uFF1F\u6B64\u64CD\u4F5C\u4E0D\u53EF\u64A4\u9500\u3002",
     "extension.clearHistoryAction": "\u6E05\u9664",
     "balance.timeout": "\u8BF7\u6C42\u8D85\u65F6\uFF0815 \u79D2\u672A\u54CD\u5E94\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u540E\u91CD\u8BD5",
-    "balance.dns": "\u65E0\u6CD5\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\uFF08\u57DF\u540D\u89E3\u6790\u5931\u8D25\uFF09\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
-    "balance.connectTimeout": "\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\u8D85\u65F6\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
-    "balance.refused": "\u8FDE\u63A5 DeepSeek \u670D\u52A1\u5668\u88AB\u62D2\u7EDD\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u6216\u7A0D\u540E\u91CD\u8BD5",
-    "balance.reset": "\u4E0E DeepSeek \u670D\u52A1\u5668\u7684\u8FDE\u63A5\u88AB\u91CD\u7F6E\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC",
-    "balance.network": "\u7F51\u7EDC\u8BF7\u6C42\u5931\u8D25\uFF0C\u8BF7\u68C0\u67E5\u7F51\u7EDC\u8FDE\u63A5",
+    "balance.network": "\u7F51\u7EDC\u8BF7\u6C42\u5931\u8D25\uFF1A{detail}",
     "balance.invalidKey": "DeepSeek API Key \u65E0\u6548\uFF08HTTP 401\uFF09",
     "app.reset": "\u91CD\u7F6E",
     "app.resetTitle": "\u91CD\u7F6E\u89C6\u56FE\u8303\u56F4",
@@ -2372,7 +2364,7 @@
 
   // webview/components/Footer.tsx
   var _tmpl$5 = /* @__PURE__ */ template(`<span>`);
-  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><span class=err></span><div class=tabs><button></button><button></button></div><button class=btn><i class="codicon codicon-pulse"></i></button><button class=btn><i class="codicon codicon-gear">`);
+  var _tmpl$24 = /* @__PURE__ */ template(`<span class=footer-right><div class=tabs><button></button><button></button></div><button class=btn><i class="codicon codicon-pulse"></i></button><button class=btn><i class="codicon codicon-gear">`);
   function Footer() {
     const info = createMemo(() => {
       const d = store.data;
@@ -2395,26 +2387,22 @@
       insert(_el$, info);
       return _el$;
     })(), (() => {
-      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.nextSibling, _el$5 = _el$4.firstChild, _el$6 = _el$5.nextSibling, _el$7 = _el$4.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$7.nextSibling, _el$0 = _el$9.firstChild;
-      insert(_el$3, (() => {
-        var _c$ = memo(() => !!store.lastError);
-        return () => _c$() ? `\u26A0 ${store.lastError}` : "";
-      })());
-      _el$5.$$click = () => setChartMode("balance");
-      insert(_el$5, () => t("footer.balance"));
-      _el$6.$$click = () => setChartMode("spend");
-      insert(_el$6, () => t("footer.spend"));
-      addEventListener(_el$7, "click", openStatusPage, true);
-      insert(_el$7, () => t("footer.status"), null);
-      addEventListener(_el$9, "click", openSettings, true);
-      insert(_el$9, () => t("footer.settings"), null);
+      var _el$2 = _tmpl$24(), _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.firstChild, _el$8 = _el$6.nextSibling, _el$9 = _el$8.firstChild;
+      _el$4.$$click = () => setChartMode("balance");
+      insert(_el$4, () => t("footer.balance"));
+      _el$5.$$click = () => setChartMode("spend");
+      insert(_el$5, () => t("footer.spend"));
+      addEventListener(_el$6, "click", openStatusPage, true);
+      insert(_el$6, () => t("footer.status"), null);
+      addEventListener(_el$8, "click", openSettings, true);
+      insert(_el$8, () => t("footer.settings"), null);
       createRenderEffect((_p$) => {
         var _v$ = t("footer.chartModeTitle"), _v$2 = "tab" + (store.chartMode === "balance" ? " active" : ""), _v$3 = "tab" + (store.chartMode === "spend" ? " active" : ""), _v$4 = t("footer.statusPageTitle"), _v$5 = t("footer.settings");
-        _v$ !== _p$.e && setAttribute(_el$4, "title", _p$.e = _v$);
-        _v$2 !== _p$.t && className(_el$5, _p$.t = _v$2);
-        _v$3 !== _p$.a && className(_el$6, _p$.a = _v$3);
-        _v$4 !== _p$.o && setAttribute(_el$7, "title", _p$.o = _v$4);
-        _v$5 !== _p$.i && setAttribute(_el$9, "title", _p$.i = _v$5);
+        _v$ !== _p$.e && setAttribute(_el$3, "title", _p$.e = _v$);
+        _v$2 !== _p$.t && className(_el$4, _p$.t = _v$2);
+        _v$3 !== _p$.a && className(_el$5, _p$.a = _v$3);
+        _v$4 !== _p$.o && setAttribute(_el$6, "title", _p$.o = _v$4);
+        _v$5 !== _p$.i && setAttribute(_el$8, "title", _p$.i = _v$5);
         return _p$;
       }, {
         e: void 0,
@@ -2427,6 +2415,21 @@
     })()];
   }
   delegateEvents(["click"]);
+
+  // webview/components/ErrorBanner.tsx
+  var _tmpl$6 = /* @__PURE__ */ template(`<div class=error-banner><i class="codicon codicon-error"></i><span>`);
+  function ErrorBanner() {
+    return createComponent(Show, {
+      get when() {
+        return store.lastError;
+      },
+      get children() {
+        var _el$ = _tmpl$6(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+        insert(_el$3, () => store.lastError);
+        return _el$;
+      }
+    });
+  }
 
   // webview/logic/segments.ts
   function decimate(pts, max) {
@@ -2960,7 +2963,7 @@
   }
 
   // webview/components/Tooltip.tsx
-  var _tmpl$6 = /* @__PURE__ */ template(`<div class=tt-cols>`);
+  var _tmpl$7 = /* @__PURE__ */ template(`<div class=tt-cols>`);
   var _tmpl$25 = /* @__PURE__ */ template(`<div class=tooltip><div class=tt-time>`);
   var _tmpl$32 = /* @__PURE__ */ template(`<div class=tt-row><span></span><b>`);
   var _tmpl$42 = /* @__PURE__ */ template(`<div class=tt-col-title>`);
@@ -3033,7 +3036,7 @@
             });
           },
           get children() {
-            var _el$3 = _tmpl$6();
+            var _el$3 = _tmpl$7();
             insert(_el$3, createComponent(For, {
               get each() {
                 return tooltipInfo().columns;
@@ -3083,7 +3086,7 @@
   }
 
   // webview/components/Empty.tsx
-  var _tmpl$7 = /* @__PURE__ */ template(`<button class="btn primary">`);
+  var _tmpl$8 = /* @__PURE__ */ template(`<button class="btn primary">`);
   var _tmpl$26 = /* @__PURE__ */ template(`<div class=empty><div class=empty-icon><i class="codicon codicon-graph-line"></i></div><div class=empty-text>`);
   function Empty() {
     const info = createMemo(() => emptyInfo());
@@ -3099,7 +3102,7 @@
             return info().showAction;
           },
           get children() {
-            var _el$4 = _tmpl$7();
+            var _el$4 = _tmpl$8();
             addEventListener(_el$4, "click", setApiKey, true);
             insert(_el$4, () => t("empty.setApiKey"));
             return _el$4;
@@ -3112,7 +3115,7 @@
   delegateEvents(["click"]);
 
   // webview/components/ChartAxis.tsx
-  var _tmpl$8 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
+  var _tmpl$9 = /* @__PURE__ */ template(`<svg><g class=axis></svg>`, false, true, false);
   var _tmpl$27 = /* @__PURE__ */ template(`<svg><g class="axis axis-right"></svg>`, false, true, false);
   var _tmpl$33 = /* @__PURE__ */ template(`<svg><line class=grid></svg>`, false, true, false);
   var _tmpl$43 = /* @__PURE__ */ template(`<svg><text text-anchor=end dominant-baseline=middle></svg>`, false, true, false);
@@ -3120,7 +3123,7 @@
   var _tmpl$62 = /* @__PURE__ */ template(`<svg><text dominant-baseline=hanging></svg>`, false, true, false);
   function ChartAxis(props) {
     return [(() => {
-      var _el$ = _tmpl$8();
+      var _el$ = _tmpl$9();
       insert(_el$, createComponent(For, {
         get each() {
           return props.lay.yTicks;
@@ -3192,7 +3195,7 @@
         return _el$2;
       }
     }), (() => {
-      var _el$3 = _tmpl$8();
+      var _el$3 = _tmpl$9();
       insert(_el$3, createComponent(For, {
         get each() {
           return props.lay.xTicks;
@@ -3242,7 +3245,7 @@
   }
 
   // webview/components/ChartSeries.tsx
-  var _tmpl$9 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
+  var _tmpl$10 = /* @__PURE__ */ template(`<svg><path></svg>`, false, true, false);
   var _tmpl$28 = /* @__PURE__ */ template(`<svg><circle r=3></svg>`, false, true, false);
   function ChartSeries(props) {
     const yOf = () => props.secondary && props.lay.yOf2 ? props.lay.yOf2 : props.lay.yOf;
@@ -3252,7 +3255,7 @@
         return props.connectorDraws;
       },
       children: (c) => [memo(() => memo(() => !!c.area)() ? (() => {
-        var _el$2 = _tmpl$9();
+        var _el$2 = _tmpl$10();
         createRenderEffect((_p$) => {
           var _v$4 = cls("area"), _v$5 = c.area, _v$6 = c.color ? {
             fill: c.color
@@ -3268,7 +3271,7 @@
         });
         return _el$2;
       })() : null), (() => {
-        var _el$ = _tmpl$9();
+        var _el$ = _tmpl$10();
         createRenderEffect((_p$) => {
           var _v$ = cls("connector") + (c.kind === "solid" || c.kind === "ignore" ? " solid" : c.kind === "dotted" ? " dotted" : ""), _v$2 = c.d, _v$3 = c.color ? {
             stroke: c.color
@@ -3289,7 +3292,7 @@
         return props.solidDraws;
       },
       children: (s) => [(() => {
-        var _el$3 = _tmpl$9();
+        var _el$3 = _tmpl$10();
         createRenderEffect((_p$) => {
           var _v$7 = cls("area"), _v$8 = s.area;
           _v$7 !== _p$.e && setAttribute(_el$3, "class", _p$.e = _v$7);
@@ -3301,7 +3304,7 @@
         });
         return _el$3;
       })(), (() => {
-        var _el$4 = _tmpl$9();
+        var _el$4 = _tmpl$10();
         createRenderEffect((_p$) => {
           var _v$9 = cls("line"), _v$0 = s.d;
           _v$9 !== _p$.e && setAttribute(_el$4, "class", _p$.e = _v$9);
@@ -3336,7 +3339,7 @@
   }
 
   // webview/components/ChartCrosshair.tsx
-  var _tmpl$10 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
+  var _tmpl$11 = /* @__PURE__ */ template(`<svg><line class=crosshair></svg>`, false, true, false);
   var _tmpl$29 = /* @__PURE__ */ template(`<svg><circle class=hover-dot r=4></svg>`, false, true, false);
   var _tmpl$34 = /* @__PURE__ */ template(`<svg><circle class="hover-dot secondary"r=4></svg>`, false, true, false);
   function ChartCrosshair(props) {
@@ -3346,7 +3349,7 @@
       },
       get children() {
         return [(() => {
-          var _el$ = _tmpl$10();
+          var _el$ = _tmpl$11();
           createRenderEffect((_p$) => {
             var _v$ = props.hover.x, _v$2 = M.top, _v$3 = props.hover.x, _v$4 = props.h - M.bottom;
             _v$ !== _p$.e && setAttribute(_el$, "x1", _p$.e = _v$);
@@ -3553,7 +3556,7 @@
   }
 
   // webview/components/Chart.tsx
-  var _tmpl$11 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
+  var _tmpl$12 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$210 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
   var _tmpl$35 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
   function Chart() {
@@ -4025,7 +4028,7 @@
         },
         get children() {
           return [(() => {
-            var _el$3 = _tmpl$11(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
+            var _el$3 = _tmpl$12(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
             createRenderEffect((_p$) => {
               var _v$ = layout().plotLeft, _v$2 = M.top, _v$3 = layout().plotRight - layout().plotLeft, _v$4 = size().h - M.bottom - M.top;
               _v$ !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$);
@@ -4162,7 +4165,7 @@
   }
 
   // webview/components/ChartBars.tsx
-  var _tmpl$12 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
+  var _tmpl$13 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$211 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)><g class=bars></svg>`, false, true, false);
   var _tmpl$36 = /* @__PURE__ */ template(`<div class=empty><div class=empty-text>`);
   var _tmpl$44 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
@@ -4457,7 +4460,7 @@
         },
         get children() {
           return [(() => {
-            var _el$3 = _tmpl$12(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
+            var _el$3 = _tmpl$13(), _el$4 = _el$3.firstChild, _el$5 = _el$4.firstChild;
             createRenderEffect((_p$) => {
               var _v$ = layout().plotLeft, _v$2 = M.top, _v$3 = layout().plotRight - layout().plotLeft, _v$4 = size().h - M.bottom - M.top;
               _v$ !== _p$.e && setAttribute(_el$5, "x", _p$.e = _v$);
@@ -4566,10 +4569,10 @@
   delegateEvents(["mousemove"]);
 
   // webview/components/Collapse.tsx
-  var _tmpl$13 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
+  var _tmpl$14 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
   function Collapse(props) {
     return (() => {
-      var _el$ = _tmpl$13(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild;
       insert(_el$2, () => props.children);
       createRenderEffect(() => className(_el$, "collapse" + (props.open ? " open" : "")));
       return _el$;
@@ -4577,10 +4580,10 @@
   }
 
   // webview/components/SettingsGroup.tsx
-  var _tmpl$14 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
   function SettingsGroup(props) {
     return (() => {
-      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
+      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
       addEventListener(_el$2, "click", props.onToggle, true);
       insert(_el$3, () => props.title, null);
       insert(_el$, createComponent(Collapse, {
@@ -4606,13 +4609,13 @@
   delegateEvents(["click"]);
 
   // webview/components/SettingRow.tsx
-  var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
+  var _tmpl$16 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
   var _tmpl$212 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
   var _tmpl$37 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
   var _tmpl$45 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
   function SettingRow(props) {
     return (() => {
-      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
       insert(_el$2, (() => {
         var _c$ = memo(() => !!props.for);
         return () => _c$() ? (() => {
@@ -4640,7 +4643,7 @@
   }
 
   // webview/components/ThresholdEditor.tsx
-  var _tmpl$16 = /* @__PURE__ */ template(`<div class=threshold-head><span></span><button class="btn small"><i class="codicon codicon-add">`);
+  var _tmpl$17 = /* @__PURE__ */ template(`<div class=threshold-head><span></span><button class="btn small"><i class="codicon codicon-add">`);
   var _tmpl$213 = /* @__PURE__ */ template(`<div id=thresholdList>`);
   var _tmpl$38 = /* @__PURE__ */ template(`<p class=settings-hint>`);
   var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep></span><input type=color class=threshold-color><button class="icon threshold-del"><i class="codicon codicon-trash">`);
@@ -4667,7 +4670,7 @@
       props.onChange(props.thresholds.filter((_, idx) => idx !== i));
     }
     return [(() => {
-      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.firstChild;
+      var _el$ = _tmpl$17(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.firstChild;
       insert(_el$2, () => t("threshold.title"));
       _el$3.$$click = add;
       insert(_el$3, () => t("threshold.add"), null);
@@ -4703,7 +4706,7 @@
   delegateEvents(["click", "input"]);
 
   // webview/components/settings/StatusBarGroup.tsx
-  var _tmpl$17 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
+  var _tmpl$18 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
   var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span></span><i class="codicon codicon-chevron-down">`);
   var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
@@ -4715,7 +4718,7 @@
       },
       "for": "statusBarShowEl",
       get children() {
-        var _el$ = _tmpl$17();
+        var _el$ = _tmpl$18();
         _el$.addEventListener("change", (e) => props.setStaged("statusBarShow", e.currentTarget.checked));
         createRenderEffect(() => _el$.checked = props.staged?.statusBarShow);
         return _el$;
@@ -4765,7 +4768,7 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ChartGroup.tsx
-  var _tmpl$18 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight></option><option value=smooth>`);
+  var _tmpl$19 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight></option><option value=smooth>`);
   var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed></option><option value=dotted></option><option value=solid></option><option value=ignore></option><option value=none>`);
   var _tmpl$310 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
@@ -4777,7 +4780,7 @@
       },
       "for": "lineStyleEl",
       get children() {
-        var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+        var _el$ = _tmpl$19(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
         _el$.addEventListener("change", (e) => props.setStaged("lineStyle", e.currentTarget.value));
         insert(_el$2, () => t("chartGroup.straight"));
         insert(_el$3, () => t("chartGroup.smooth"));
@@ -4846,7 +4849,7 @@
   }
 
   // webview/components/settings/GeneralGroup.tsx
-  var _tmpl$19 = /* @__PURE__ */ template(`<select id=languageEl class=settings-select><option value=auto></option><option value=en></option><option value=zh-cn>`);
+  var _tmpl$20 = /* @__PURE__ */ template(`<select id=languageEl class=settings-select><option value=auto></option><option value=en></option><option value=zh-cn>`);
   var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
   var _tmpl$311 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
   var _tmpl$49 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
@@ -4860,7 +4863,7 @@
       },
       "for": "languageEl",
       get children() {
-        var _el$ = _tmpl$19(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
+        var _el$ = _tmpl$20(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
         _el$.addEventListener("change", (e) => props.setStaged("language", e.currentTarget.value));
         insert(_el$2, () => t("settings.language.auto"));
         insert(_el$3, () => t("settings.language.en"));
@@ -4954,7 +4957,7 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ApiKeyGroup.tsx
-  var _tmpl$20 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$21 = /* @__PURE__ */ template(`<button class=btn>`);
   var _tmpl$217 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function ApiKeyGroup() {
     return createComponent(SettingRow, {
@@ -4963,7 +4966,7 @@
       },
       get children() {
         return [(() => {
-          var _el$ = _tmpl$20();
+          var _el$ = _tmpl$21();
           _el$.$$click = () => postMessage({
             type: "setApiKey"
           });
@@ -4983,14 +4986,14 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/DataGroup.tsx
-  var _tmpl$21 = /* @__PURE__ */ template(`<button class="btn danger">`);
+  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function DataGroup() {
     return createComponent(SettingRow, {
       get label() {
         return t("data.historyLabel");
       },
       get children() {
-        var _el$ = _tmpl$21();
+        var _el$ = _tmpl$30();
         _el$.$$click = () => postMessage({
           type: "clearHistory"
         });
@@ -5002,14 +5005,14 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/MiscGroup.tsx
-  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">`);
+  var _tmpl$31 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function MiscGroup() {
     return createComponent(SettingRow, {
       get label() {
         return t("misc.resetLabel");
       },
       get children() {
-        var _el$ = _tmpl$30();
+        var _el$ = _tmpl$31();
         _el$.$$click = () => postMessage({
           type: "resetSettings"
         });
@@ -5021,7 +5024,7 @@
   delegateEvents(["click"]);
 
   // webview/components/Settings.tsx
-  var _tmpl$31 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title></span><button class=icon><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i></button><button class=btn></button><button class="btn primary"><i class="codicon codicon-check">`);
+  var _tmpl$40 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title></span><button class=icon><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i></button><button class=btn></button><button class="btn primary"><i class="codicon codicon-check">`);
   function Settings(props) {
     const [groupsOpen, setGroupsOpen] = createStore({
       statusBar: true,
@@ -5076,7 +5079,7 @@
       close();
     }
     return (() => {
-      var _el$ = _tmpl$31(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.firstChild;
+      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.firstChild;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -5188,7 +5191,7 @@
   delegateEvents(["pointerdown", "click"]);
 
   // webview/components/RefreshButton.tsx
-  var _tmpl$40 = /* @__PURE__ */ template(`<button><i>`);
+  var _tmpl$41 = /* @__PURE__ */ template(`<button><i>`);
   function RefreshButton() {
     const refreshIcon = createMemo(() => {
       if (store.refreshing) return "codicon-refresh spinning";
@@ -5205,7 +5208,7 @@
       return t("refresh.idle");
     });
     return (() => {
-      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$41(), _el$2 = _el$.firstChild;
       addEventListener(_el$, "click", checkNow, true);
       createRenderEffect((_p$) => {
         var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
@@ -5226,7 +5229,7 @@
   delegateEvents(["click"]);
 
   // webview/components/App.tsx
-  var _tmpl$41 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$50 = /* @__PURE__ */ template(`<button class=btn>`);
   var _tmpl$218 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=icon><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
     createEffect(() => {
@@ -5244,7 +5247,7 @@
         },
         get children() {
           return [createComponent(Ranges, {}), (() => {
-            var _el$4 = _tmpl$41();
+            var _el$4 = _tmpl$50();
             addEventListener(_el$4, "click", resetView, true);
             insert(_el$4, () => t("app.reset"));
             createRenderEffect(() => setAttribute(_el$4, "title", t("app.resetTitle")));
@@ -5255,6 +5258,7 @@
       insert(_el$3, createComponent(Tabs, {}), _el$5);
       insert(_el$3, createComponent(RefreshButton, {}), _el$5);
       addEventListener(_el$5, "click", openUsage, true);
+      insert(_el$, createComponent(ErrorBanner, {}), _el$6);
       insert(_el$, createComponent(Show, {
         get when() {
           return store.chartMode === "balance";

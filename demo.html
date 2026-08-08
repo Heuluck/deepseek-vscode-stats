@@ -16,6 +16,8 @@
       --vscode-editorWidget-background: #252526;
       --vscode-editorWidget-border: #454545;
       --vscode-charts-line: #4e9bef;
+      --vscode-charts-red: #f14c4c;
+      --vscode-errorForeground: #f48771;
       --vscode-editor-lineHighlightBorder: rgba(128, 128, 128, 0.25);
       --vscode-button-background: #0e639c;
       --vscode-button-foreground: #ffffff;
@@ -25,38 +27,10 @@
       --vscode-font-family: -apple-system, "Segoe UI", "PingFang SC", sans-serif;
       --vscode-font-size: 13px;
     }
-    /* 演示说明条（真实 webview 没有） */
-    .demo-note {
-      position: fixed;
-      left: 12px;
-      right: 12px;
-      top: 8px;
-      z-index: 999;
-      pointer-events: none; /* 不拦截图表交互 */
-      display: flex;
-      align-items: center;
-      gap: 16px;
-      padding: 8px 14px;
-      background: #2d2d30;
-      border: 1px solid rgba(128, 128, 128, 0.4);
-      border-radius: 6px;
-      color: #cccccc;
-      font: 12px/1.5 var(--vscode-font-family);
-    }
-    .demo-note b { font-weight: 600; }
-    .sw { display: inline-block; width: 18px; height: 3px; border-radius: 2px; vertical-align: middle; }
-    .sw.cny { background: #4e9bef; }
-    .sw.usd { background: #e0a83c; }
-    #app { height: calc(100vh - 52px); }
+    #app { height: 100vh; }
   </style>
 </head>
 <body>
-  <div class="demo-note">
-    <span><b>模拟数据演示</b> · 你的账户没有 USD，这里用假数据展示双币种叠加效果</span>
-    <span><span class="sw cny"></span> CNY（左轴）</span>
-    <span><span class="sw usd"></span> USD（右轴）</span>
-    <span>每 4 秒模拟一次轮询，可看到曲线实时右滑</span>
-  </div>
   <div id="app"></div>
 
   <script>

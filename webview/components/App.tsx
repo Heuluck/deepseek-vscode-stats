@@ -11,6 +11,7 @@ import { Header } from './Header';
 import { Tabs } from './Tabs';
 import { Ranges } from './Ranges';
 import { Footer } from './Footer';
+import { ErrorBanner } from './ErrorBanner';
 import { Chart } from './Chart';
 import { ChartBars } from './ChartBars';
 import { Settings } from './Settings';
@@ -45,6 +46,7 @@ export function App() {
           </button>
         </div>
       </header>
+      <ErrorBanner />
       <Show when={store.chartMode === 'balance'} fallback={<ChartBars />}>
         <Chart />
       </Show>

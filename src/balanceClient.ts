@@ -52,7 +52,7 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse> {
   }
 }
 
-/** 把 fetch 的网络层错误翻译为用户可读的中文（HTTP/业务错误原样保留）。 */
+/** 把 fetch 的错误处理为用户可读的摘要：原始错误信息透传（不翻译、不抹掉错误码）。 */
 function translateFetchError(err: unknown): Error {
   // 401：API Key 无效——保留 status 供 isInvalidKeyError 识别
   if (err instanceof ApiHttpError && err.status === 401) {
@@ -61,28 +61,24 @@ function translateFetchError(err: unknown): Error {
   if (err instanceof Error && err.name === 'AbortError') {
     return new Error(t('balance.timeout'));
   }
-  // Node 内置 fetch 网络失败统一抛 TypeError，真实原因（DNS/连接等）在 cause 链里
+  // Node 内置 fetch 网络失败统一抛 TypeError，真实原因（如
+  // "getaddrinfo ENOTFOUND api.deepseek.com"）藏在 cause 链里——取出透传，不做分类翻译
   if (err instanceof TypeError) {
-    let cause: unknown = err;
-    while (cause instanceof Error && cause.cause) {
-      cause = cause.cause;
-    }
-    const m = (cause instanceof Error ? cause.message : String(cause)).toLowerCase();
-    if (m.includes('enotfound') || m.includes('getaddrinfo') || m.includes('eai_again')) {
-      return new Error(t('balance.dns'));
-    }
-    if (m.includes('etimedout') || m.includes('timeout') || m.includes('econnaborted')) {
-      return new Error(t('balance.connectTimeout'));
-    }
-    if (m.includes('econnrefused')) {
-      return new Error(t('balance.refused'));
-    }
-    if (m.includes('econnreset') || m.includes('epipe')) {
-      return new Error(t('balance.reset'));
-    }
-    return new Error(t('balance.network'));
+    return new Error(t('balance.network', { detail: getRootCauseMessage(err) }));
   }
   return err instanceof Error ? err : new Error(String(err));
+}
+
+/** 沿 cause 链取最后一个有内容的错误信息（Node fetch 的真实原因在链的最深处）。 */
+function getRootCauseMessage(err: unknown): string {
+  let cur: unknown = err;
+  let lastMsg = '';
+  while (cur instanceof Error) {
+    if (cur.message) lastMsg = cur.message;
+    if (!cur.cause) break;
+    cur = cur.cause;
+  }
+  return lastMsg || String(cur);
 }
 
 /** 返回全部币种账户（CNY/USD…）。 */

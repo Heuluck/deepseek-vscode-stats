@@ -28,7 +28,6 @@ export function Footer() {
     <>
       <span>{info()}</span>
       <span class="footer-right">
-        <span class="err">{store.lastError ? `⚠ ${store.lastError}` : ''}</span>
         {/* 图表模式切换：余额曲线 / 消耗柱状图（状态按钮左侧） */}
         <div class="tabs" title={t('footer.chartModeTitle')}>
           <button
