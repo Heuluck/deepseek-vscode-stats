@@ -8,6 +8,14 @@ import { activeCurrencies, mainCurrency } from '../logic/viewport';
 import { todaySpendFromCache } from '../logic/todaySpend';
 import type { Snapshot } from '../types';
 
+/** 取某币种的最新一条快照（快照按时间升序，必须从尾部反向找；find() 会命中最早一条）。 */
+function latestSnapOf(snaps: Snapshot[], currency: string): Snapshot | undefined {
+  for (let i = snaps.length - 1; i >= 0; i--) {
+    if (snaps[i].currency === currency) return snaps[i];
+  }
+  return undefined;
+}
+
 export function Header() {
   const balance = createMemo(() => {
     const data = store.data;
@@ -29,7 +37,7 @@ export function Header() {
     const data = store.data;
     const snaps = data?.snapshots || [];
     const main = mainCurrency(data);
-    const cur = snaps.find((s) => s.currency === main) || snaps[snaps.length - 1];
+    const cur = latestSnapOf(snaps, main) || snaps[snaps.length - 1];
     if (cur) {
       return t('header.rechargeGrant', {
         top: fmtMoney(cur.toppedUp, cur.currency),
@@ -51,8 +59,7 @@ export function Header() {
     const data = store.data;
     const main = mainCurrency(data);
     // 今日花费缓存基于主币种构建，当前余额也取主币种的最新快照，保证口径一致
-    const curSnap =
-      (data?.snapshots || []).find((s) => s.currency === main) || data?.current || null;
+    const curSnap = latestSnapOf(data?.snapshots || [], main) || data?.current || null;
     const info = todaySpendFromCache(store.todayCache, curSnap);
     if (!info) {
       return { value: '-', title: t('header.spendUnreliable') };

@@ -1177,7 +1177,7 @@
     "settings.cancel": "Cancel",
     "settings.save": "Save",
     "settings.language": "Languages",
-    "settings.language.auto": "Auto (follow VS Code)",
+    "settings.language.auto": "Auto",
     "settings.language.en": "English",
     "settings.language.zhCn": "\u7B80\u4F53\u4E2D\u6587",
     "general.pollInterval": "Poll interval (minutes)",
@@ -1189,7 +1189,7 @@
     "general.dayBoundary": "Today's spend day boundary",
     "general.dayBoundaryHint": "DeepSeek calculates daily usage in UTC",
     "general.dayBoundaryLocal": "Local timezone",
-    "general.dayBoundaryUtc": "UTC (matches official)",
+    "general.dayBoundaryUtc": "UTC",
     "statusBarGroup.show": "Show balance",
     "statusBarGroup.thresholds": "Threshold colors",
     "statusBarGroup.defaultColor": "Default color",
@@ -1321,7 +1321,7 @@
     "settings.cancel": "\u53D6\u6D88",
     "settings.save": "\u4FDD\u5B58",
     "settings.language": "\u8BED\u8A00",
-    "settings.language.auto": "\u81EA\u52A8\uFF08\u8DDF\u968F VS Code\uFF09",
+    "settings.language.auto": "\u81EA\u52A8",
     "settings.language.en": "English",
     "settings.language.zhCn": "\u7B80\u4F53\u4E2D\u6587",
     "general.pollInterval": "\u67E5\u8BE2\u95F4\u9694\uFF08\u5206\u949F\uFF09",
@@ -1333,7 +1333,7 @@
     "general.dayBoundary": "\u4ECA\u65E5\u82B1\u8D39\u65E5\u754C",
     "general.dayBoundaryHint": "DeepSeek \u5B98\u65B9\u6309 UTC \u8BA1\u7B97\u6BCF\u65E5\u7528\u91CF",
     "general.dayBoundaryLocal": "\u672C\u5730\u65F6\u533A",
-    "general.dayBoundaryUtc": "UTC\uFF08\u4E0E\u5B98\u65B9\u4E00\u81F4\uFF09",
+    "general.dayBoundaryUtc": "UTC",
     "statusBarGroup.show": "\u663E\u793A\u4F59\u989D",
     "statusBarGroup.thresholds": "\u9608\u503C\u989C\u8272",
     "statusBarGroup.defaultColor": "\u9ED8\u8BA4\u989C\u8272",
@@ -2195,6 +2195,12 @@
   // webview/components/Header.tsx
   var _tmpl$ = /* @__PURE__ */ template(`<div class=stat><span class=stat-label></span><span class=stat-value>`);
   var _tmpl$2 = /* @__PURE__ */ template(`<div class=head-left><div class=stats><div class=stat><span class=stat-label></span><span class=stat-value></span></div></div><div class=current-meta><span class=meta>`);
+  function latestSnapOf(snaps, currency) {
+    for (let i = snaps.length - 1; i >= 0; i--) {
+      if (snaps[i].currency === currency) return snaps[i];
+    }
+    return void 0;
+  }
   function Header() {
     const balance = createMemo(() => {
       const data = store.data;
@@ -2212,7 +2218,7 @@
       const data = store.data;
       const snaps = data?.snapshots || [];
       const main = mainCurrency(data);
-      const cur = snaps.find((s) => s.currency === main) || snaps[snaps.length - 1];
+      const cur = latestSnapOf(snaps, main) || snaps[snaps.length - 1];
       if (cur) {
         return t("header.rechargeGrant", {
           top: fmtMoney(cur.toppedUp, cur.currency),
@@ -2226,7 +2232,7 @@
       if (!showSpend()) return null;
       const data = store.data;
       const main = mainCurrency(data);
-      const curSnap = (data?.snapshots || []).find((s) => s.currency === main) || data?.current || null;
+      const curSnap = latestSnapOf(data?.snapshots || [], main) || data?.current || null;
       const info = todaySpendFromCache(store.todayCache, curSnap);
       if (!info) {
         return {
