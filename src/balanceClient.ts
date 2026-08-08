@@ -12,6 +12,19 @@ export interface BalanceResponse {
   balance_infos: BalanceInfo[];
 }
 
+/** 带 HTTP 状态码的错误：用于区分「API Key 无效（401）」与普通失败。 */
+export class ApiHttpError extends Error {
+  constructor(readonly status: number, message: string) {
+    super(message);
+    this.name = 'ApiHttpError';
+  }
+}
+
+/** 401 = API Key 无效（其余 HTTP 错误/网络错误都不是 key 的问题）。 */
+export function isInvalidKeyError(err: unknown): boolean {
+  return err instanceof ApiHttpError && err.status === 401;
+}
+
 /**
  * 查询 DeepSeek 账户余额。
  * 官方接口：GET https://api.deepseek.com/user/balance
@@ -29,7 +42,7 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse> {
     });
     if (!res.ok) {
       const body = (await res.text()).slice(0, 300);
-      throw new Error(`查询失败 HTTP ${res.status}${body ? `: ${body}` : ''}`);
+      throw new ApiHttpError(res.status, `查询失败 HTTP ${res.status}${body ? `: ${body}` : ''}`);
     }
     return (await res.json()) as BalanceResponse;
   } catch (err) {
@@ -41,6 +54,10 @@ export async function fetchBalance(apiKey: string): Promise<BalanceResponse> {
 
 /** 把 fetch 的网络层错误翻译为用户可读的中文（HTTP/业务错误原样保留）。 */
 function translateFetchError(err: unknown): Error {
+  // 401：API Key 无效——保留 status 供 isInvalidKeyError 识别
+  if (err instanceof ApiHttpError && err.status === 401) {
+    return new ApiHttpError(401, t('balance.invalidKey'));
+  }
   if (err instanceof Error && err.name === 'AbortError') {
     return new Error(t('balance.timeout'));
   }

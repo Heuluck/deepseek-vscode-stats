@@ -57,6 +57,19 @@ export class StatusBar implements vscode.Disposable {
     this.item.show();
   }
 
+  /** API Key 无效（401）：橙色三角 + 点击重新设置（区别于普通查询失败）。 */
+  showInvalidKey(msg: string): void {
+    if (!getShowStatusBar()) {
+      this.item.hide();
+      return;
+    }
+    this.item.text = `$(warning) ${t('statusBar.invalidKey')}`;
+    this.item.tooltip = t('statusBar.invalidKeyTooltip', { msg });
+    this.item.command = 'deepseek-stats.setApiKey';
+    this.item.color = undefined;
+    this.item.show();
+  }
+
   /** 一次轮询可能产出多币种快照：主账户（CNY 优先）决定阈值变色，其余币种并列展示。 */
   update(snaps: Snapshot[]): void {
     if (!snaps.length) return;

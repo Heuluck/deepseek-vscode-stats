@@ -2,7 +2,8 @@ import * as vscode from 'vscode';
 import { ChartPanel } from './panel';
 import { HistoryStore, Snapshot } from './historyStore';
 import { StatusBar } from './statusBar';
-import { fetchBalance, pickBalanceInfos } from './balanceClient';
+import { fetchBalance, isInvalidKeyError, pickBalanceInfos } from './balanceClient';
+import type { BalanceResponse } from './balanceClient';
 import { getPanelConfig, getPollIntervalMinutes } from './config';
 import { getLocale, t } from './i18n';
 
@@ -234,6 +235,26 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
     vscode.window.showInformationMessage(t('extension.resetDone'));
   }
 
+  /** 用一次成功的余额响应更新 store/状态栏/webview（checkNow 与 setApiKey 校验共用，避免重复请求）。 */
+  function recordBalance(res: BalanceResponse): void {
+    const infos = pickBalanceInfos(res);
+    if (!infos.length) {
+      throw new Error(t('extension.noBalanceData'));
+    }
+    // 多币种：每个币种各采集一条快照（CNY 优先作为主账户，其余并列）
+    const snaps: Snapshot[] = infos.map((info) => ({
+      t: Date.now(),
+      total: Number(info.total_balance) || 0,
+      toppedUp: Number(info.topped_up_balance) || 0,
+      granted: Number(info.granted_balance) || 0,
+      currency: info.currency || 'CNY',
+      available: !!res.is_available,
+    }));
+    store.appendMany(snaps);
+    statusBar.update(snaps);
+    if (chart && chart.alive) chart.postSnapshots(snaps);
+  }
+
   async function checkNow(): Promise<void> {
     if (checking) return;
     checking = true;
@@ -246,26 +267,15 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         }
         return;
       }
-      const res = await fetchBalance(key);
-      const infos = pickBalanceInfos(res);
-      if (!infos.length) {
-        throw new Error(t('extension.noBalanceData'));
-      }
-      // 多币种：每个币种各采集一条快照（CNY 优先作为主账户，其余并列）
-      const snaps: Snapshot[] = infos.map((info) => ({
-        t: Date.now(),
-        total: Number(info.total_balance) || 0,
-        toppedUp: Number(info.topped_up_balance) || 0,
-        granted: Number(info.granted_balance) || 0,
-        currency: info.currency || 'CNY',
-        available: !!res.is_available,
-      }));
-      store.appendMany(snaps);
-      statusBar.update(snaps);
-      if (chart && chart.alive) chart.postSnapshots(snaps);
+      recordBalance(await fetchBalance(key));
     } catch (err) {
       const msg = err instanceof Error ? err.message : String(err);
-      statusBar.showError(msg);
+      // API Key 无效（401）切换到「点击重新设置」的橙三角状态，其余错误保持普通报错
+      if (isInvalidKeyError(err)) {
+        statusBar.showInvalidKey(msg);
+      } else {
+        statusBar.showError(msg);
+      }
       if (chart && chart.alive) chart.postError(msg);
     } finally {
       checking = false;
@@ -300,9 +310,62 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       });
       if (!value || !value.trim()) return;
       const key = value.trim();
+
+      // 先校验、后保存：用真实余额接口验证 key（DeepSeek 无独立校验端点），通过才落盘
+      let res: BalanceResponse;
+      try {
+        res = await fetchBalance(key);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        if (isInvalidKeyError(err)) {
+          // 401：key 确定无效 → 不保存，弹错 + 状态栏橙三角
+          statusBar.showInvalidKey(msg);
+          if (chart && chart.alive) chart.postError(msg);
+          void vscode.window.showErrorMessage(t('extension.apiKeyInvalid', { detail: msg }));
+          return;
+        }
+        // 网络/服务异常：key 可能有效，交由用户决定
+        const choice = await vscode.window.showErrorMessage(
+          t('extension.apiKeyVerifyFailed', { detail: msg }),
+          t('extension.apiKeyRetry'),
+          t('extension.apiKeySaveAnyway')
+        );
+        if (choice === t('extension.apiKeyRetry')) {
+          void vscode.commands.executeCommand('deepseek-stats.setApiKey');
+          return;
+        }
+        if (choice !== t('extension.apiKeySaveAnyway')) return;
+        // 用户选择「仍要保存」：落盘即可，真实状态由后续轮询自然反映
+        await context.secrets.store(API_KEY_SECRET, key);
+        apiKey = key;
+        pushDataToPanel();
+        return;
+      }
+
+      // 切换账号且已有历史数据：询问是否继承（避免不同账号数据混在一起）
+      const prevKey = apiKey;
+      const hasHistory = store.getSnapshots().length > 0 || store.getDaily().length > 0;
+      if (prevKey !== undefined && key !== prevKey && hasHistory) {
+        const pick = await vscode.window.showWarningMessage(
+          t('extension.apiKeySwitchConfirm'),
+          { modal: true },
+          t('extension.apiKeyInheritData'),
+          t('extension.apiKeyFreshStart')
+        );
+        if (pick === undefined) return; // 取消设置，不保存新 key
+        if (pick === t('extension.apiKeyFreshStart')) store.clear();
+      }
+
       await context.secrets.store(API_KEY_SECRET, key);
       apiKey = key;
-      await checkNow();
+      try {
+        // 校验已拿到结果，直接更新，避免二次请求
+        recordBalance(res);
+      } catch (err) {
+        const msg = err instanceof Error ? err.message : String(err);
+        statusBar.showError(msg);
+        if (chart && chart.alive) chart.postError(msg);
+      }
       pushDataToPanel();
       vscode.window.showInformationMessage(t('extension.apiKeySaved'));
     }),
