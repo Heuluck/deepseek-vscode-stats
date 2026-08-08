@@ -18,6 +18,8 @@ const Y_MIN_SPAN_RATIO_KEY = 'chartUi.yMinSpanRatio';
 type ChartMode = 'balance' | 'spend';
 const DEFAULT_CHART_MODE: ChartMode = 'spend';
 const CHART_MODE_KEY = 'chartUi.mode';
+/** 消耗面板「估算」一次性提示是否已确认（webview 本地，存 globalState）。 */
+const SPEND_WARNING_SEEN_KEY = 'chartUi.spendWarningSeen';
 
 function clampRatio(v: unknown): number {
   const n = Number(v);
@@ -130,6 +132,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
       void context.globalState.update(Y_MIN_SPAN_RATIO_KEY, clampRatio(msg.payload?.ratio));
     } else if (msg.type === 'setChartMode') {
       void context.globalState.update(CHART_MODE_KEY, sanitizeChartMode(msg.payload?.mode));
+    } else if (msg.type === 'setSpendWarningSeen') {
+      void context.globalState.update(SPEND_WARNING_SEEN_KEY, true);
     } else if (msg.type === 'openNativeSettings') {
       void vscode.commands.executeCommand('workbench.action.openSettings', 'deepseek-stats');
     } else if (msg.type === 'ready') {
@@ -157,7 +161,8 @@ export async function activate(context: vscode.ExtensionContext): Promise<void> 
         getPanelConfig(),
         !!apiKey,
         context.globalState.get<number>(Y_MIN_SPAN_RATIO_KEY, DEFAULT_Y_MIN_SPAN_RATIO),
-        context.globalState.get<ChartMode>(CHART_MODE_KEY, DEFAULT_CHART_MODE)
+        context.globalState.get<ChartMode>(CHART_MODE_KEY, DEFAULT_CHART_MODE),
+        context.globalState.get<boolean>(SPEND_WARNING_SEEN_KEY, false)
       );
     }
   }

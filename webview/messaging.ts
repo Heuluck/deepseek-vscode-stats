@@ -49,7 +49,9 @@ export type WebviewToExtension =
   | { type: 'openNativeSettings' }
   | { type: 'saveSettings'; payload: SaveSettingsPayload }
   | { type: 'setYMinSpanRatio'; payload: { ratio: number } }
-  | { type: 'setChartMode'; payload: { mode: ChartMode } };
+  | { type: 'setChartMode'; payload: { mode: ChartMode } }
+  /** 消耗面板「估算」提示已确认（一次性，持久化到扩展 globalState）。 */
+  | { type: 'setSpendWarningSeen' };
 
 interface VsCodeApi {
   postMessage(msg: unknown): void;

@@ -43,7 +43,8 @@ export class ChartPanel {
     config: PanelConfig,
     hasKey: boolean,
     yMinSpanRatio: number,
-    chartMode: 'balance' | 'spend'
+    chartMode: 'balance' | 'spend',
+    spendWarningSeen: boolean
   ): void {
     this.panel?.webview.postMessage({
       type: 'init',
@@ -55,6 +56,7 @@ export class ChartPanel {
         hasKey,
         yMinSpanRatio,
         chartMode,
+        spendWarningSeen,
         locale: getLocale(),
         vscodeLocale: getVscodeLocale(),
       },

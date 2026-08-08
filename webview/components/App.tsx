@@ -14,6 +14,7 @@ import { Footer } from './Footer';
 import { ErrorBanner } from './ErrorBanner';
 import { Chart } from './Chart';
 import { ChartBars } from './ChartBars';
+import { SpendWarning } from './SpendWarning';
 import { Settings } from './Settings';
 import { RefreshButton } from './RefreshButton';
 import { t } from '../i18n';
@@ -53,6 +54,7 @@ export function App() {
       <footer>
         <Footer />
       </footer>
+      <SpendWarning />
       <Show when={store.settingsOpen}>
         <Settings onClose={closeSettings} />
       </Show>

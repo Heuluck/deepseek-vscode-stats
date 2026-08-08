@@ -63,6 +63,8 @@ export interface InitPayload {
   yMinSpanRatio: number;
   /** 图表模式（webview 本地设置，存扩展 globalState）：默认消耗柱状图。 */
   chartMode: ChartMode;
+  /** 消耗面板「估算」一次性提示是否已确认（存扩展 globalState）。 */
+  spendWarningSeen: boolean;
   /** 扩展侧解析后的界面语言（配合 HTML 注入的初始 locale，用于 webview 首帧/同步）。 */
   locale: string;
   /** 跟随 VS Code 显示语言应生效的 locale（语言设置为 auto 时的兜底值）。 */

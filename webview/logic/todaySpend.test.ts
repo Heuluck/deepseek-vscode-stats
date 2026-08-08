@@ -23,6 +23,7 @@ function mkData(snapshots: Snapshot[]): InitPayload {
     hasKey: true,
     yMinSpanRatio: 0.2,
     chartMode: 'spend',
+    spendWarningSeen: false,
     locale: 'en',
     vscodeLocale: 'en',
   };

@@ -1171,6 +1171,9 @@
     "footer.statusPageTitle": "Open DeepSeek status page",
     "footer.status": "Status",
     "footer.settings": "Settings",
+    "spend.estimate.title": "Consumption is an estimate",
+    "spend.estimate.message": "The spend chart is estimated from balance snapshots: every drop in balance is counted as consumption. It may be inaccurate due to top-ups, data gaps, or because the first snapshot has no baseline.",
+    "spend.estimate.ok": "Got it",
     "settings.title": "DeepSeek Stats Settings",
     "settings.close": "Close",
     "settings.group.statusBar": "Status Bar",
@@ -1321,6 +1324,9 @@
     "footer.statusPageTitle": "\u6253\u5F00 DeepSeek \u72B6\u6001\u9875",
     "footer.status": "\u72B6\u6001",
     "footer.settings": "\u8BBE\u7F6E",
+    "spend.estimate.title": "\u6D88\u8017\u4E3A\u4F30\u7B97\u503C",
+    "spend.estimate.message": "\u6D88\u8017\u67F1\u72B6\u56FE\u7531\u4F59\u989D\u5FEB\u7167\u63A8\u7B97\uFF1A\u6BCF\u6B21\u4F59\u989D\u4E0B\u964D\u90FD\u8BA1\u4E3A\u6D88\u8D39\u3002\u53EF\u80FD\u56E0\u5145\u503C\u3001\u6570\u636E\u65AD\u6863\u6216\u7F3A\u5C11\u9996\u4E2A\u5FEB\u7167\u57FA\u51C6\u800C\u4E0D\u51C6\u786E\u3002",
+    "spend.estimate.ok": "\u77E5\u9053\u4E86",
     "settings.title": "DeepSeek Stats \u8BBE\u7F6E",
     "settings.close": "\u5173\u95ED",
     "settings.group.statusBar": "\u72B6\u6001\u680F",
@@ -1986,6 +1992,8 @@
     refreshResult: null,
     yMinSpanRatio: 0.2,
     chartMode: "spend",
+    spendWarningSeen: false,
+    spendWarningOpen: false,
     consGran: "hour",
     vscodeLocale: "en",
     todayCache: null
@@ -2054,6 +2062,8 @@
       minWindow: r.minWindow ?? 6e4,
       yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
       chartMode: payload.chartMode ?? "spend",
+      spendWarningSeen: payload.spendWarningSeen ?? false,
+      spendWarningOpen: (payload.chartMode ?? "spend") === "spend" && !(payload.spendWarningSeen ?? false),
       consGran: "hour",
       vscodeLocale: payload.vscodeLocale || "en",
       todayCache: buildTodaySpendCache(
@@ -2120,9 +2130,17 @@
     setStore({ yMinSpanRatio: ratio });
   }
   function setChartMode(mode) {
-    setStore({ chartMode: mode });
+    setStore({
+      chartMode: mode,
+      // 首次进入消耗面板时弹出估算提示（已确认过则不再弹）
+      ...mode === "spend" && !store.spendWarningSeen ? { spendWarningOpen: true } : {}
+    });
     setTooltipInfo(null);
     postMessage({ type: "setChartMode", payload: { mode } });
+  }
+  function dismissSpendWarning() {
+    setStore({ spendWarningOpen: false, spendWarningSeen: true });
+    postMessage({ type: "setSpendWarningSeen" });
   }
   function setConsGran(g) {
     setStore({ consGran: g });
@@ -4521,11 +4539,30 @@
   }
   delegateEvents(["mousemove"]);
 
+  // webview/components/SpendWarning.tsx
+  var _tmpl$14 = /* @__PURE__ */ template(`<div class=overlay><div class=modal><div class=modal-head><span class=modal-title></span></div><p class=modal-message></p><div class=modal-actions><button class="btn primary">`);
+  function SpendWarning() {
+    return createComponent(Show, {
+      get when() {
+        return store.spendWarningOpen;
+      },
+      get children() {
+        var _el$ = _tmpl$14(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$3.nextSibling, _el$6 = _el$5.nextSibling, _el$7 = _el$6.firstChild;
+        insert(_el$4, () => t("spend.estimate.title"));
+        insert(_el$5, () => t("spend.estimate.message"));
+        addEventListener(_el$7, "click", dismissSpendWarning, true);
+        insert(_el$7, () => t("spend.estimate.ok"));
+        return _el$;
+      }
+    });
+  }
+  delegateEvents(["click"]);
+
   // webview/components/Collapse.tsx
-  var _tmpl$14 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
+  var _tmpl$15 = /* @__PURE__ */ template(`<div><div class=collapse-inner>`);
   function Collapse(props) {
     return (() => {
-      var _el$ = _tmpl$14(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild;
       insert(_el$2, () => props.children);
       createRenderEffect(() => className(_el$, "collapse" + (props.open ? " open" : "")));
       return _el$;
@@ -4533,10 +4570,10 @@
   }
 
   // webview/components/SettingsGroup.tsx
-  var _tmpl$15 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
+  var _tmpl$16 = /* @__PURE__ */ template(`<div class=settings-group><button type=button><span class=settings-group-title><i></i></span><i class="codicon codicon-chevron-down">`);
   function SettingsGroup(props) {
     return (() => {
-      var _el$ = _tmpl$15(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
+      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild;
       addEventListener(_el$2, "click", props.onToggle, true);
       insert(_el$3, () => props.title, null);
       insert(_el$, createComponent(Collapse, {
@@ -4562,13 +4599,13 @@
   delegateEvents(["click"]);
 
   // webview/components/SettingRow.tsx
-  var _tmpl$16 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
+  var _tmpl$17 = /* @__PURE__ */ template(`<div class=settings-row><div class=settings-label-wrap></div><div class=settings-controls>`);
   var _tmpl$212 = /* @__PURE__ */ template(`<label class=settings-label-text>`);
   var _tmpl$37 = /* @__PURE__ */ template(`<span class=settings-label-text>`);
   var _tmpl$45 = /* @__PURE__ */ template(`<span class=settings-hint-inline>`);
   function SettingRow(props) {
     return (() => {
-      var _el$ = _tmpl$16(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+      var _el$ = _tmpl$17(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
       insert(_el$2, (() => {
         var _c$ = memo(() => !!props.for);
         return () => _c$() ? (() => {
@@ -4596,7 +4633,7 @@
   }
 
   // webview/components/ThresholdEditor.tsx
-  var _tmpl$17 = /* @__PURE__ */ template(`<div class=threshold-head><span></span><button class="btn small"><i class="codicon codicon-add">`);
+  var _tmpl$18 = /* @__PURE__ */ template(`<div class=threshold-head><span></span><button class="btn small"><i class="codicon codicon-add">`);
   var _tmpl$213 = /* @__PURE__ */ template(`<div id=thresholdList>`);
   var _tmpl$38 = /* @__PURE__ */ template(`<p class=settings-hint>`);
   var _tmpl$46 = /* @__PURE__ */ template(`<div class=threshold-row><input type=number class=threshold-below min=0 step=0.01><span class=sep></span><input type=color class=threshold-color><button class="icon threshold-del"><i class="codicon codicon-trash">`);
@@ -4623,7 +4660,7 @@
       props.onChange(props.thresholds.filter((_, idx) => idx !== i));
     }
     return [(() => {
-      var _el$ = _tmpl$17(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.firstChild;
+      var _el$ = _tmpl$18(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.firstChild;
       insert(_el$2, () => t("threshold.title"));
       _el$3.$$click = add;
       insert(_el$3, () => t("threshold.add"), null);
@@ -4659,7 +4696,7 @@
   delegateEvents(["click", "input"]);
 
   // webview/components/settings/StatusBarGroup.tsx
-  var _tmpl$18 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
+  var _tmpl$19 = /* @__PURE__ */ template(`<input id=statusBarShowEl type=checkbox>`);
   var _tmpl$214 = /* @__PURE__ */ template(`<button type=button><span></span><i class="codicon codicon-chevron-down">`);
   var _tmpl$39 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$47 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
@@ -4671,7 +4708,7 @@
       },
       "for": "statusBarShowEl",
       get children() {
-        var _el$ = _tmpl$18();
+        var _el$ = _tmpl$19();
         _el$.addEventListener("change", (e) => props.setStaged("statusBarShow", e.currentTarget.checked));
         createRenderEffect(() => _el$.checked = props.staged?.statusBarShow);
         return _el$;
@@ -4721,7 +4758,7 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ChartGroup.tsx
-  var _tmpl$19 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight></option><option value=smooth>`);
+  var _tmpl$20 = /* @__PURE__ */ template(`<select id=lineStyleEl class=settings-select><option value=straight></option><option value=smooth>`);
   var _tmpl$215 = /* @__PURE__ */ template(`<select id=connectorStyleEl class=settings-select><option value=dashed></option><option value=dotted></option><option value=solid></option><option value=ignore></option><option value=none>`);
   var _tmpl$310 = /* @__PURE__ */ template(`<input type=color>`);
   var _tmpl$48 = /* @__PURE__ */ template(`<label class=settings-inline><input type=checkbox>`);
@@ -4733,7 +4770,7 @@
       },
       "for": "lineStyleEl",
       get children() {
-        var _el$ = _tmpl$19(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
+        var _el$ = _tmpl$20(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling;
         _el$.addEventListener("change", (e) => props.setStaged("lineStyle", e.currentTarget.value));
         insert(_el$2, () => t("chartGroup.straight"));
         insert(_el$3, () => t("chartGroup.smooth"));
@@ -4802,7 +4839,7 @@
   }
 
   // webview/components/settings/GeneralGroup.tsx
-  var _tmpl$20 = /* @__PURE__ */ template(`<select id=languageEl class=settings-select><option value=auto></option><option value=en></option><option value=zh-cn>`);
+  var _tmpl$21 = /* @__PURE__ */ template(`<select id=languageEl class=settings-select><option value=auto></option><option value=en></option><option value=zh-cn>`);
   var _tmpl$216 = /* @__PURE__ */ template(`<input type=number id=pollMinutesEl min=1 step=1 class=settings-number>`);
   var _tmpl$311 = /* @__PURE__ */ template(`<input type=number id=rawRetentionEl min=1 step=1 class=settings-number>`);
   var _tmpl$49 = /* @__PURE__ */ template(`<input id=showTodaySpendEl type=checkbox>`);
@@ -4816,7 +4853,7 @@
       },
       "for": "languageEl",
       get children() {
-        var _el$ = _tmpl$20(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
+        var _el$ = _tmpl$21(), _el$2 = _el$.firstChild, _el$3 = _el$2.nextSibling, _el$4 = _el$3.nextSibling;
         _el$.addEventListener("change", (e) => props.setStaged("language", e.currentTarget.value));
         insert(_el$2, () => t("settings.language.auto"));
         insert(_el$3, () => t("settings.language.en"));
@@ -4910,7 +4947,7 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/ApiKeyGroup.tsx
-  var _tmpl$21 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$30 = /* @__PURE__ */ template(`<button class=btn>`);
   var _tmpl$217 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function ApiKeyGroup() {
     return createComponent(SettingRow, {
@@ -4919,7 +4956,7 @@
       },
       get children() {
         return [(() => {
-          var _el$ = _tmpl$21();
+          var _el$ = _tmpl$30();
           _el$.$$click = () => postMessage({
             type: "setApiKey"
           });
@@ -4939,14 +4976,14 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/DataGroup.tsx
-  var _tmpl$30 = /* @__PURE__ */ template(`<button class="btn danger">`);
+  var _tmpl$31 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function DataGroup() {
     return createComponent(SettingRow, {
       get label() {
         return t("data.historyLabel");
       },
       get children() {
-        var _el$ = _tmpl$30();
+        var _el$ = _tmpl$31();
         _el$.$$click = () => postMessage({
           type: "clearHistory"
         });
@@ -4958,14 +4995,14 @@
   delegateEvents(["click"]);
 
   // webview/components/settings/MiscGroup.tsx
-  var _tmpl$31 = /* @__PURE__ */ template(`<button class="btn danger">`);
+  var _tmpl$40 = /* @__PURE__ */ template(`<button class="btn danger">`);
   function MiscGroup() {
     return createComponent(SettingRow, {
       get label() {
         return t("misc.resetLabel");
       },
       get children() {
-        var _el$ = _tmpl$31();
+        var _el$ = _tmpl$40();
         _el$.$$click = () => postMessage({
           type: "resetSettings"
         });
@@ -4977,7 +5014,7 @@
   delegateEvents(["click"]);
 
   // webview/components/Settings.tsx
-  var _tmpl$40 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title></span><button class=icon><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i></button><button class=btn></button><button class="btn primary"><i class="codicon codicon-check">`);
+  var _tmpl$41 = /* @__PURE__ */ template(`<div class=overlay><div class=settings-panel><div class=settings-head><span class=settings-title></span><button class=icon><i class="codicon codicon-close"></i></button></div><div class=settings-body></div><div class=settings-foot><button class=btn><i class="codicon codicon-settings-gear"></i></button><button class=btn></button><button class="btn primary"><i class="codicon codicon-check">`);
   function Settings(props) {
     const [groupsOpen, setGroupsOpen] = createStore({
       statusBar: true,
@@ -5032,7 +5069,7 @@
       close();
     }
     return (() => {
-      var _el$ = _tmpl$40(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.firstChild;
+      var _el$ = _tmpl$41(), _el$2 = _el$.firstChild, _el$3 = _el$2.firstChild, _el$4 = _el$3.firstChild, _el$5 = _el$4.nextSibling, _el$6 = _el$3.nextSibling, _el$7 = _el$6.nextSibling, _el$8 = _el$7.firstChild, _el$9 = _el$8.firstChild, _el$0 = _el$8.nextSibling, _el$1 = _el$0.nextSibling, _el$10 = _el$1.firstChild;
       _el$.$$pointerdown = (e) => {
         if (e.target === e.currentTarget) close();
       };
@@ -5144,7 +5181,7 @@
   delegateEvents(["pointerdown", "click"]);
 
   // webview/components/RefreshButton.tsx
-  var _tmpl$41 = /* @__PURE__ */ template(`<button><i>`);
+  var _tmpl$50 = /* @__PURE__ */ template(`<button><i>`);
   function RefreshButton() {
     const refreshIcon = createMemo(() => {
       if (store.refreshing) return "codicon-refresh spinning";
@@ -5161,7 +5198,7 @@
       return t("refresh.idle");
     });
     return (() => {
-      var _el$ = _tmpl$41(), _el$2 = _el$.firstChild;
+      var _el$ = _tmpl$50(), _el$2 = _el$.firstChild;
       addEventListener(_el$, "click", checkNow, true);
       createRenderEffect((_p$) => {
         var _v$ = `icon${store.refreshing ? " refreshing" : ""}${store.refreshResult === "ok" ? " ok" : ""}${store.refreshResult === "fail" ? " fail" : ""}`, _v$2 = refreshTitle(), _v$3 = store.refreshing, _v$4 = `codicon ${refreshIcon()}`;
@@ -5182,7 +5219,7 @@
   delegateEvents(["click"]);
 
   // webview/components/App.tsx
-  var _tmpl$50 = /* @__PURE__ */ template(`<button class=btn>`);
+  var _tmpl$51 = /* @__PURE__ */ template(`<button class=btn>`);
   var _tmpl$218 = /* @__PURE__ */ template(`<div id=app><header><div class=controls><button class=icon><i class="codicon codicon-link-external"></i></button></div></header><footer>`);
   function App() {
     createEffect(() => {
@@ -5200,7 +5237,7 @@
         },
         get children() {
           return [createComponent(Ranges, {}), (() => {
-            var _el$4 = _tmpl$50();
+            var _el$4 = _tmpl$51();
             addEventListener(_el$4, "click", resetView, true);
             insert(_el$4, () => t("app.reset"));
             createRenderEffect(() => setAttribute(_el$4, "title", t("app.resetTitle")));
@@ -5224,6 +5261,7 @@
         }
       }), _el$6);
       insert(_el$6, createComponent(Footer, {}));
+      insert(_el$, createComponent(SpendWarning, {}), null);
       insert(_el$, createComponent(Show, {
         get when() {
           return store.settingsOpen;

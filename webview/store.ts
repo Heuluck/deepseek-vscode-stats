@@ -52,6 +52,10 @@ export interface AppState {
   yMinSpanRatio: number;
   /** 图表模式：余额曲线 / 消耗柱状图（webview 本地设置，存扩展 globalState）。 */
   chartMode: ChartMode;
+  /** 消耗面板「估算」一次性提示是否已确认（存扩展 globalState）。 */
+  spendWarningSeen: boolean;
+  /** 消耗面板「估算」提示当前是否打开。 */
+  spendWarningOpen: boolean;
   /** 消耗柱状图粒度（本次会话内有效）。 */
   consGran: ConsumptionGranularity;
   /** 跟随 VS Code 显示语言的 locale（语言设置为 auto 时应用；由 init payload 提供）。 */
@@ -76,6 +80,8 @@ export const [store, setStore] = createStore<AppState>({
   refreshResult: null,
   yMinSpanRatio: 0.2,
   chartMode: 'spend',
+  spendWarningSeen: false,
+  spendWarningOpen: false,
   consGran: 'hour',
   vscodeLocale: 'en',
   todayCache: null,
@@ -176,6 +182,8 @@ export function init(payload: InitPayload): void {
     minWindow: r.minWindow ?? 60e3,
     yMinSpanRatio: payload.yMinSpanRatio ?? 0.2,
     chartMode: payload.chartMode ?? 'spend',
+    spendWarningSeen: payload.spendWarningSeen ?? false,
+    spendWarningOpen: (payload.chartMode ?? 'spend') === 'spend' && !(payload.spendWarningSeen ?? false),
     consGran: 'hour',
     vscodeLocale: payload.vscodeLocale || 'en',
     todayCache: buildTodaySpendCache(
@@ -261,9 +269,19 @@ export function setYMinSpanRatio(ratio: number): void {
 
 /** 切换图表模式（余额/消耗）；乐观更新 + 持久化到扩展 globalState。 */
 export function setChartMode(mode: ChartMode): void {
-  setStore({ chartMode: mode });
+  setStore({
+    chartMode: mode,
+    // 首次进入消耗面板时弹出估算提示（已确认过则不再弹）
+    ...(mode === 'spend' && !store.spendWarningSeen ? { spendWarningOpen: true } : {}),
+  });
   setTooltipInfo(null); // 坐标空间已变，清掉旧 tooltip 防止错位
   postMessage({ type: 'setChartMode', payload: { mode } });
+}
+
+/** 关闭消耗面板「估算」提示（一次性）；持久化到扩展 globalState。 */
+export function dismissSpendWarning(): void {
+  setStore({ spendWarningOpen: false, spendWarningSeen: true });
+  postMessage({ type: 'setSpendWarningSeen' });
 }
 
 /** 切换消耗柱状图粒度（仅本次会话，不持久化）。 */
