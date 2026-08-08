@@ -1,8 +1,8 @@
 {
   "name": "deepseek-stats",
   "displayName": "DeepSeek Stats",
-  "description": "%deepseek-stats.description%",
-  "version": "0.1.3",
+  "description": "Query your DeepSeek account balance in VS Code and view hourly / daily / monthly balance trend charts",
+  "version": "0.1.4",
   "publisher": "heuluck",
   "license": "MIT",
   "icon": "media/icon.png",
