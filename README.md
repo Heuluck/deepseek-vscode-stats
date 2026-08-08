@@ -39,7 +39,7 @@ Stop opening platform.deepseek.com to check your balance. DeepSeek Stats keeps i
 
 ### Usage
 
-1. Set your API key: click **"DeepSeek: Not configured"** in the status bar, or the **API Key** button in the panel header
+1. Set your API key: click **"DeepSeek: Not configured"** in the status bar, or open the panel and configure it in **⚙ Settings** (bottom-right)
 2. The status bar shows your balance
 3. **Click the balance** to open the trend panel
 
@@ -79,16 +79,6 @@ Default thresholds: balance < 10 → red `#e51400`, < 50 → yellow `#ffb900`.
 - DeepSeek has **no historical-usage API** — trends are recorded by this extension itself, so data points exist only while VS Code is open
 - Closed periods render as connectors (configurable) — **never interpolated or fabricated**
 - API key lives in `SecretStorage` (OS keychain); snapshots live in VS Code global state, kept for 7 days by default
-
-## Compared to Alternatives
-
-| | Official website | Custom script | This extension |
-|---|---|---|---|
-| Status bar balance | ❌ | ⚠️ DIY | ✅ |
-| Trend charts | ❌ | ❌ | ✅ 3 views, interactive |
-| Today's spend (recharge-corrected) | ❌ | ❌ | ✅ |
-| Honest gap handling | — | ⚠️ often fakes | ✅ breaks, never fabricates |
-| Secure key storage | — | ⚠️ usually plaintext | ✅ SecretStorage |
 
 ## Development
 
