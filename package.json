@@ -8,10 +8,10 @@
   "icon": "media/icon.png",
   "repository": {
     "type": "git",
-    "url": "https://github.com/Heuluck/deepseek-vscode-stat.git"
+    "url": "https://github.com/Heuluck/deepseek-vscode-stats.git"
   },
   "bugs": {
-    "url": "https://github.com/Heuluck/deepseek-vscode-stat/issues"
+    "url": "https://github.com/Heuluck/deepseek-vscode-stats/issues"
   },
   "engines": {
     "vscode": "^1.85.0"
