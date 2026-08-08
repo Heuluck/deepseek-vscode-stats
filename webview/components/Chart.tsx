@@ -3,8 +3,7 @@
  * 手势（缩放/平移/悬停/双击）由 useChartGestures hook 管理，只读写 store 与高频 signal。
  * 渲染拆为 ChartAxis / ChartSeries / ChartCrosshair 纯展示组件。
  */
-import { createEffect, createMemo, onCleanup, onMount, Show } from 'solid-js';
-import { createSignal } from 'solid-js';
+import { createEffect, createMemo, Show } from 'solid-js';
 import { setTooltipInfo, store } from '../store';
 import { t } from '../i18n';
 import { activeCurrencies, mainCurrency, viewPoints } from '../logic/viewport';
@@ -44,25 +43,17 @@ import { ChartAxis } from './ChartAxis';
 import { ChartSeries } from './ChartSeries';
 import { ChartCrosshair } from './ChartCrosshair';
 import { useChartGestures } from '../hooks/useChartGestures';
+import { useElementSize } from '../hooks/useElementSize';
 
 export function Chart() {
-  let wrapRef: HTMLDivElement | undefined;
   let svgRef: SVGSVGElement | undefined;
 
-  // ---------- 尺寸（ResizeObserver → signal） ----------
-  const [size, setSize] = createSignal({ w: 0, h: 0 });
-  onMount(() => {
-    const ro = new ResizeObserver(() => {
-      if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
-    });
-    ro.observe(wrapRef!);
-    if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
-    onCleanup(() => ro.disconnect());
-  });
+  // ---------- 尺寸（RO + window.resize 兜底：webview 宿主里 RO 可能漏触发） ----------
+  const { ref: wrapRef, getEl, size } = useElementSize<HTMLDivElement>();
 
   // ---------- 手势（只回写 store 与高频 signal；渲染由 memo 统一驱动） ----------
   const { mouseX, pinT, pinUntil } = useChartGestures({
-    wrapRef: () => wrapRef,
+    wrapRef: getEl,
     svgRef: () => svgRef,
     getLayout: () => layout(),
     // 手势命中基于主系列几何（悬停命中同样只针对主系列）
@@ -545,7 +536,13 @@ export function Chart() {
 
   return (
     <main id="chartWrap" ref={wrapRef}>
-      <svg id="chart" width={size().w} height={size().h} ref={svgRef}>
+      <svg
+        id="chart"
+        width={size().w}
+        height={size().h}
+        style={{ width: `${size().w}px`, height: `${size().h}px` }}
+        ref={svgRef}
+      >
         <Show when={layout()}>
           <defs>
             {/* 绘图区裁剪：几何含视口外 overscan 预渲染点，裁掉离屏部分，避免画到坐标轴上 */}

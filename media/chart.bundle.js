@@ -3503,37 +3503,52 @@
     return { mouseX, setMouseX, pinT, setPinT, pinUntil, setPinUntil };
   }
 
+  // webview/hooks/useElementSize.ts
+  function useElementSize() {
+    const [size, setSize] = createSignal({ w: 0, h: 0 });
+    let el;
+    const measure = () => {
+      if (el) setSize({ w: el.clientWidth, h: el.clientHeight });
+    };
+    onMount(() => {
+      if (!el) return;
+      const ro = new ResizeObserver(measure);
+      ro.observe(el);
+      window.addEventListener("resize", measure);
+      measure();
+      onCleanup(() => {
+        ro.disconnect();
+        window.removeEventListener("resize", measure);
+      });
+    });
+    return {
+      /** Solid ref 回调，绑定到被测量的容器元素（JSX ref 回调参数类型为 HTMLElement）。 */
+      ref: (node) => {
+        el = node;
+      },
+      /** 当前容器元素（供手势等外部读取）。 */
+      getEl: () => el,
+      size
+    };
+  }
+
   // webview/components/Chart.tsx
   var _tmpl$11 = /* @__PURE__ */ template(`<svg><defs><clipPath id=plotClip><rect></svg>`, false, true, false);
   var _tmpl$210 = /* @__PURE__ */ template(`<svg><g clip-path=url(#plotClip)></svg>`, false, true, false);
   var _tmpl$35 = /* @__PURE__ */ template(`<main id=chartWrap><svg id=chart>`);
   function Chart() {
-    let wrapRef;
     let svgRef;
-    const [size, setSize] = createSignal({
-      w: 0,
-      h: 0
-    });
-    onMount(() => {
-      const ro = new ResizeObserver(() => {
-        if (wrapRef) setSize({
-          w: wrapRef.clientWidth,
-          h: wrapRef.clientHeight
-        });
-      });
-      ro.observe(wrapRef);
-      if (wrapRef) setSize({
-        w: wrapRef.clientWidth,
-        h: wrapRef.clientHeight
-      });
-      onCleanup(() => ro.disconnect());
-    });
+    const {
+      ref: wrapRef,
+      getEl,
+      size
+    } = useElementSize();
     const {
       mouseX,
       pinT,
       pinUntil
     } = useChartGestures({
-      wrapRef: () => wrapRef,
+      wrapRef: getEl,
       svgRef: () => svgRef,
       getLayout: () => layout(),
       // 手势命中基于主系列几何（悬停命中同样只针对主系列）
@@ -3981,10 +3996,9 @@
     });
     return (() => {
       var _el$ = _tmpl$35(), _el$2 = _el$.firstChild;
-      var _ref$ = wrapRef;
-      typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
-      var _ref$2 = svgRef;
-      typeof _ref$2 === "function" ? use(_ref$2, _el$2) : svgRef = _el$2;
+      use(wrapRef, _el$);
+      var _ref$ = svgRef;
+      typeof _ref$ === "function" ? use(_ref$, _el$2) : svgRef = _el$2;
       insert(_el$2, createComponent(Show, {
         get when() {
           return layout();
@@ -4065,13 +4079,17 @@
       insert(_el$, createComponent(Tooltip, {}), null);
       insert(_el$, createComponent(Empty, {}), null);
       createRenderEffect((_p$) => {
-        var _v$5 = size().w, _v$6 = size().h;
+        var _v$5 = size().w, _v$6 = size().h, _v$7 = `${size().w}px`, _v$8 = `${size().h}px`;
         _v$5 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$5);
         _v$6 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$6);
+        _v$7 !== _p$.a && setStyleProperty(_el$2, "width", _p$.a = _v$7);
+        _v$8 !== _p$.o && setStyleProperty(_el$2, "height", _p$.o = _v$8);
         return _p$;
       }, {
         e: void 0,
-        t: void 0
+        t: void 0,
+        a: void 0,
+        o: void 0
       });
       return _el$;
     })();
@@ -4136,26 +4154,11 @@
     month: false
   };
   function ChartBars() {
-    let wrapRef;
     let svgRef;
-    const [size, setSize] = createSignal({
-      w: 0,
-      h: 0
-    });
-    onMount(() => {
-      const ro = new ResizeObserver(() => {
-        if (wrapRef) setSize({
-          w: wrapRef.clientWidth,
-          h: wrapRef.clientHeight
-        });
-      });
-      ro.observe(wrapRef);
-      if (wrapRef) setSize({
-        w: wrapRef.clientWidth,
-        h: wrapRef.clientHeight
-      });
-      onCleanup(() => ro.disconnect());
-    });
+    const {
+      ref: wrapRef,
+      size
+    } = useElementSize();
     const buckets = createMemo(() => {
       const data = store.data;
       if (!data || !data.snapshots.length) return [];
@@ -4344,6 +4347,34 @@
         slotW
       };
     });
+    const barShapes = createMemo(() => {
+      const bs = buckets();
+      const lay = layout();
+      if (!lay) return [];
+      return bs.map((b, i) => {
+        const center = lay.xOf(i + 0.5);
+        const bottom = lay.yOf(lay.yMin);
+        const mainX = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)));
+        const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
+        const shape = {
+          key: b.t,
+          mainX,
+          mainTop,
+          mainW: lay.barW,
+          mainH: Math.max(0, bottom - mainTop)
+        };
+        if (lay.currency2 && lay.yOf2) {
+          const val = b.values[lay.currency2] ?? 0;
+          shape.secondary = {
+            x: Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)),
+            y: lay.yOf2(val),
+            w: lay.barW,
+            h: Math.max(0, lay.yOf2(0) - lay.yOf2(val))
+          };
+        }
+        return shape;
+      });
+    });
     const onMove = (e) => {
       const lay = layout();
       const bs = buckets();
@@ -4395,12 +4426,11 @@
     const noConsumption = () => buckets().length === 0 || buckets().every((b) => Object.values(b.values).every((v) => v <= EPS2));
     return (() => {
       var _el$ = _tmpl$44(), _el$2 = _el$.firstChild;
-      var _ref$ = wrapRef;
-      typeof _ref$ === "function" ? use(_ref$, _el$) : wrapRef = _el$;
+      use(wrapRef, _el$);
       _el$2.addEventListener("mouseleave", () => setTooltipInfo(null));
       _el$2.$$mousemove = onMove;
-      var _ref$2 = svgRef;
-      typeof _ref$2 === "function" ? use(_ref$2, _el$2) : svgRef = _el$2;
+      var _ref$ = svgRef;
+      typeof _ref$ === "function" ? use(_ref$, _el$2) : svgRef = _el$2;
       insert(_el$2, createComponent(Show, {
         get when() {
           return layout();
@@ -4433,51 +4463,46 @@
             var _el$6 = _tmpl$211(), _el$7 = _el$6.firstChild;
             insert(_el$7, createComponent(For, {
               get each() {
-                return buckets();
+                return barShapes();
               },
-              children: (b, i) => {
-                const lay = layout();
-                const center = lay.xOf(i() + 0.5);
-                const bottom = lay.yOf(lay.yMin);
-                const mainX = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)));
-                const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
-                return [(() => {
-                  var _el$0 = _tmpl$54();
-                  setAttribute(_el$0, "x", mainX);
-                  setAttribute(_el$0, "y", mainTop);
+              children: (s) => [(() => {
+                var _el$0 = _tmpl$54();
+                createRenderEffect((_p$) => {
+                  var _v$9 = s.mainX, _v$0 = s.mainTop, _v$1 = s.mainW, _v$10 = s.mainH;
+                  _v$9 !== _p$.e && setAttribute(_el$0, "x", _p$.e = _v$9);
+                  _v$0 !== _p$.t && setAttribute(_el$0, "y", _p$.t = _v$0);
+                  _v$1 !== _p$.a && setAttribute(_el$0, "width", _p$.a = _v$1);
+                  _v$10 !== _p$.o && setAttribute(_el$0, "height", _p$.o = _v$10);
+                  return _p$;
+                }, {
+                  e: void 0,
+                  t: void 0,
+                  a: void 0,
+                  o: void 0
+                });
+                return _el$0;
+              })(), createComponent(Show, {
+                get when() {
+                  return s.secondary;
+                },
+                get children() {
+                  var _el$1 = _tmpl$63();
                   createRenderEffect((_p$) => {
-                    var _v$7 = lay.barW, _v$8 = Math.max(0, bottom - mainTop);
-                    _v$7 !== _p$.e && setAttribute(_el$0, "width", _p$.e = _v$7);
-                    _v$8 !== _p$.t && setAttribute(_el$0, "height", _p$.t = _v$8);
+                    var _v$11 = s.secondary.x, _v$12 = s.secondary.y, _v$13 = s.secondary.w, _v$14 = s.secondary.h;
+                    _v$11 !== _p$.e && setAttribute(_el$1, "x", _p$.e = _v$11);
+                    _v$12 !== _p$.t && setAttribute(_el$1, "y", _p$.t = _v$12);
+                    _v$13 !== _p$.a && setAttribute(_el$1, "width", _p$.a = _v$13);
+                    _v$14 !== _p$.o && setAttribute(_el$1, "height", _p$.o = _v$14);
                     return _p$;
                   }, {
                     e: void 0,
-                    t: void 0
+                    t: void 0,
+                    a: void 0,
+                    o: void 0
                   });
-                  return _el$0;
-                })(), createComponent(Show, {
-                  get when() {
-                    return memo(() => !!lay.currency2)() && lay.yOf2;
-                  },
-                  get children() {
-                    var _el$1 = _tmpl$63();
-                    createRenderEffect((_p$) => {
-                      var _v$9 = Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)), _v$0 = lay.yOf2(b.values[lay.currency2] ?? 0), _v$1 = lay.barW, _v$10 = Math.max(0, lay.yOf2(0) - lay.yOf2(b.values[lay.currency2] ?? 0));
-                      _v$9 !== _p$.e && setAttribute(_el$1, "x", _p$.e = _v$9);
-                      _v$0 !== _p$.t && setAttribute(_el$1, "y", _p$.t = _v$0);
-                      _v$1 !== _p$.a && setAttribute(_el$1, "width", _p$.a = _v$1);
-                      _v$10 !== _p$.o && setAttribute(_el$1, "height", _p$.o = _v$10);
-                      return _p$;
-                    }, {
-                      e: void 0,
-                      t: void 0,
-                      a: void 0,
-                      o: void 0
-                    });
-                    return _el$1;
-                  }
-                })];
-              }
+                  return _el$1;
+                }
+              })]
             }));
             return _el$6;
           })()];
@@ -4503,13 +4528,17 @@
         }
       }), null);
       createRenderEffect((_p$) => {
-        var _v$5 = size().w, _v$6 = size().h;
+        var _v$5 = size().w, _v$6 = size().h, _v$7 = `${size().w}px`, _v$8 = `${size().h}px`;
         _v$5 !== _p$.e && setAttribute(_el$2, "width", _p$.e = _v$5);
         _v$6 !== _p$.t && setAttribute(_el$2, "height", _p$.t = _v$6);
+        _v$7 !== _p$.a && setStyleProperty(_el$2, "width", _p$.a = _v$7);
+        _v$8 !== _p$.o && setStyleProperty(_el$2, "height", _p$.o = _v$8);
         return _p$;
       }, {
         e: void 0,
-        t: void 0
+        t: void 0,
+        a: void 0,
+        o: void 0
       });
       return _el$;
     })();

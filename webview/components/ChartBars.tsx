@@ -2,8 +2,7 @@
  * 固定窗口（小时=最近 24h / 周=最近 7 天 / 月=最近 12 个月），无缩放平移，只悬停看值。
  * 坐标轴复用 ChartAxis（Layout 兼容），柱为 <rect>，复用 Tooltip / Empty。
  */
-import { createMemo, onCleanup, onMount, Show, For } from 'solid-js';
-import { createSignal } from 'solid-js';
+import { createMemo, Show, For } from 'solid-js';
 import { setTooltipInfo, store } from '../store';
 import { t } from '../i18n';
 import {
@@ -24,6 +23,7 @@ import {
 } from '../logic/format';
 import type { Layout, Snapshot, XLabel, YLabel } from '../types';
 import { activeCurrencies, mainCurrency, type ViewKey } from '../logic/viewport';
+import { useElementSize } from '../hooks/useElementSize';
 import { ChartAxis } from './ChartAxis';
 import { Empty } from './Empty';
 import { Tooltip } from './Tooltip';
@@ -50,19 +50,21 @@ interface BarsLayout extends Layout {
   slotW: number;
 }
 
-export function ChartBars() {
-  let wrapRef: HTMLDivElement | undefined;
-  let svgRef: SVGSVGElement | undefined;
-  const [size, setSize] = createSignal({ w: 0, h: 0 });
+/** 一根柱的最终几何（主/次币种共用）。 */
+interface BarShape {
+  /** 桶时间戳（作为 key，跨重算稳定）。 */
+  key: number;
+  mainX: number;
+  mainTop: number;
+  mainW: number;
+  mainH: number;
+  secondary?: { x: number; y: number; w: number; h: number };
+}
 
-  onMount(() => {
-    const ro = new ResizeObserver(() => {
-      if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
-    });
-    ro.observe(wrapRef!);
-    if (wrapRef) setSize({ w: wrapRef.clientWidth, h: wrapRef.clientHeight });
-    onCleanup(() => ro.disconnect());
-  });
+export function ChartBars() {
+  let svgRef: SVGSVGElement | undefined;
+  // 尺寸：RO + window.resize 兜底（webview 宿主里 RO 可能漏触发，见 useElementSize）
+  const { ref: wrapRef, size } = useElementSize<HTMLDivElement>();
 
   // ---------- 数据：按币种分别聚合消费（多币种快照混算负跳增会错乱，必须隔离），再按桶合并 ----------
   const buckets = createMemo<BarsBucket[]>(() => {
@@ -277,6 +279,44 @@ export function ChartBars() {
     };
   });
 
+  // ---------- 柱几何（依赖 buckets + layout；必须 memo 化——布局/resize 变化时重算，
+  //   不能在 <For> 回调里只取一次 layout()，否则容器尺寸变化后柱子停在旧几何） ----------
+  const barShapes = createMemo<BarShape[]>(() => {
+    const bs = buckets();
+    const lay = layout();
+    if (!lay) return [];
+    return bs.map((b, i) => {
+      const center = lay.xOf(i + 0.5);
+      const bottom = lay.yOf(lay.yMin);
+      // 主币种柱（左轴，偏左）
+      const mainX = Math.max(
+        lay.plotLeft,
+        Math.min(
+          lay.plotRight - lay.barW,
+          center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)
+        )
+      );
+      const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
+      const shape: BarShape = {
+        key: b.t,
+        mainX,
+        mainTop,
+        mainW: lay.barW,
+        mainH: Math.max(0, bottom - mainTop),
+      };
+      if (lay.currency2 && lay.yOf2) {
+        const val = b.values[lay.currency2] ?? 0;
+        shape.secondary = {
+          x: Math.max(lay.plotLeft, Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)),
+          y: lay.yOf2(val),
+          w: lay.barW,
+          h: Math.max(0, lay.yOf2(0) - lay.yOf2(val)),
+        };
+      }
+      return shape;
+    });
+  });
+
   // ---------- 悬停：最近桶 → tooltip（双币种各显示一列消费） ----------
   const onMove = (e: MouseEvent) => {
     const lay = layout();
@@ -344,6 +384,7 @@ export function ChartBars() {
         id="chart"
         width={size().w}
         height={size().h}
+        style={{ width: `${size().w}px`, height: `${size().h}px` }}
         ref={svgRef}
         onMouseMove={onMove}
         onMouseLeave={() => setTooltipInfo(null)}
@@ -363,49 +404,29 @@ export function ChartBars() {
           <ChartAxis lay={layout()!} view={axisView()} />
           <g clip-path="url(#plotClip)">
             <g class="bars">
-              <For each={buckets()}>
-                {(b, i) => {
-                  const lay = layout()!;
-                  const center = lay.xOf(i() + 0.5);
-                  const bottom = lay.yOf(lay.yMin);
-                  // 主币种柱（左轴，偏左）
-                  const mainX = Math.max(
-                    lay.plotLeft,
-                    Math.min(
-                      lay.plotRight - lay.barW,
-                      center - (lay.currency2 ? lay.barW + lay.barGap / 2 : lay.barW / 2)
-                    )
-                  );
-                  const mainTop = lay.yOf(b.values[lay.currency] ?? 0);
-                  return (
-                    <>
+              <For each={barShapes()}>
+                {(s) => (
+                  <>
+                    <rect
+                      class="bar"
+                      x={s.mainX}
+                      y={s.mainTop}
+                      width={s.mainW}
+                      height={s.mainH}
+                      rx={2}
+                    />
+                    <Show when={s.secondary}>
                       <rect
-                        class="bar"
-                        x={mainX}
-                        y={mainTop}
-                        width={lay.barW}
-                        height={Math.max(0, bottom - mainTop)}
+                        class="bar secondary"
+                        x={s.secondary!.x}
+                        y={s.secondary!.y}
+                        width={s.secondary!.w}
+                        height={s.secondary!.h}
                         rx={2}
                       />
-                      <Show when={lay.currency2 && lay.yOf2}>
-                        <rect
-                          class="bar secondary"
-                          x={Math.max(
-                            lay.plotLeft,
-                            Math.min(lay.plotRight - lay.barW, center + lay.barGap / 2)
-                          )}
-                          y={lay.yOf2!(b.values[lay.currency2!] ?? 0)}
-                          width={lay.barW}
-                          height={Math.max(
-                            0,
-                            lay.yOf2!(0) - lay.yOf2!(b.values[lay.currency2!] ?? 0)
-                          )}
-                          rx={2}
-                        />
-                      </Show>
-                    </>
-                  );
-                }}
+                    </Show>
+                  </>
+                )}
               </For>
             </g>
           </g>
